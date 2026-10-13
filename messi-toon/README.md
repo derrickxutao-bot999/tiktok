@@ -31,3 +31,24 @@ ffmpeg -framerate 30 -i out/frames/%04d.png -i SOURCE.mov -map 0:v -map 1:a \
 ```
 
 To preview a few frames only, set `ONLY=1,60,145`. A full run takes about 8 minutes on one CPU, and most of that time is the mean-shift pass.
+
+## Character reference
+
+`character/` holds the cartoon player as a fixed reference, so the character looks the same in later edits or AI video tools:
+
+| File | Pose (source frame) |
+|---|---|
+| `barca-stride.png` | Barça kit, full stride (145) |
+| `barca-upright.png` | Barça kit, upright (16) |
+| `argentina-stride.png` | Argentina kit, stride (53) |
+| `argentina-reach.png` | Argentina kit, reaching (59) |
+| `sheet.png` | All four side by side, labelled |
+
+Each pose is a transparent PNG with a bold sticker outline. All four share one colour palette and use the same ink style as the animation. The ball is left out.
+
+```bash
+python3 char_sheet.py SOURCE.mov character     # rebuild, about 30 s
+python3 score_frames.py out/src                 # rank frames by sharpness to pick new poses
+```
+
+To change the poses, edit `POSES` in `char_sheet.py`. The sharpness score is only a starting point, so check the frames by eye: motion blur on the legs makes some high-scoring frames poor references.
