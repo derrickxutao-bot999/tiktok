@@ -65,6 +65,6 @@ if (arg("--stills")) {
   const enc = (name, rate) => run(["-y", "-loglevel", "error", "-i", master, "-c:v", "libx264", "-preset", "slow", "-tune", "grain", ...rate,
     "-pix_fmt", "yuv420p", "-profile:v", "high", "-c:a", "copy", "-movflags", "+faststart", join(out, name)]);
   await enc("banana-39.mp4", ["-crf", "23", "-maxrate", "6M", "-bufsize", "12M"]);
-  await enc("banana-39-preview.mp4", ["-vf", "scale=720:1280:flags=lanczos", "-b:v", "1.75M", "-maxrate", "2.4M", "-bufsize", "4.8M"]);
+  await enc("banana-39-preview.mp4", ["-vf", "scale=720:1280:flags=lanczos", "-b:v", "1.5M", "-maxrate", "2.1M", "-bufsize", "4.2M"]);
   console.log(`done in ${((Date.now() - t0) / 1000).toFixed(0)} s -> out/banana-39.mp4 (+ master.mp4, banana-39-preview.mp4)`);
 }
