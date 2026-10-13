@@ -1,0 +1,24 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>@font-face{font-family:"Oswald";font-weight:700;src:url(fonts/Oswald-SemiBold.ttf)}@font-face{font-family:"NotoSerifSC";font-weight:600;src:url(fonts/NotoSerifSC-SemiBold.ttf)}</style></head>
+<body style="margin:0;background:#000"><canvas id="c" width="2500" height="1400"></canvas>
+<script src="silhouette.js"></script>
+<script>
+const g=document.getElementById("c").getContext("2d");
+window.draw=()=>{const W=2500,Hh=1400;
+ const bg=g.createLinearGradient(0,0,0,Hh);bg.addColorStop(0,"#d9d6cf");bg.addColorStop(0.75,"#b4b1aa");bg.addColorStop(1,"#8f8c86");
+ g.fillStyle=bg;g.fillRect(0,0,W,Hh);
+ const xs=[260,740,1250,1760,2230],GY=1180,FH=820;
+ // ground wash + reflections
+ g.fillStyle="rgba(60,58,55,0.18)";g.fillRect(0,GY,W,Hh-GY);
+ const list=[["backWalk","背影 · 低头走远"],["sky","双指向天"],["sideWalk","低头走过"],["hips","叉腰 · 低头"],["dribble","左脚盘带"]];
+ list.forEach(([k,lab],i)=>{
+  g.save();g.globalAlpha=0.18;g.translate(0,2*GY);g.scale(1,-1);drawFig(g,xs[i],GY,FH,POSES[k],{number:false});g.restore();
+  drawFig(g,xs[i],GY,FH,POSES[k]);
+  g.fillStyle="#2a2a2a";g.font="600 40px NotoSerifSC";g.textAlign="center";g.fillText(lab,xs[i],1330);});
+ // rain
+ let s=7;const rnd=()=>(s=(s*16807)%2147483647)/2147483647;
+ g.strokeStyle="rgba(40,40,40,0.25)";g.lineWidth=2;
+ for(let i=0;i<500;i++){const x=rnd()*W,y=rnd()*Hh,l=30+rnd()*50;g.beginPath();g.moveTo(x,y);g.lineTo(x-l*0.18,y+l);g.stroke();}
+};
+window.ready=document.fonts.ready.then(()=>Promise.all(["700 40px Oswald","600 40px NotoSerifSC"].map(f=>document.fonts.load(f,"10背影低头走远双指向天叉腰左脚盘带过"))));
+</script></body></html>
