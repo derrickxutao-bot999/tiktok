@@ -1,4 +1,4 @@
-"""Score + sound design for 一根香蕉的39年 (122 s), cued to js/main.js -> out/soundtrack.wav
+"""Score + sound design for 一根香蕉的39年 (130.5 s), cued to js/main.js -> out/soundtrack.wav
 
 Every cut in the film lands on a downbeat, and every transition has its own musical gesture: the Anfield
 score rewinds with the picture, the tape lurches into 1987, camcorder cuts glitch, a bassoon pickup walks
@@ -6,7 +6,8 @@ Frank Newton in, whip pans whoosh onto the groove's bar lines, the groove dives 
 in a club, a snare roll strobes into Boxing Day, the tape stops, timpani land with each relegation, a TV
 sting wipes to Wembley, a music box winds down and never plays its last note, a clock locks into the tempo
 of Anfield, a deceptive cadence opens the montage of the lows, and the five-note banana motif finally
-resolves on its missing note under the end card.
+resolves on its missing note under the end card. The glory motif breaks off when the trophies go cold, a phone's
+buzz stops the music box, and the lonely 1987 piano returns when the film remembers where the banana was born.
 Real instruments: University of Iowa MIS (unrestricted use). Drums, 303 bass, choir, SFX: synthesised.
 """
 import os
@@ -18,10 +19,10 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "audio"))
 from sampler import fx, midi, play, section  # noqa: E402
 from synth import SR, adsr, band, boom, choir, convolve, crowd, heartbeat, hz, noise, reverb_ir, riser, rng, timpani, tt  # noqa: E402
-from synth2 import (acid, boos, clap, claps, click, crackle, glitch, hat, hiss, kick, organ, pad, pop, pulse, rain,  # noqa: E402
-                    rewind, rustle, shaker, shutter, snare, tamb, tape_clunk, tick, whistle, whoosh)
+from synth2 import (acid, boos, buzz, clap, claps, crackle, flutter, glitch, hat, hiss, kick, organ, pad, pop, pulse,  # noqa: E402
+                    rain, rewind, rustle, shaker, shutter, snare, tamb, tape_clunk, tick, whistle, whoosh)
 
-DUR = 122.0
+DUR = 130.5
 N = int(DUR * SR)
 BUS = {k: np.zeros((2, N)) for k in ("orch", "groove", "choir", "perc", "sfx")}
 POST = np.zeros((2, N))   # dry sounds added after the rewind / choke edits
@@ -143,8 +144,8 @@ def amb(y, at, dur, lo, hi, gain=1.0, pan=0.0, bus="sfx", fade=.025):
 
 # the cuts of js/main.js
 CUT = dict(rew=10.4, play=12.2, fence=15.8, maine=19.4, count=31.0, zoo=35.14, club=39.29, brk=43.43, stoke=45.5,
-           stop=56.375, seats=57.2, ladder=60.8, wem=64.4, sky=74.4, troph=78.4, shoe=84.4, lamp=87.15, verd=87.4,
-           anf=95.85, fans=104.6, m87=109.6, m98=110.85, m99=112.1, m23=113.35, home=114.6, card=117.725)
+           stop=56.375, seats=57.2, ladder=60.8, wem=64.4, sky=74.4, troph=78.4, charges=82.4, shoe=86.4, phone=89.2, push=89.8,
+           verd=91.0, anf=98.5, shield=107.25, fans=111.0, m87=119.75, m98=121.0, m99=122.25, m23=123.5, home=124.75, card=127.875)
 
 # ======================= 0 – 10.4  Anfield, 2026 (beat .6) ======================
 put(crowd(10.8, .9) * adsr(int(10.8 * SR), 1.0, .5, .9, 1.2), 0, 1, 0, "sfx")
@@ -349,7 +350,7 @@ strings("D", 72.4, 1.9, vel=.85, soft=.1, att=.05, rel=1.0)
 for at in (72.95, 73.3, 73.6, 73.8, 74.0, 74.15, 74.27):                                         # photographers
     put(shutter(.8), at, 1, (rng.random() - .5) * 1.2, "sfx")
 
-# ======================= 74.4 – 84.4  the money era (beat .5) ======================
+# ======================= 74.4 – 82.4  the money era (beat .5) ======================
 hit("cym_stick", CUT["sky"], .35)                                                                # the flash
 for i in range(32):
     solo("violin", ["D5", "F#5", "A5", "F#5"][i % 4], 74.4 + i * .125, .1, vel=.5 + .2 * (i % 4 == 0), pan=-.3, att=.005, rel=.05)
@@ -360,102 +361,141 @@ put(timpani(hz("D2"), 2, .8), CUT["sky"], 1, 0, "perc")
 for i, n in enumerate(("A5", "B5", "C#6", "D6", "E6", "F#6", "G#6", "A6")):                      # the gold sweep
     ring("glock", n, 78.0 + i * .05, .3 + .05 * i, -.4 + .1 * i)
 hit("crash_viennese", CUT["troph"], .4, 0, rev=True, length=1.0)
-for at, ch in ((78.4, "D"), (79.9, "Bm"), (81.4, "G"), (82.9, "A")):
-    strings(ch, at, 1.55, vel=.85 if at in (78.4, 81.4) else .65, soft=.1, att=.03, rel=.35 if at < 82 else 1.3)
-    brass("horn", [V[ch]["cello"][0], V[ch]["viola"][0]], at, 1.5, vel=.75, att=.03, rel=.3 if at < 82 else 1.0)
+for at, ch in ((78.4, "D"), (79.9, "Bm"), (81.4, "G")):
+    strings(ch, at, 1.55 if at < 81 else 1.0, vel=.85 if at in (78.4, 81.4) else .65, soft=.1, att=.03, rel=.35 if at < 81 else .6)
+    brass("horn", [V[ch]["cello"][0], V[ch]["viola"][0]], at, 1.5 if at < 81 else 1.0, vel=.75, att=.03, rel=.3 if at < 81 else .5)
 for at in (78.4, 81.4):
     hit("crash_viennese", at, .5)
     put(timpani(hz("D2"), 2, 1.0), at, 1, 0, "perc")
     put(choir(hz("D4"), 1.4, "ah", 10, .05, .8) + choir(hz("A4"), 1.4, "ah", 10, .05, .8), at, .5, 0, "choir")
 for at, n in ((78.7, "A6"), (79.3, "A6"), (79.9, "A6"), (81.4, "D7"), (81.65, "D7"), (81.9, "D7")):   # trophies appear
     ring("crotale", n, at, .45, (rng.random() - .5) * .8)
-motif("G", 81.4, .5, lambda n, t, d: solo("trumpet", n, t, d * .95, vel=.9, att=.02, rel=.15))
+for n, at, d in (("D5", 81.4, .25), ("G5", 81.65, .25), ("F#5", 81.9, .5)):                       # the treble's fanfare… breaks off
+    solo("trumpet", n, at, d * .95, vel=.9, att=.02, rel=.15 if n != "F#5" else .45)
 
-# ======================= 84.4 – 87.4  the shoebox ======================
-put(pad([hz("F3"), hz("A3"), hz("C4")], CUT["lamp"] - 84.0, .8, 1.0, .03), 84.0, 1, 0, "orch")  # fades in under the dissolve
-put(hiss(2.75, .45), CUT["shoe"], 1, 0, "sfx")
-for at, n in ((84.75, "C6"), (85.1, "F6"), (85.525, "E6"), (86.525, "C6")):                     # a music box winding down…
-    ring("glock", n, at, .45, .1)
-put(click(1.0), CUT["lamp"], 1, .3, "post")                                                       # …and the lamp goes off before its last note
+# ======================= 82.4 – 86.4  the same year: 115 charges ======================
+hit("crash_viennese", CUT["charges"], .35, 0, rev=True, length=.7)                                # a short intake of breath into the cold
+put(boom(2.4, 48, 30, .5), CUT["charges"], 1, 0, "sfx")
+hit("tamtam_bow", CUT["charges"] + .1, .35)
+put(section("cello", "D2", 4.0, n=2, vel=.5, soft=.6, att=.5, rel=1.0), CUT["charges"], .95, .3)
+put(section("bass", "D2", 4.0, n=2, vel=.45, soft=.6, att=.5, rel=1.0), CUT["charges"], .85, .45)
+put(section("violin", "Bb5", 3.2, vel=.33, soft=.45, att=1.0, rel=.5), CUT["charges"] + .1, 1.0, -.35)   # a cold semitone rub…
+put(section("violin", "A5", 4.4, vel=.33, soft=.45, att=1.0, rel=1.0), CUT["charges"] + .1, 1.0, -.35)   # …that resolves onto A, the note the shoebox's F major keeps
+put(section("viola", "F4", 4.2, vel=.35, soft=.5, att=1.0, rel=1.0), CUT["charges"] + .1, .8, .1)
+for k in range(3):                                                                                # a clock starts: it comes back under the verdict
+    put(tick(.5 + .12 * k), CUT["charges"] + .5 + 1.25 * k, 1, (.3 if k % 2 else -.3), "sfx")
 
-# ======================= 87.4 – 95.85  the verdict ======================
-put(section("cello", "D2", 8.45, n=2, vel=.5, soft=.6, att=.6, rel=.6), CUT["verd"], .95, .3)
-put(pulse(hz("D1"), 8.45, .35, .2) * adsr(int(8.45 * SR), 1.0, .2, 1, 1.0), CUT["verd"], 1, 0, "orch")
-ticks = [88.35 + 1.25 * k for k in range(6)] + [95.225]                                          # a slow clock that locks into Anfield's tempo
+# ======================= 86.4 – 91.0  the shoebox; the phone ======================
+put(pad([hz("F3"), hz("A3"), hz("C4")], 3.9, 1.1, 1.0, 1.0), 86.0, 1, 0, "orch")                  # warmth fades in under the dissolve…
+put(section("cello", "F2", 3.4, n=2, vel=.4, soft=.7, att=1.0, rel=1.0), 86.1, .8, .3)
+put(hiss(3.6, .45) * env_in_out(int(3.6 * SR), .4, .6), CUT["shoe"], 1, 0, "sfx")
+for at, n in ((86.8, "C6"), (87.2, "F6"), (87.65, "E6"), (88.45, "C6")):                         # …a music box winds down…
+    ring("glock", n, at, .62, .1)
+for at in (CUT["phone"], CUT["phone"] + .4):                                                      # …and before its last note the phone buzzes
+    put(buzz(.3), at, 1, .25, "sfx")
+put(riser(1.25, 400, 9000, .7), CUT["push"], 1, 0, "sfx")                                         # the push into the screen
+hit("cym_bow", CUT["verd"], .4, 0, rev=True, length=1.2)
+put(boom(2.2, 46, 30, .6), CUT["verd"], 1, 0, "sfx")                                              # landing on "114"
+
+# ======================= 91.0 – 98.5  the verdict ======================
+put(section("cello", "D2", 8.0, n=2, vel=.5, soft=.6, att=.8, rel=.6), CUT["verd"] - .5, .95, .3)
+put(pulse(hz("D1"), 8.0, .35, .2) * adsr(int(8.0 * SR), 1.0, .2, 1, 1.0), CUT["verd"] - .5, 1, 0, "orch")
+ticks = [CUT["verd"] + 1.25 * k for k in range(6)] + [CUT["anf"] - .625]                          # the clock again, locking into Anfield's tempo
 for i, at in enumerate(ticks):
-    put(tick(.8 + .15 * (at > 94)), at, 1, (-.3 if i % 2 else .3), "sfx")
+    put(tick(.8 + .15 * (i >= 5)), at, 1, (-.3 if i % 2 else .3), "sfx")
 for sec, n in (("violin", "Eb5"), ("violin", "D5"), ("viola", "G#4"), ("violin", "A4")):
-    put(section(sec, n, 3.6, vel=.4, soft=.4, att=2.0, rel=1.4), 88.2, SEC[sec][1], SEC[sec][0])
-put(rustle(8.4, 1.0), CUT["verd"], 1, 0, "sfx")
+    put(section(sec, n, 3.6, vel=.4, soft=.4, att=2.0, rel=1.4), CUT["verd"] + .5, SEC[sec][1], SEC[sec][0])
+put(rustle(7.5, 1.0), CUT["verd"], 1, 0, "sfx")
 for n in ("A1", "D2"):
-    piano(n, 91.8, .8)
-hit("tamtam_bow", 91.85, .3)
+    piano(n, CUT["verd"] + 2.5, .8)
+hit("tamtam_bow", CUT["verd"] + 2.55, .3)
+put(flutter(.65), CUT["anf"] - .65, 1, -.2, "sfx")                                                # the last page flies into the lens
 put(crowd(1.0, .8) * np.linspace(0, 1, int(1.0 * SR)) ** 2, CUT["anf"] - 1.0, 1, 0, "sfx")
 hit("crash_viennese", CUT["anf"], .5, 0, rev=True, length=1.2)
 
-# ======================= 95.85 – 104.6  Anfield again (beat .625) ======================
-put(crowd(8.9, .9) * env_in_out(int(8.9 * SR), .02, .35), CUT["anf"], 1, 0, "sfx")
-put(choir(hz("D3"), 8.5, "oo", 14, 1.0, .8) + choir(hz("F3"), 8.5, "oo", 14, 1.0, .8), CUT["anf"], .5, -.2, "choir")
-put(boos(4.0, 1.0), 100.35, 1, .35, "sfx")
+# ======================= 98.5 – 107.25  Anfield again (beat .625) ======================
+put(crowd(8.75, .9) * env_in_out(int(8.75 * SR), .02, .9), CUT["anf"], 1, 0, "sfx")
+put(choir(hz("D3"), 8.6, "oo", 14, 1.0, .9) + choir(hz("F3"), 8.6, "oo", 14, 1.0, .9), CUT["anf"], .5, -.2, "choir")
+put(boos(3.6, 1.0), 103.0, 1, .35, "sfx")
 for i in range(28):
     t = CUT["anf"] + i * .3125
     solo("cello", ["D2", "D2", "D3", "D2"][i % 4], t, .24, vel=.6 + .3 * i / 28, pan=.3, att=.01, rel=.08)
     if i % 2 == 0:
         put(kick(.8 + .2 * (i % 4 == 0)), t, .9, 0, "perc")
-for at, ch in ((95.85, "Dm"), (98.35, "Bb"), (100.85, "Gm"), (103.35, "A")):
-    brass("horn", V[ch]["cello"] + V[ch]["viola"], at, 2.3 if at < 103 else 1.2, vel=.6, soft=.3, att=.4, rel=.3 if at < 103 else .1)
-motif("min", 97.1, .625, lambda n, t, d: (solo("trumpet", n, t, d * .95, vel=.9, att=.02, rel=.15), solo("horn", up(n, -1), t, d * .95, vel=.6, pan=-.2, att=.02, rel=.15)))
-rev_chord(["F3", "A3", "C4", "F4"], CUT["fans"], vel=.55, gain=.9)                                 # sucked into the reverse angle
+for at, ch in ((98.5, "Dm"), (101.0, "Bb"), (103.5, "Gm"), (106.0, "A")):
+    brass("horn", V[ch]["cello"] + V[ch]["viola"], at, 2.3 if at < 105 else 1.3, vel=.6, soft=.3, att=.4, rel=.3 if at < 105 else .4)
+motif("min", 99.75, .625, lambda n, t, d: (solo("trumpet", n, t, d * .95, vel=.9, att=.02, rel=.15), solo("horn", up(n, -1), t, d * .95, vel=.6, pan=-.2, att=.02, rel=.15)))
 
-# ======================= 104.6 – 109.6  two fans (beat .625, F major) ======================
-put(band(crowd(5.2, .9), 150, 900) * env_in_out(int(5.2 * SR), .3, .6), CUT["fans"], .55, 0, "sfx")   # the stadium, far away
+# ======================= 107.25 – 111.0  "the club's shield" ======================
+# the camera keeps moving in on the bananas; the beat stops, the claim hangs on a held D minor
+put(section("cello", "D2", 3.9, n=2, vel=.55, soft=.4, att=.05, rel=.7), CUT["shield"], .95, .3)
+put(section("bass", "D2", 3.9, n=2, vel=.5, soft=.5, att=.05, rel=.7), CUT["shield"], .85, .45)
+brass("horn", ["D3", "F3", "A3"], CUT["shield"], 2.5, vel=.5, soft=.4, att=.3, rel=.7)
+for at in (CUT["shield"], CUT["shield"] + 1.875):
+    put(timpani(hz("D2"), 1.6, .45), at, 1, 0, "perc")
+put(band(crowd(3.9, .9), 200, 2500) * env_in_out(int(3.9 * SR), .1, 1.6), CUT["shield"], .6, 0, "sfx")
+solo("violin", "A5", CUT["shield"] + 2.5, 2.6, vel=.4, pan=-.3, soft=.2, att=.8, rel=.9)          # A: in D minor and in F major — it carries the change of key
+hit("cym_bow", CUT["fans"], .35, 0, rev=True, length=1.4)
+rev_chord(["F3", "A3", "C4", "F4"], CUT["fans"], vel=.55, gain=.9)
+
+# ======================= 111.0 – 119.75  two fans (beat .625) ======================
+put(band(crowd(8.9, .9), 150, 900) * env_in_out(int(8.9 * SR), .4, .8), CUT["fans"], .5, 0, "sfx")   # the stadium, far away
 for n in ("F2", "C3"):
     piano(n, CUT["fans"], .45)
 for i, n in enumerate(("A3", "C4", "F4")):
     piano(n, CUT["fans"] + .03 * i, .36)
-for at, ch, d in ((104.6, "F", 1.25), (105.85, "C/E", 1.25), (107.1, "Dm", 1.25), (108.35, "Bb", .625), (108.975, "C", .625)):
+for at, ch, d in ((111.0, "F", 1.25), (112.25, "Dm", 1.875), (114.125, "A", .625), (114.75, "F", 1.25), (116.0, "C/E", 1.25),
+                  (117.25, "Dm", 1.25), (118.5, "Bb", .625), (119.125, "C", .625)):
     strings(ch, at, d, vel=.42, soft=.6, att=.25, rel=.3, only=("bass", "cello", "viola"))
-motif("maj", 105.225, .625, lambda n, t, d: piano(n, t, .55, pan=0))
-solo("cello", "C4", 107.725, .6, vel=.5, pan=.3, soft=.3, att=.08, rel=.2)
-solo("cello", "D4", 108.35, .6, vel=.55, pan=.3, soft=.3, att=.08, rel=.2)
-solo("cello", "E4", 108.975, .6, vel=.6, pan=.3, soft=.3, att=.08, rel=.2)
+# "the year the banana was born": the lonely 1987 piano comes back, with a breath of tape hiss
+motif("min", 111.625, .625, lambda n, t, d: piano(n, t, .5, pan=-.05))
+put(hiss(2.6, .5) * env_in_out(int(2.6 * SR), .5, .9), 111.6, 1, 0, "sfx")
+# "the fans did nothing wrong": the motif in its own major key
+motif("maj", 115.375, .625, lambda n, t, d: piano(n, t, .55, pan=0))
+for at, n, v in ((117.875, "C4", .5), (118.5, "D4", .55), (119.125, "E4", .6)):
+    solo("cello", n, at, .6, vel=v, pan=.3, soft=.3, att=.08, rel=.2)
 
-# ======================= 109.6 – 114.6  the same fan, 1987 → 2023 ======================
+# ======================= 119.75 – 124.75  the same fan, 1987 → 2023 ======================
 # vi – IV – ii7 – V: the deceptive cadence drops into the lows, then climbs; a rising line on top
 MONT = ((CUT["m87"], "Dm", "A4"), (CUT["m98"], "Bb", "D5"), (CUT["m99"], "Gm7", "F5"), (CUT["m23"], "Csus4", "F5"))
+C_RES = CUT["m23"] + .625
 for k, (at, ch, top) in enumerate(MONT):
     strings(ch, at, 1.25 if k < 3 else .625, vel=.55 + .12 * k, soft=.35 - .08 * k, att=.06, rel=.25)
     solo("violin", top, at, 1.2 if k < 3 else .6, vel=.6 + .1 * k, pan=-.3, soft=.1, att=.04, rel=.2)
     solo("violin", up(top, 1), at, 1.2 if k < 3 else .6, vel=.45 + .1 * k, pan=-.4, soft=.1, att=.04, rel=.2)
     put(timpani(hz({"Dm": "D2", "Bb": "Bb1", "Gm7": "G1", "Csus4": "C2"}[ch]), 1.4, .55 + .15 * k), at, 1, 0, "perc")
-strings("C", 113.975, .625, vel=.95, soft=0, att=.04, rel=.2)
-solo("violin", "E5", 113.975, .6, vel=.9, pan=-.3, att=.03, rel=.2)
-solo("violin", "E6", 113.975, .6, vel=.75, pan=-.4, att=.03, rel=.2)
+    if k:                                                                 # a soft breath of air into each dissolve
+        hit("cym_bow", at, .16, (k - 2) * .4, bus="sfx", rev=True, length=.45)
+strings("C", C_RES, .625, vel=.95, soft=0, att=.04, rel=.2)
+solo("violin", "E5", C_RES, .6, vel=.9, pan=-.3, att=.03, rel=.2)
+solo("violin", "E6", C_RES, .6, vel=.75, pan=-.4, att=.03, rel=.2)
 for i in range(16):                                                       # viola eighths, growing
     t = CUT["m87"] + i * .3125
     root = "D3" if i < 12 else "C3"
     solo("viola", [root, up(root, 1)][i % 2], t, .2, vel=.45 + .4 * i / 16, pan=.1, att=.005, rel=.05)
 brass("horn", ["Bb3", "D4", "F4"], CUT["m99"], 1.2, vel=.7, soft=.2, att=.15, rel=.2)
 brass("horn", ["C4", "F4", "G4"], CUT["m23"], .6, vel=.85, soft=.1, att=.05, rel=.1)
-brass("horn", ["C4", "E4", "G4"], 113.975, .6, vel=.95, att=.03, rel=.15)
+brass("horn", ["C4", "E4", "G4"], C_RES, .6, vel=.95, att=.03, rel=.15)
 put(choir(hz("D4"), 1.25, "ah", 12, .05, .3) + choir(hz("F4"), 1.25, "ah", 12, .05, .3), CUT["m99"], .45, 0, "choir")
 put(choir(hz("C4"), 1.25, "ah", 12, .05, .3) + choir(hz("G4"), 1.25, "ah", 12, .05, .3), CUT["m23"], .55, 0, "choir")
 for k in range(20):                                                       # timpani roll into the arrival
     put(timpani(hz("C2"), .5, .15 + .04 * k), CUT["m23"] + k * .0625, 1, 0, "perc")
 hit("crash_viennese", CUT["home"], .6, 0, rev=True, length=1.25)
-# each era sounds for exactly as long as it is on screen
-amb(hiss(1.25, 1.6) + rain(1.25, .9) + crowd(1.25, .45), CUT["m87"], 1.25, 300, 6000, .9)
-amb(rain(1.25, 1.5) + crowd(1.25, .4) + hiss(1.25, .5), CUT["m98"], 1.25, 400, 7000, .9)
-amb(crowd(1.25, 1.5), CUT["m99"], 1.25, 200, 6000, 1.0)
-amb(crowd(1.25, 1.6) + crackle(1.25, .8), CUT["m23"], 1.25, 120, 12000, 1.0)
-for at in (113.42, 113.85, 114.2):                                        # the fireworks on screen
+# each era's crowd fades in and out with its own dissolve
+for at, y, lo, hi, gn in ((CUT["m87"], hiss(1.7, 1.6) + rain(1.7, .9) + crowd(1.7, .45), 300, 6000, .9),
+                          (CUT["m98"], rain(1.7, 1.5) + crowd(1.7, .4) + hiss(1.7, .5), 400, 7000, .9),
+                          (CUT["m99"], crowd(1.7, 1.5), 200, 6000, 1.0),
+                          (CUT["m23"], crowd(1.7, 1.6) + crackle(1.7, .8), 120, 12000, 1.0)):
+    amb(y, at - .22, 1.7, lo, hi, gn, fade=.22)
+for at in (123.57, 124.0, 124.35):                                        # the fireworks on screen
     put(pop(.8), at, 1, (rng.random() - .5), "sfx")
     put(crackle(.9, .6), at + .25, 1, (rng.random() - .5), "sfx")
 
-# ======================= 114.6 – 122  the whole away end: the motif resolves ======================
+# ======================= 124.75 – 130.5  the whole away end: the motif resolves ======================
 H2 = 1.25                                                                 # maestoso: half the tempo of the montage
-put(crowd(7.4, 1.2) * env_in_out(int(7.4 * SR), .05, 3.0), CUT["home"], 1, 0, "sfx")
-for at, ch, d in ((114.6, "F", .625), (115.225, "Bb", .625), (115.85, "C", 1.25), (117.1, "C7", .625)):
+put(crowd(5.75, 1.2) * env_in_out(int(5.75 * SR), .05, 2.6), CUT["home"], 1, 0, "sfx")
+for k, (ch, d) in enumerate((("F", .625), ("Bb", .625), ("C", 1.25), ("C7", .625))):
+    at = CUT["home"] + (0, .625, 1.25, 2.5)[k]
     strings(ch, at, d, vel=.9, soft=.05, att=.04, rel=.25)
     brass("horn", V[ch]["cello"][:1] + V[ch]["viola"], at, d, vel=.8, att=.04, rel=.2)
     brass("trombone", V[ch]["bass"] + V[ch]["cello"][:1], at, d, vel=.7, att=.04, rel=.2)
@@ -466,25 +506,25 @@ put(choir(hz("F3"), 3.2, "ah", 16, .05, .6) + choir(hz("A3"), 3.2, "ah", 16, .05
 
 def maestoso(n, t, d):
     last = n == "A4"
-    dd, rr = (3.2, 1.4) if last else (d * .97, .3)
+    dd, rr = (2.6, 1.2) if last else (d * .97, .3)
     solo("trumpet", n, t, dd, vel=.85, att=.03, rel=rr)
     solo("violin", up(n, 1), t, dd, vel=.8, pan=-.35, att=.03, rel=rr)
     solo("horn", up(n, -1), t, dd, vel=.7, pan=-.2, att=.03, rel=rr)
 
 
 motif("maj", CUT["home"], H2, maestoso)
-# 117.725: the note the music box never played, on F major — with everyone
-strings("F", CUT["card"], 3.3, vel=.85, soft=.15, att=.06, rel=1.4)
-brass("horn", ["F3", "A3", "C4"], CUT["card"], 3.0, vel=.7, att=.06, rel=1.4)
-brass("trombone", ["F2", "C3"], CUT["card"], 3.0, vel=.6, att=.06, rel=1.4)
-put(choir(hz("F3"), 4.2, "ah", 16, .1, 1.8) + choir(hz("A3"), 4.2, "ah", 16, .1, 1.8) + choir(hz("C4"), 4.2, "ah", 16, .1, 1.8), CUT["card"], .55, 0, "choir")
+# the end card: the note the music box never played, on F major — with everyone
+strings("F", CUT["card"], 2.7, vel=.85, soft=.15, att=.06, rel=1.2)
+brass("horn", ["F3", "A3", "C4"], CUT["card"], 2.5, vel=.7, att=.06, rel=1.2)
+brass("trombone", ["F2", "C3"], CUT["card"], 2.5, vel=.6, att=.06, rel=1.2)
+put(choir(hz("F3"), 3.4, "ah", 16, .1, 1.6) + choir(hz("A3"), 3.4, "ah", 16, .1, 1.6) + choir(hz("C4"), 3.4, "ah", 16, .1, 1.6), CUT["card"], .55, 0, "choir")
 for n in ("F2", "C3", "F3", "A3", "C4"):
     piano(n, CUT["card"], .5, pan=0)
 ring("glock", "A5", CUT["card"] + .02, .5, .1)
 ring("crotale", "A6", CUT["card"] + .3, .3, .25)
 put(timpani(hz("F2"), 2.4, .7), CUT["card"], 1, 0, "perc")
-for k in range(36):                                                       # a soft timpani roll holds the last chord, dying away
-    put(timpani(hz("F2"), .5, .16 * (1 - k / 36) ** 1.5), CUT["card"] + 1.2 + k * .07, 1, 0, "perc")
+for k in range(30):                                                       # a soft timpani roll holds the last chord, dying away
+    put(timpani(hz("F2"), .5, .16 * (1 - k / 30) ** 1.5), CUT["card"] + 1.2 + k * .07, 1, 0, "perc")
 
 
 # ======================= mix & master ======================
@@ -536,11 +576,6 @@ p = (tau - .4 * tau * (1 - tau / T) ** 2) * SR
 i0 = int(CUT["play"] * SR)
 seg = mix[:, i0:i0 + len(tau) + 8].copy()
 mix[:, i0:i0 + len(tau)] = np.stack([np.interp(p, np.arange(seg.shape[1]), ch) for ch in seg])
-# 87.15: the lamp clicks off and takes the room with it
-g = np.ones(N)
-for a, b, v0, v1 in ((CUT["lamp"], CUT["lamp"] + .025, 1, .03), (CUT["lamp"] + .025, CUT["verd"] - .02, .03, .03), (CUT["verd"] - .02, CUT["verd"] + .02, .03, 1)):
-    g[int(a * SR):int(b * SR)] = np.linspace(v0, v1, int(b * SR) - int(a * SR))
-mix *= g
 mix += POST
 mix = np.stack([band(ch, 28) for ch in mix])
 blk = 256

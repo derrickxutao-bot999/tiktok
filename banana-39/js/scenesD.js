@@ -68,7 +68,7 @@ function standFX(g, era, t) {
   }
   if (era === "m99" || era === "m23" || era === "kop") for (let i = 0; i < 7; i++) if (r() < .55) blit(g, SPR.glowWhite, r() * W, 420 + r() * 330, 14 + r() * 16, .9);   // flashbulbs and phones
   if (era === "m23") {
-    for (const [ft, fx, fy, col] of [[113.42, 300, 170, "255,214,120"], [113.85, 780, 120, "255,236,190"], [114.2, 520, 210, "255,200,90"]]) {   // fireworks over the roof
+    for (const [ft, fx, fy, col] of [[123.57, 300, 170, "255,214,120"], [124.0, 780, 120, "255,236,190"], [124.35, 520, 210, "255,200,90"]]) {   // fireworks over the roof
       const k = (t - ft) / 1.1; if (k < 0 || k > 1) continue;
       g.globalCompositeOperation = "lighter";
       for (let i = 0; i < 36; i++) { const a = i / 36 * TAU, d = easeOut(k) * 190, x = fx + Math.cos(a) * d, y = fy + Math.sin(a) * d + k * k * 60; g.fillStyle = `rgba(${col},${(1 - k) * .9})`; g.fillRect(x - 2, y - 2, 4, 4); }
@@ -141,7 +141,8 @@ function crowdFan(g, f, t, era, near) {
 
 /* ---------- composition: stand, people (rim-lit), the man, weather in front ---------- */
 const figBuf = makeCanvas(W, H), fbg = figBuf.getContext("2d"), rimBuf = makeCanvas(W, H), rbg = rimBuf.getContext("2d");
-const fanCam = t => ({ s: 1 + .016 * (t - 104.6), sb: 1.012 + .006 * (t - 104.6), dx: Math.sin(t * .7) * 5, dy: Math.sin(t * .93 + 1) * 4 });
+const E0 = 111.0;   // the ending starts: one continuous push-in from here through the montage
+const fanCam = t => ({ s: 1 + .012 * (t - E0), sb: 1.02 + .005 * (t - E0), dx: Math.sin(t * .7) * 5, dy: Math.sin(t * .93 + 1) * 4 });
 function aroundAnchor(g, s, dx, dy, fn) { g.save(); g.translate(MAN_HAND[0] + dx, MAN_HAND[1] + dy); g.scale(s, s); g.translate(-MAN_HAND[0], -MAN_HAND[1]); fn(); g.restore(); }
 // people seen from behind against the light: a glow around them, a thin rim along their upper edges, shoulders a touch lifted
 function rimLayer(g, cam, glow, fn) {
@@ -203,9 +204,13 @@ function shotM23(g, t, lt) {
   g.save(); g.fillStyle = "rgba(255,232,170,0.95)"; g.shadowColor = "rgba(0,0,0,0.6)"; g.shadowBlur = 14;
   g.font = "700 96px Playfair"; g.fillText("2023", 90, 290); g.font = "600 44px NotoSerifSC"; g.letterSpacing = "10px"; g.fillText("★★★", 96, 360); g.restore();
 }
+function shotShield(g, t, lt) {   // in close on the away end, continuing Anfield2's push: a wall of bananas
+  const k = easeOut(prog(lt, 0, 4.1));
+  ANF.draw(g, t, { cam: { x: lerp(400, 470, k), y: lerp(-80, -72, k), s: lerp(1.5, 1.66, k) }, banner: 1, dof: .45, fg: .45 });
+}
 function shotHome(g, t, lt) {
   const k = easeOut(prog(lt, 0, 7.4));
   ANF.draw(g, t, { cam: { x: lerp(150, 40, k), y: lerp(-60, 10, k), s: lerp(1.3, 1.08, k) }, dof: .5, fg: .55 });
-  const d = smooth(prog(t, 117.2, 118.4));
+  const d = smooth(prog(t, 127.2, 128.4));
   if (d > 0) { const gr = g.createLinearGradient(0, 1150, 0, H); gr.addColorStop(0, "rgba(0,0,0,0)"); gr.addColorStop(1, `rgba(0,0,0,${.55 * d})`); g.fillStyle = gr; g.fillRect(0, 1150, W, H - 1150); }
 }

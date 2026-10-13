@@ -1,6 +1,6 @@
 "use strict";
 /* main.js — 一根香蕉的39年: shot list, cut-synced transitions, era looks, bilingual subtitles, frame assembly */
-const DURATION = 122;
+const DURATION = 130.5;
 const scene = makeCanvas(W, H), sg = scene.getContext("2d");
 const bufA = makeCanvas(W, H), ag = bufA.getContext("2d");
 const bufB = makeCanvas(W, H), bg = bufB.getContext("2d");
@@ -22,6 +22,8 @@ const LOOKS = {
   hdGold: look({ temp: .35, sat: 1.1, contrast: 1.2, bloom: .35, hal: .25, thresh: .55, vig: .6, grain: .035 }),
   memory: look({ temp: .45, sat: .9, contrast: .95, lift: [.04, .03, .02], bloom: .3, hal: .3, thresh: .5, vig: .65, grain: .05 }),
   verdict: look({ temp: -.35, sat: .25, contrast: 1.3, pivot: .4, bloom: .12, vig: .7, grain: .045 }),
+  // the trophies under a cold light: the same year, 115 charges
+  cold: look({ temp: -.32, sat: .5, contrast: 1.2, pivot: .42, bloom: .2, hal: .05, thresh: .6, vig: .65, grain: .04 }),
   // the ending: the same night at Anfield, but warmer and closer
   fans: look({ exposure: .06, temp: .06, sat: 1.0, contrast: 1.1, pivot: .42, split: 1, shT: [-.02, .01, .06], hiT: [.09, .05, -.02], bloom: .32, hal: .22, thresh: .55, vig: .6, grain: .04 }),
 };
@@ -46,16 +48,17 @@ const SHOTS = [
   { a: 60.8, b: 64.4, fn: "shotLadder", look: "dv" },
   { a: 64.4, b: 74.4, fn: "shotWembley", look: "broadcast" },
   { a: 74.4, b: 78.4, fn: "shotSkyline", look: "hd" },
-  { a: 78.4, b: 84.4, fn: "shotTrophies", look: "hdGold" },
-  { a: 84.4, b: 87.4, fn: "shotShoebox", look: "memory" },
-  { a: 87.4, b: 95.85, fn: "shotVerdict", look: t => withL(LOOKS.verdict, { fade: 1 - smooth(prog(t, 87.4, 88.0)) }) },
-  { a: 95.85, b: 104.6, fn: "shotAnfield2", look: "modern" },
-  { a: 104.6, b: 109.6, fn: "shotFans", look: "fans" },
-  { a: 109.6, b: 110.85, fn: "shotM87", look: "vhs" },
-  { a: 110.85, b: 112.1, fn: "shotM98", look: "dv" },
-  { a: 112.1, b: 113.35, fn: "shotM99", look: "broadcast" },
-  { a: 113.35, b: 114.6, fn: "shotM23", look: "hdGold" },
-  { a: 114.6, b: 122.0, fn: "shotHome", look: t => withL(LOOKS.fans, { exposure: LOOKS.fans.exposure - .22 * smooth(prog(t, 117.4, 118.6)) }) },
+  { a: 78.4, b: 86.4, fn: "shotTrophies", look: t => mixLook(LOOKS.hdGold, LOOKS.cold, smooth(prog(t, 82.3, 83.4))) },     // the gold goes cold: 115 charges
+  { a: 86.4, b: 91.0, fn: "shotShoebox", look: t => mixLook(LOOKS.memory, LOOKS.verdict, smooth(prog(t, 89.8, 90.9))) },   // the news drains the warmth
+  { a: 91.0, b: 98.5, fn: "shotVerdict", look: "verdict" },
+  { a: 98.5, b: 107.25, fn: "shotAnfield2", look: "modern" },
+  { a: 107.25, b: 111.0, fn: "shotShield", look: "modern" },
+  { a: 111.0, b: 119.75, fn: "shotFans", look: "fans" },
+  { a: 119.75, b: 121.0, fn: "shotM87", look: "vhs" },
+  { a: 121.0, b: 122.25, fn: "shotM98", look: "dv" },
+  { a: 122.25, b: 123.5, fn: "shotM99", look: "broadcast" },
+  { a: 123.5, b: 124.75, fn: "shotM23", look: "hdGold" },
+  { a: 124.75, b: 130.5, fn: "shotHome", look: t => withL(LOOKS.fans, { exposure: LOOKS.fans.exposure - .22 * smooth(prog(t, 127.5, 128.7)) }) },
 ];
 const lookOf = (s, t) => typeof s.look === "function" ? s.look(t) : LOOKS[s.look];
 const shotAt = t => SHOTS.find(s => t >= s.a && t < s.b) || SHOTS[SHOTS.length - 1];
@@ -80,12 +83,16 @@ const CUTS = [
   { t: 64.4, type: "wipe", pre: .28, post: .28 },                       // a 1999 TV graphics wipe
   { t: 74.4, type: "flash", pre: .12, post: .55, peak: 1 },             // camera flashes at Wembley
   { t: 78.4, type: "sweep", pre: .35, post: .35 },                      // a gold light sweep
-  { t: 84.4, type: "dissolve", pre: .5, post: .5 },                     // gold trophies dissolve into a shoebox
-  { t: 95.85, type: "flash", pre: .2, post: .5, peak: .8 },             // floodlights
-  { t: 104.6, type: "flare", pre: .3, post: .35 },                      // reverse angle behind two fans
-  { t: 109.6, type: "match", post: .2 }, { t: 110.85, type: "match", post: .2 },   // the same fan, 1987 → 2023
-  { t: 112.1, type: "match", post: .2 }, { t: 113.35, type: "match", post: .2 },
-  { t: 114.6, type: "flare", pre: .3, post: .35 },                      // back to the whole away end
+  { t: 86.4, type: "mix", pre: .6, post: .6, bloom: .08 },              // the cold trophies dissolve into a lamp over a shoebox
+  { t: 91.0, type: "mix", pre: .25, post: .4 },                         // pushed into the phone's notification: its "114 / 115" becomes the verdict's
+  { t: 98.5, type: "flash", pre: .1, post: .6, peak: .92 },             // the last page hits the lens; its white becomes the floodlights
+  { t: 107.25, type: "mix", pre: .35, post: .35 },                      // the camera keeps moving in on the bananas
+  { t: 111.0, type: "mix", pre: .7, post: .7, bloom: .35, white: .1, flare: 760 },   // a slow light dissolve in among the fans
+  { t: 119.75, type: "mix", pre: .4, post: .4, bloom: .15 },            // the same fan, 2026 → 1987 → 2023: match dissolves on his raised hand
+  { t: 121.0, type: "mix", pre: .22, post: .22, bloom: .12 },
+  { t: 122.25, type: "mix", pre: .22, post: .22, bloom: .12 },
+  { t: 123.5, type: "mix", pre: .22, post: .22, bloom: .12 },
+  { t: 124.75, type: "mix", pre: .35, post: .5, bloom: .4, white: .25 }, // fireworks bloom into the whole away end
 ];
 const cutLook = (A, B, t, c, w = .05) => mixLook(lookOf(A, t), lookOf(B, t), smooth(prog(t, c.t - w, c.t + w)));
 // average N copies of a moving pair of frames: cheap, correct motion blur
@@ -105,12 +112,6 @@ const TRANS = {
     else { drawShot(B, bg, t); const p = 1 + .05 * Math.exp(-d * 9); reset(sg); sg.fillStyle = "#000"; sg.fillRect(0, 0, W, H); sg.setTransform(p, 0, 0, p, 540 * (1 - p), 960 * (1 - p)); sg.drawImage(bufB, 0, 0); reset(sg); }
     const L = Object.assign({}, lookOf(s, t));
     L.flash = Math.max(L.flash, c.peak * (d < 0 ? Math.pow(prog(d, -c.pre, 0), 2) : Math.exp(-d * 8)));
-    return L;
-  },
-  match(c, A, B, t) {
-    drawShot(B, sg, t);
-    const d = t - c.t, L = Object.assign({}, lookOf(B, t));
-    L.flash = Math.max(L.flash, .2 * Math.exp(-d * 16)); L.exposure += .12 * Math.exp(-d * 10);
     return L;
   },
   vhsCut(c, A, B, t) {
@@ -191,20 +192,13 @@ const TRANS = {
     blit(sg, SPR.glowWarm, X, 960, 900, .35 * a);
     return mixLook(lookOf(A, t), lookOf(B, t), k);
   },
-  dissolve(c, A, B, t) {
-    const k = smooth(prog(t, c.t - c.pre, c.t + c.post));
+  mix(c, A, B, t) {   // a dissolve; optionally light blooms at its middle and a flare drifts across
+    const u = prog(t, c.t - c.pre, c.t + c.post), k = smooth(u), w = Math.sin(Math.PI * u);
     drawShot(A, sg, t); drawShot(B, bg, t);
     sg.globalAlpha = k; sg.drawImage(bufB, 0, 0); reset(sg);
-    return mixLook(lookOf(A, t), lookOf(B, t), k);
-  },
-  flare(c, A, B, t) {
-    const d = t - c.t, s = d < 0 ? A : B, k = prog(t, c.t - c.pre, c.t + c.post), a = Math.sin(Math.PI * k);
-    drawShot(s, sg, t);
-    const x = lerp(-260, W + 260, easeInOut(k)), y = 760;   // an anamorphic flare crosses the lens; the cut hides under its peak
-    blit(sg, SPR.glowCool, x, y, 1500, .5 * a); blit(sg, SPR.glowWhite, x, y, 320, .9 * a);
-    streak(sg, x, y, 1000, .85 * a); streak(sg, x, y + 5, 640, .5 * a, "rgba(255,220,180,");
-    for (const [f, sz, al] of [[.45, 90, .28], [-.3, 170, .2], [-.75, 70, .32]]) blit(sg, SPR.bokehCool, 540 + (x - 540) * f, 960 + (y - 960) * f, sz, al * a, "lighter");
-    const L = Object.assign({}, lookOf(s, t)); L.flash = Math.max(L.flash, .32 * Math.exp(-Math.abs(d) * 9));
+    if (c.flare) { const x = lerp(-150, W + 150, u); blit(sg, SPR.glowCool, x, c.flare, 1400, .35 * w); blit(sg, SPR.glowWhite, x, c.flare, 260, .6 * w); streak(sg, x, c.flare, 950, .55 * w); }
+    const L = mixLook(lookOf(A, t), lookOf(B, t), k);
+    L.exposure += (c.bloom || 0) * w; L.bloom += (c.bloom || 0) * .6 * w; L.flash = Math.max(L.flash, (c.white || 0) * w);
     return L;
   },
 };
@@ -231,16 +225,19 @@ const CUES = [
   { t0: 64.65, t1: 69.2, zh: ["1999年附加赛决赛，第89分钟", "曼城还0比2落后"], en: "1999 play-off final at Wembley: 89 minutes gone, City 2-0 down." },
   { t0: 69.45, t1: 74.25, zh: ["补时阶段扳平比分", "点球大战，他们赢了"], en: "Level in stoppage time. Then they won on penalties." },
   { t0: 74.55, t1: 78.3, zh: ["2008年，阿布扎比财团收购曼城", "冠军开始一座接一座"], en: "2008: Abu Dhabi buys the club. The trophies start arriving." },
-  { t0: 78.55, t1: 84.2, zh: ["2012年，44年来首个顶级联赛冠军", "2023年，三冠王"], en: "2012: first league title in 44 years. 2023: the treble." },
-  { t0: 84.6, t1: 87.05, zh: ["香蕉，成了老球迷鞋盒里的回忆"], en: "The bananas went into old fans' shoeboxes." },
-  { t0: 87.65, t1: 91.65, zh: ["2026年9月29日，独立委员会认定", "曼城在2009至2018年间违反财务规则"], en: "29 September 2026: an independent commission finds City broke financial rules from 2009 to 2018." },
-  { t0: 91.8, t1: 95.7, zh: ["115项指控中，114项成立", "处罚未定，曼城否认违规并已上诉"], en: "114 of 115 charges upheld. Sanctions pending; City deny wrongdoing and have appealed." },
-  { t0: 96.05, t1: 100.2, label: "球迷组织 1894", zh: ["于是，香蕉回来了。曼城3比0取胜", "“这群球迷，一直在坐过山车”"], en: "So the bananas came back, and City won 3-0. 1894: 'This fan base has always been on a rollercoaster.'" },
-  { t0: 100.35, t1: 104.35, zh: ["主队看台的横幅写着：", "“一代球迷被欺骗了”"], en: "The home end's banner: 'A generation of supporters cheated.'" },
-  { t0: 104.85, t1: 109.4, zh: ["账本上的对错，交给裁决", "举起香蕉的球迷，没有做错什么"], en: "Let the verdict judge the accounts. The fans holding bananas did nothing wrong." },
-  { t0: 109.75, t1: 112.0, zh: ["跌到第三级别时，他们在"], en: "When City fell to the third tier, they were there." },
-  { t0: 112.15, t1: 114.45, zh: ["站上欧洲之巅时，他们也在"], en: "When City stood on top of Europe, they were there too." },
-  { t0: 114.8, t1: 123, big: 1, zh: ["香蕉没变", "举香蕉的人，一直都在"], en: "The banana hasn't changed. The people holding it never left." },
+  { t0: 78.55, t1: 82.3, zh: ["2012年，44年来首个顶级联赛冠军", "2023年，三冠王"], en: "2012: first league title in 44 years. 2023: the treble." },
+  { t0: 82.5, t1: 86.2, zh: ["同一年，英超提出115项指控", "查的正是夺冠那些年的账"], en: "Same year: 115 Premier League charges, covering the years of those titles." },
+  { t0: 86.75, t1: 89.6, zh: ["官司打了三年多", "香蕉静静躺在老球迷的鞋盒里"], en: "The case ran for more than three years. The bananas lay in old fans' shoeboxes." },
+  { t0: 89.8, t1: 92.95, zh: ["2026年9月29日", "独立委员会作出裁决"], en: "29 September 2026: the independent commission rules." },
+  { t0: 93.15, t1: 97.6, zh: ["115项指控中，114项成立", "处罚未定，曼城否认违规并已上诉"], en: "114 of 115 charges upheld. Sanctions pending; City deny wrongdoing and have appealed." },
+  { t0: 98.7, t1: 102.85, label: "球迷组织 1894", zh: ["于是，香蕉回来了。曼城3比0取胜", "“这群球迷，一直在坐过山车”"], en: "So the bananas came back, and City won 3-0. 1894: 'This fan base has always been on a rollercoaster.'" },
+  { t0: 103.0, t1: 107.0, zh: ["主队看台的横幅写着：", "“一代球迷被欺骗了”"], en: "The home end's banner: 'A generation of supporters cheated.'" },
+  { t0: 107.45, t1: 110.8, zh: ["也有人说，这些香蕉", "成了俱乐部的挡箭牌"], en: "Others say the bananas have become the club's shield." },
+  { t0: 111.45, t1: 114.9, zh: ["可香蕉诞生的那年", "曼城一无所有，只有球迷"], en: "But when the banana was born, City had nothing but their fans." },
+  { t0: 115.1, t1: 119.55, zh: ["账本上的对错，交给裁决", "举起香蕉的球迷，没有做错什么"], en: "Let the verdict judge the accounts. The fans holding bananas did nothing wrong." },
+  { t0: 119.9, t1: 122.15, zh: ["跌到第三级别时，他们在"], en: "When City fell to the third tier, they were there." },
+  { t0: 122.3, t1: 124.6, zh: ["站上欧洲之巅时，他们也在"], en: "When City stood on top of Europe, they were there too." },
+  { t0: 124.95, t1: 132, big: 1, zh: ["香蕉没变", "举香蕉的人，一直都在"], en: "The banana hasn't changed. The people holding it never left." },
 ];
 const CREAM = "246,241,232", GOLD = "236,200,96";
 const isCJK = s => /[㐀-鿿]/.test(s);
@@ -269,13 +266,13 @@ function drawTitles(g, t) {
     line(g, "1987 — 2026", 540, 870, "600 40px Oswald", 14, CREAM, a * .85);
   });
   // full-time score at Anfield
-  a = smooth(prog(t, 96.85, 97.45)) * (1 - smooth(prog(t, 103.9, 104.35)));
+  a = smooth(prog(t, 99.5, 100.1)) * (1 - smooth(prog(t, 106.6, 107.05)));
   if (a > 0) {
     g.save(); g.globalAlpha = a; g.fillStyle = "rgba(12,16,24,0.85)"; g.fillRect(70, 186, 420, 64); g.fillStyle = "#f4f4f4"; g.font = "600 36px Oswald"; g.textBaseline = "middle";
     g.fillText("LIV  0 - 3  MCI", 92, 219); g.fillStyle = "#f5d33a"; g.fillText("FT", 420, 219); g.restore();
   }
   // end card, on the last chord
-  k = smooth(prog(t, 117.75, 118.55)); a = k;
+  k = smooth(prog(t, 127.9, 128.7)); a = k;
   textBlock(g, a, (1 - k) * 10, () => {
     line(g, "一根香蕉的39年", 540, 1400, "600 62px NotoSerifSC", 10, "255,226,120", a);
     line(g, "足球与城市 · 第三集", 540, 1470, "500 30px NotoSerifSC", 10, CREAM, a * .85);

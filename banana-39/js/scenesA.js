@@ -207,6 +207,6 @@ function shotAnfield(g, t, lt) {
 }
 function shotAnfield2(g, t, lt) {
   // drift, then lean in on the away end just before the reverse angle
-  const k = easeInOut(prog(lt, 0, 8.75)), push = easeIn(prog(lt, 7.5, 8.75));
-  ANF.draw(g, t, { cam: { x: lerp(-10, 30, k) + 130 * push, y: lerp(30, -10, k) - 40 * push, s: lerp(1.0, 1.1, k) + .14 * push }, banner: smooth(prog(lt, 4.5, 5.3)), dof: .6 });
+  const k = easeInOut(prog(lt, 0, 8.75)), push = easeIn(prog(lt, 7.5, 8.75));   // the push ends exactly where shotShield begins
+  ANF.draw(g, t, { cam: { x: lerp(-10, 30, k) + 370 * push, y: lerp(30, -10, k) - 70 * push, s: lerp(1.0, 1.1, k) + .4 * push }, banner: smooth(prog(lt, 4.5, 5.3)), dof: .6 });
 }

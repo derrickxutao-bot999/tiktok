@@ -152,30 +152,69 @@ function trophy(g, x, y, s, kind) {
   g.restore();
 }
 function shotTrophies(g, t, lt) {
+  // the same year as the treble, 115 charges: the gold light flickers and goes cold
+  const cold = smooth(prog(lt, 3.95, 5.0)), flick = lt > 3.9 && lt < 4.35 && Math.sin(lt * 95) > .3 ? .5 : 1, warm = (1 - cold) * flick;
   g.fillStyle = "#06080d"; g.fillRect(0, 0, W, H);
-  blit(g, SPR.glowWarm, 540, 1020, 1300, .35); beam(g, 540, -100, 540, 1300, 80, 520, "rgba(255,230,180,", .09);
-  [[300, 0, .3], [540, 1, .9], [780, 2, 1.5]].forEach(([x, kind, at]) => { const a = smooth(prog(lt, at, at + .7)); if (a <= 0) return; g.globalAlpha = a; trophy(g, x, 1250, 130, kind); blit(g, SPR.glowWarm, x, 1080, 340, .35 * a); g.globalAlpha = 1; });
-  const a1 = smooth(prog(lt, .2, .8)) * (1 - smooth(prog(lt, 2.6, 3.0))), a2 = smooth(prog(lt, 3.0, 3.5));
+  blit(g, SPR.glowWarm, 540, 1020, 1300, .35 * warm); blit(g, SPR.glowCool, 540, 1020, 1300, .22 * cold);
+  beam(g, 540, -100, 540, 1300, 80, 520, "rgba(255,230,180,", .09 * warm); beam(g, 540, -100, 540, 1300, 80, 520, "rgba(205,222,255,", .08 * cold);
+  [[300, 0, .3], [540, 1, .9], [780, 2, 1.5]].forEach(([x, kind, at]) => { const a = smooth(prog(lt, at, at + .7)); if (a <= 0) return; g.globalAlpha = a; trophy(g, x, 1250, 130, kind); blit(g, SPR.glowWarm, x, 1080, 340, .35 * a * warm); blit(g, SPR.glowCool, x, 1080, 300, .2 * a * cold); g.globalAlpha = 1; });
+  const a1 = smooth(prog(lt, .2, .8)) * (1 - smooth(prog(lt, 2.6, 3.0))), a2 = smooth(prog(lt, 3.0, 3.5)), a3 = smooth(prog(lt, 4.3, 5.0));
   g.save(); g.textAlign = "center"; g.fillStyle = `rgba(255,236,190,${a1})`; g.font = "600 170px Oswald"; g.fillText("93:20", 540, 620);
   g.font = "600 40px Oswald"; g.letterSpacing = "12px"; g.fillStyle = `rgba(255,236,190,${a1 * .7})`; g.fillText("2012", 546, 690); g.letterSpacing = "0px";
-  g.fillStyle = `rgba(255,236,190,${a2})`; g.font = "700 150px Playfair"; g.fillText("2023", 540, 600);
-  g.font = "600 70px NotoSerifSC"; g.fillText("★ ★ ★", 540, 720); g.restore();
+  g.fillStyle = `rgba(${lerp(255, 225, cold) | 0},${lerp(236, 230, cold) | 0},${lerp(190, 238, cold) | 0},${a2 * (1 - .35 * cold)})`; g.font = "700 150px Playfair"; g.fillText("2023", 540, 600);
+  g.font = "600 70px NotoSerifSC"; g.fillText("★ ★ ★", 540, 720);
+  g.fillStyle = `rgba(232,238,248,${a3})`; g.font = "700 150px Playfair"; g.fillText("115", 540, 925);
+  g.font = "600 32px Oswald"; g.letterSpacing = "14px"; g.fillStyle = `rgba(232,238,248,${a3 * .75})`; g.fillText("CHARGES", 547, 985); g.letterSpacing = "0px";
+  g.restore();
+}
+/* the shoebox; then a phone propped inside it lights up with the news, and the camera pushes into it */
+const PHONE = { x: 742, y: 958, w: 132, h: 262 };   // standing in the box against its back wall
+const PH_F = 26, PH_114 = [728, 980];               // "114" on the notification: font size, baseline centre
+const SHOE = { on: 2.8, push: 3.4, land: 4.6 };     // local times: the screen lights (89.2 s); the push lands on the verdict's "114" (91.0 s)
+function drawPhone(g, lt) {
+  const on = smooth(prog(lt, SHOE.on, SHOE.on + .12)), buzzing = (lt > SHOE.on && lt < SHOE.on + .3) || (lt > SHOE.on + .4 && lt < SHOE.on + .7);
+  const { x, y, w, h } = PHONE, sw = w - 10, sh = h - 12;
+  g.save(); g.translate(x + (buzzing ? Math.sin(lt * 260) * 2.2 : 0), y);
+  g.fillStyle = "#0b0c0f"; roundRect(g, -w / 2, -h / 2, w, h, 16); g.fill();
+  g.strokeStyle = "rgba(255,255,255,0.16)"; g.lineWidth = 1.5; roundRect(g, -w / 2 + 1, -h / 2 + 1, w - 2, h - 2, 15); g.stroke();
+  g.fillStyle = "#050608"; roundRect(g, -sw / 2, -sh / 2, sw, sh, 12); g.fill();
+  g.fillStyle = "rgba(255,220,170,0.07)"; g.beginPath(); g.moveTo(-sw / 2, -sh / 2 + 30); g.lineTo(sw / 2, -sh / 2 + 4); g.lineTo(sw / 2, -sh / 2 + 40); g.lineTo(-sw / 2, -sh / 2 + 70); g.fill();
+  if (on > 0) {
+    g.globalAlpha = on;
+    const sc = g.createLinearGradient(0, -sh / 2, 0, sh / 2); sc.addColorStop(0, "#22324f"); sc.addColorStop(1, "#0a0e1a");
+    g.fillStyle = sc; roundRect(g, -sw / 2, -sh / 2, sw, sh, 12); g.fill();
+    g.textAlign = "center"; g.fillStyle = "rgba(235,240,250,0.85)"; g.font = "600 9px Oswald"; g.fillText("TUESDAY 29 SEPTEMBER", 0, -sh / 2 + 30);
+    g.fillStyle = "rgba(20,24,34,0.95)"; roundRect(g, -sw / 2 + 5, -20, sw - 10, 76, 9); g.fill();
+    g.textAlign = "left"; g.fillStyle = "rgba(190,198,215,0.8)"; g.font = "600 7px Oswald"; g.fillText("NEWS · NOW", -sw / 2 + 12, -8);
+    g.textAlign = "center"; g.fillStyle = "rgb(240,242,245)"; g.font = `700 ${PH_F}px Playfair`; g.fillText("114", PH_114[0] - x, PH_114[1] - y);
+    g.fillStyle = "rgba(240,242,245,0.5)"; g.font = `700 ${PH_F * .3}px Playfair`; g.fillText("/115", PH_114[0] - x + PH_F * 1.1333, PH_114[1] - y);   // same layout as the verdict's "114 /115"
+    g.textAlign = "left"; g.fillStyle = "rgba(190,198,215,0.85)"; g.font = "600 6.5px Oswald"; g.fillText("CHARGES UPHELD · MAN CITY", -sw / 2 + 12, 46);
+    g.globalAlpha = 1;
+  }
+  g.restore();
+  return on;
 }
 function shotShoebox(g, t, lt) {
-  const lamp = lt < 2.75 ? 1 : 0;   // clicked off at 87.15 s, before the music box can play its last note
-  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#1b120b"); bg.addColorStop(1, "#0c0806"); g.fillStyle = bg; g.fillRect(0, 0, W, H);
-  if (lamp) beam(g, 980, 120, 420, 1500, 60, 380, "rgba(255,210,150,", .16);
-  const s = 1 + .03 * lt; g.save(); g.translate(540, 1150); g.scale(s, s); g.translate(-540, -1150);
+  const sb = 1 + .03 * Math.min(lt, SHOE.land);
+  const Zmax = 300 / (PH_F * (1 + .03 * SHOE.land)), Z = Math.exp(Math.log(Zmax) * easeInOut(prog(lt, SHOE.push, SHOE.land))), m = (Z - 1) / (Zmax - 1);
+  const P = [540 + (PH_114[0] - 540) * sb, 1150 + (PH_114[1] - 1150) * sb];
+  const on = smooth(prog(lt, SHOE.on, SHOE.on + .12)), dim = smooth(prog(lt, SHOE.on, SHOE.on + 1.2));
+  const cam = () => { g.translate(lerp(P[0], 520, m), lerp(P[1], 860, m)); g.scale(Z, Z); g.translate(-P[0], -P[1]); g.translate(540, 1150); g.scale(sb, sb); g.translate(-540, -1150); };
+  const bgr = g.createLinearGradient(0, 0, 0, H); bgr.addColorStop(0, "#1b120b"); bgr.addColorStop(1, "#0c0806"); g.fillStyle = bgr; g.fillRect(0, 0, W, H);
+  g.save(); cam();
+  beam(g, 980, 120, 420, 1500, 60, 380, "rgba(255,210,150,", .16 * (1 - .75 * dim));
   g.fillStyle = "#6e4f31"; g.beginPath(); g.moveTo(230, 1000); g.lineTo(850, 1000); g.lineTo(880, 1330); g.lineTo(200, 1330); g.fill();
+  drawPhone(g, lt);
   g.fillStyle = "#8a6743"; g.beginPath(); g.moveTo(200, 1330); g.lineTo(880, 1330); g.lineTo(880, 1420); g.lineTo(200, 1420); g.fill();
   g.fillStyle = "#1c1b1f"; g.save(); g.translate(430, 1120); g.rotate(-.12); g.fillRect(-150, -55, 300, 110); g.fillStyle = "#efe9da"; g.fillRect(-120, -40, 200, 46);
   g.fillStyle = "#2b2b2b"; g.font = "italic 500 34px Cormorant"; g.fillText("City '88", -105, -6); g.restore();
   g.save(); g.translate(690, 1160); g.rotate(.18); g.fillStyle = "#e9dcc0"; g.fillRect(-90, -45, 180, 90); g.fillStyle = "#3a2f22"; g.font = "600 20px Oswald"; g.fillText("BOXING DAY", -70, -8); g.fillText("1988", -70, 22); g.restore();
   drawBanana(g, 560, 1260, 420, -.06, { deflate: .85, sheen: .5 });
   g.restore();
-  if (!lamp) { g.fillStyle = "rgba(4,5,9,0.93)"; g.fillRect(0, 0, W, H); return; }
+  // the lamp loses to the screen: the room sinks, the phone stays lit and throws a cold light into the box
+  if (dim > 0) { g.fillStyle = `rgba(3,5,10,${.62 * dim})`; g.fillRect(0, 0, W, H); g.save(); cam(); drawPhone(g, lt); blit(g, SPR.glowCool, PHONE.x, PHONE.y, 560, .5 * on); g.restore(); }
   const r = rng(3); g.globalCompositeOperation = "lighter";
-  for (let i = 0; i < 70; i++) { const x = 400 + r() * 600 + Math.sin(t * .3 + i) * 20, y = 200 + ((r() * 1300 + t * 12) % 1300); g.globalAlpha = .2 + r() * .4; g.fillStyle = "#ffe2b0"; g.fillRect(x, y, 2.5, 2.5); }
+  for (let i = 0; i < 70; i++) { const x = 400 + r() * 600 + Math.sin(t * .3 + i) * 20, y = 200 + ((r() * 1300 + t * 12) % 1300); g.globalAlpha = (.2 + r() * .4) * (1 - dim); g.fillStyle = "#ffe2b0"; g.fillRect(x, y, 2.5, 2.5); }
   g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
 }
 
@@ -192,8 +231,15 @@ function shotVerdict(g, t, lt) {
   g.fillStyle = "#0b0e12"; g.fillRect(0, 0, W, H);
   blit(g, SPR.glowCool, 540, 700, 1400, .18);
   for (const p of PAGES.filter(p => p.z < 1)) page(g, p, ((p.y0 + lt * 180 * p.sp) % 2400) - 300);
-  const a = smooth(prog(lt, .8, 1.8));
-  g.save(); g.textAlign = "center"; g.fillStyle = `rgba(240,242,245,${a})`; g.font = "700 300px Playfair"; g.fillText("114", 520, 860);
-  g.font = "700 90px Playfair"; g.fillStyle = `rgba(240,242,245,${a * .5})`; g.fillText("/115", 860, 860); g.restore();
+  // already on screen: it arrives from the phone's notification
+  g.save(); g.textAlign = "center"; g.fillStyle = "rgb(240,242,245)"; g.font = "700 300px Playfair"; g.fillText("114", 520, 860);
+  g.font = "700 90px Playfair"; g.fillStyle = "rgba(240,242,245,0.5)"; g.fillText("/115", 860, 860); g.restore();
   g.filter = "blur(6px)"; g.globalAlpha = .85; for (const p of PAGES.filter(p => p.z >= 1)) page(g, p, ((p.y0 + lt * 260 * p.sp) % 2400) - 300); g.filter = "none"; g.globalAlpha = 1;
+  // the last page flies into the lens; its white becomes Anfield's floodlights
+  const f = prog(lt, 6.85, 7.5);
+  if (f > 0) {
+    g.save(); g.translate(lerp(640, 540, f), lerp(1320, 960, f)); g.rotate(lerp(.5, .05, f));
+    const s = Math.exp(lerp(Math.log(.5), Math.log(7.5), easeIn(f))); g.scale(s, s); page(g, { x: 0, z: 1, rot: 0, seed: 7 }, 0); g.restore();
+    g.fillStyle = `rgba(240,242,245,${.9 * smooth(prog(f, .55, 1))})`; g.fillRect(0, 0, W, H);
+  }
 }

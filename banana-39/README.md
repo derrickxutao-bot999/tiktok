@@ -1,6 +1,6 @@
 # 一根香蕉的39年 · 足球与城市 第三集
 
-**39 Years of a Banana.** A 122-second vertical film (1080×1920, 30 fps) for Douyin about Manchester City's inflatable bananas: from a joke in the club's worst years to the away end at Anfield in October 2026.
+**39 Years of a Banana.** A 130-second vertical film (1080×1920, 30 fps) for Douyin about Manchester City's inflatable bananas: from a joke in the club's worst years to the away end at Anfield in October 2026.
 
 Final video: `banana-39.mp4`
 
@@ -15,12 +15,13 @@ Why bananas? The answer goes back to the late 1980s.
 3. **The craze spread:** about 50 bananas at the last away game of 1987–88. The next season brought sharks, crocodiles, dinosaurs and Frankensteins. A banana producer stepped up production and a fruit company sponsored City games. Meanwhile Manchester's clubs were playing acid house.
 4. **Boxing Day 1988 at Stoke:** over 12,000 City fans came in fancy dress, and Stoke gave them two sides of the ground. The players ran out with inflatables. City lost.
 5. **The decline:** the inflatables faded with all-seater grounds. City fell to the third tier in 1998, then came back at Wembley in 1999 from 2-0 down at 89 minutes.
-6. **2008 onwards:** Abu Dhabi ownership, the 2012 title (the 93:20 goal) and the 2023 treble. The bananas became a memory.
-7. **29 September 2026:** the commission found that City broke the financial rules between 2009-10 and 2017-18. Sanctions are still to come, and City deny wrongdoing and have appealed. At Anfield the bananas came back.
+6. **2008 onwards:** Abu Dhabi ownership, the 2012 title (the 93:20 goal) and the 2023 treble.
+7. **6 February 2023, the year of the treble:** the Premier League brought 115 charges. The main ones concern the club's finances from 2009-10 to 2017-18, the seasons of City's first titles. The case ran for more than three years, and the bananas stayed in old fans' shoeboxes.
+8. **29 September 2026:** the commission upheld 114 of the 115 charges. Sanctions are still to come, and City deny wrongdoing and have appealed. At Anfield the bananas came back.
    - The supporters' group 1894 said: "this fan base has always been on a rollercoaster".
    - The home end's banner read: "a generation of supporters cheated".
 
-The film ends with a conclusion: the verdict is about the club's accounts, and the fans holding bananas did nothing wrong. In a match-cut montage, the same supporter stands in the same spot through the lows and the peaks:
+The film ends with an argument and a conclusion. Some say the bananas have become the club's shield. But the banana was born in 1987, when City had nothing but their fans. The verdict is about the club's accounts; the fans holding bananas did nothing wrong. In a montage of match dissolves, the same supporter stands in the same spot through the lows and the peaks:
 
 - a banana at Maine Road in 1987
 - a scarf in the rain in the third tier in 1998
@@ -34,6 +35,7 @@ The last line is *香蕉没变，举香蕉的人，一直都在*: the banana has
 
 - GJ Football Archive, [Bananarama – The Inflatables Craze](https://gjfootballarchive.com/2022/06/20/bananarama-the-inflatables-craze/): Newton, Plymouth, the chant, the 50 bananas, Fyffes, Stoke on Boxing Day, the players.
 - Yahoo Sports, [Why Man City fans have inflatable bananas at Anfield](https://sports.yahoo.com/articles/why-man-city-fans-inflatable-155348226.html): 11 October 2026, the 0-3 result, 1894, the banner, the appeal.
+- ESPN, [Man City vs. Premier League: 115 charges, what's at stake](https://global.espn.com/football/story/_/id/41279820/man-city-vs-premier-league-115-charges-whats-stake): the charges of 6 February 2023 and the seasons they cover.
 - CBS Sports, [Commission finds Manchester City guilty on 114 charges](https://www.cbssports.com/soccer/news/manchester-city-premier-league-commission-guilty-114-charges/): 29 September 2026, the seasons covered, sanctions to come.
 - Wikipedia, [1999 Football League Second Division play-off final](https://en.wikipedia.org/wiki/1999_Football_League_Second_Division_play-off_final).
 
@@ -48,9 +50,11 @@ The last line is *香蕉没变，举香蕉的人，一直都在*: the banana has
   - a strobe drops into Boxing Day, and the tape stops
   - the camera tilts down as City fall, then a 1999 TV graphic wipes to Wembley
   - photographers' flashes lead out of Wembley, then a gold light sweeps across
-  - the trophies dissolve into a shoebox, whose lamp clicks off
-  - floodlights flare between shots
-  - the closing montage is matched on one fan's raised hand
+  - under "2023 ★★★" the light flickers and goes cold as "115 CHARGES" appears: the honours and the charges share one frame
+  - the trophies dissolve into a shoebox; a phone in it lights up with the verdict, and the camera pushes into the notification until its "114 / 115" becomes the verdict's
+  - the last falling page flies into the lens, and its white becomes the floodlights at Anfield
+  - one continuous push takes the camera from the banner into the wall of bananas, then a slow light dissolve finds two fans in the away end
+  - the closing montage dissolves through the eras on one fan's raised hand
 - **Grading:** `js/grade.js` grades each frame in WebGL2. Each era has its own look:
   - **1987–88 camcorder:** scanline jitter, chroma smear, tracking band, head-switch noise, on-screen date.
   - **1990s DV:** cold tones and interlace.
@@ -71,9 +75,12 @@ The last line is *香蕉没变，举香蕉的人，一直都在*: the banana has
   - The groove closes into a low-pass filter as the camera dives into the banana, and opens up again in the club.
   - The tape stops when the 1980s end.
   - Timpani land when City drop a division.
-  - The music box slows down, and the lamp clicks off before it can play its last note.
-  - A ticking clock speeds up into the tempo of Anfield.
-  - A deceptive cadence opens the montage of the lows. Each era's crowd sound plays only while its shot is on screen.
+  - When the trophies go cold, the treble's fanfare breaks off mid-phrase, a high semitone rub resolves onto the A that the shoebox's F major keeps, and a clock starts ticking; it returns under the verdict.
+  - The music box slows down, and the phone's buzz stops it before its last note.
+  - A rising push lands on "114" with a low boom, and the clock speeds up into the tempo of Anfield.
+  - Under "the club's shield" the beat stops on a held D minor; a high violin A, common to D minor and F major, carries the change of key into the fans' scene.
+  - When the film remembers where the banana was born, the lonely 1987 piano version of the motif returns; the major version answers it.
+  - A deceptive cadence opens the montage of the lows. Each era's crowd sound fades in and out with its own dissolve.
   - The motif finally resolves under the end card, and the music box's missing note is played by everyone.
 
   The instruments are real recordings from the [University of Iowa Musical Instrument Samples](https://theremin.music.uiowa.edu/MIS.html), which are free for any use.

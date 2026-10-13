@@ -239,3 +239,19 @@ def pop(vel=1.0):
     t = tt(.5)
     f = 40 + 90 * np.exp(-t * 40)
     return (np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t * 14) + band(noise(.5), 500, 6000) * np.exp(-t * 30) * .5) * vel * .5
+
+
+def buzz(d=.3, vel=1.0):
+    """a phone vibrating against cardboard"""
+    t = tt(d)
+    motor = np.sin(2 * np.pi * 165 * t) + .45 * np.sin(2 * np.pi * 330 * t + 1) + .2 * np.sin(2 * np.pi * 495 * t)
+    rattle = band(noise(d), 1800, 6000) * (np.sin(2 * np.pi * 165 * t) > .6)
+    env = np.clip(t / .015, 0, 1) * np.clip((d - t) / .03, 0, 1)
+    return (motor * .6 + rattle * .5) * env * vel * .25
+
+
+def flutter(d=.6, vel=1.0):
+    """a sheet of paper flying past the lens"""
+    t = tt(d)
+    x = band(noise(d), 700, 7000) * (.55 + .45 * np.sign(np.sin(2 * np.pi * (18 + 30 * t / d) * t)))
+    return x * (t / d) ** 2.2 * vel * .5
