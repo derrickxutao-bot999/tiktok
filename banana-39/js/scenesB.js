@@ -9,7 +9,7 @@ const CRAZE = (() => {
   let L = null;
   function build() {
     L = {};
-    const c = makeCanvas(W + 400, H + 200), g = c.getContext("2d"); g.translate(200, 0);
+    const c = makeLayer(W + 400, H + 200), g = c.getContext("2d"); g.translate(200, 0);
     const sky = g.createLinearGradient(0, 0, 0, 600); sky.addColorStop(0, "#7fa6c4"); sky.addColorStop(1, "#cfdbe2"); g.fillStyle = sky; g.fillRect(-200, 0, W + 400, 620);
     blit(g, SPR.glowWarm, 900, 160, 700, .45);
     g.fillStyle = "#8a8b86"; g.fillRect(-200, 560, W + 400, 800);
@@ -19,7 +19,7 @@ const CRAZE = (() => {
     g.fillStyle = "#666b6a"; g.fillRect(-200, 1340, W + 400, 40);
     const p = g.createLinearGradient(0, 1380, 0, H + 200); p.addColorStop(0, "#6f9a4e"); p.addColorStop(1, "#4b7535"); g.fillStyle = p; g.fillRect(-200, 1380, W + 400, H);
     L.bg = c;
-    const z = makeCanvas(W + 400, H + 200), zg = z.getContext("2d"); zg.translate(200, 0);
+    const z = makeLayer(W + 400, H + 200), zg = z.getContext("2d"); zg.translate(200, 0);
     zg.fillStyle = sky; zg.fillRect(-200, 0, W + 400, 620); zg.fillStyle = "#8a8b86"; zg.fillRect(-200, 560, W + 400, 800);
     const cz = crowdLayer(53, Array.from({ length: 12 }, (_, i) => ({ y: 640 + i * 60, s: 16 + i * 2.6 })), { jackets: BRIGHT, scarves: .3, hats: .3 });
     zg.drawImage(cz.c, -200, 0); zg.fillStyle = p; zg.fillRect(-200, 1380, W + 400, H);
@@ -104,7 +104,7 @@ const STOKE = (() => {
   const items = [];
   function build() {
     L = {};
-    const c = makeCanvas(W + 600, H + 300), g = c.getContext("2d"); g.translate(300, 0);
+    const c = makeLayer(W + 600, H + 300), g = c.getContext("2d"); g.translate(300, 0);
     const sky = g.createLinearGradient(0, 0, 0, 640); sky.addColorStop(0, "#7c868d"); sky.addColorStop(1, "#b6bab5"); g.fillStyle = sky; g.fillRect(-300, 0, W + 600, 660);
     for (const px of [-160, 1240]) {
       g.strokeStyle = "#3a3d40"; g.lineWidth = 4; g.beginPath(); g.moveTo(px - 26, 640); g.lineTo(px - 8, 180); g.moveTo(px + 26, 640); g.lineTo(px + 8, 180); g.stroke();

@@ -4,7 +4,7 @@
 
 /* ---------- the stand across the pitch, one per era ---------- */
 function buildStand(o) {
-  const c = makeCanvas(W, H), g = c.getContext("2d"), r = rng(o.seed), ry = o.roofY;
+  const c = makeLayer(W, H), g = c.getContext("2d"), r = rng(o.seed), ry = o.roofY;
   const sky = g.createLinearGradient(0, 0, 0, ry + 40); o.sky.forEach((col, i) => sky.addColorStop(i / (o.sky.length - 1), col));
   g.fillStyle = sky; g.fillRect(0, 0, W, ry + 60);
   if (o.towers) for (const tx of [395, 690]) {   // Wembley's twin towers above the far roof
@@ -141,6 +141,7 @@ function crowdFan(g, f, t, era, near) {
 
 /* ---------- composition: stand, people (rim-lit), the man, weather in front ---------- */
 const figBuf = makeCanvas(W, H), fbg = figBuf.getContext("2d"), rimBuf = makeCanvas(W, H), rbg = rimBuf.getContext("2d");
+fbg.imageSmoothingQuality = rbg.imageSmoothingQuality = "high";
 const E0 = 111.0;   // the ending starts: one continuous push-in from here through the montage
 const fanCam = t => ({ s: 1 + .012 * (t - E0), sb: 1.02 + .005 * (t - E0), dx: Math.sin(t * .7) * 5, dy: Math.sin(t * .93 + 1) * 4 });
 function aroundAnchor(g, s, dx, dy, fn) { g.save(); g.translate(MAN_HAND[0] + dx, MAN_HAND[1] + dy); g.scale(s, s); g.translate(-MAN_HAND[0], -MAN_HAND[1]); fn(); g.restore(); }

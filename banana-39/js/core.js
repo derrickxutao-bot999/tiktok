@@ -24,7 +24,25 @@ const rgba = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
 const mixHex = (a, b, k, al = 1) => { const x = hexRGB(a), y = hexRGB(b); return rgba([lerp(x[0], y[0], k), lerp(x[1], y[1], k), lerp(x[2], y[2], k)], al); };
 
 /* ---------- canvases & sprites ---------- */
-function makeCanvas(w, h) { const c = document.createElement("canvas"); c.width = Math.ceil(w); c.height = Math.ceil(h); return c; }
+function makeCanvas(w, h, ss = 1) {
+  const c = document.createElement("canvas"); c.width = Math.ceil(w * ss); c.height = Math.ceil(h * ss);
+  if (ss !== 1) { c.__ss = ss; c.getContext("2d").scale(ss, ss); }
+  return c;
+}
+// Pre-rendered layers (crowds, stands, streets) are built at LAYER_SS x resolution so that camera zooms stay sharp.
+// They are drawn in logical units: drawImage(layer, x, y) draws it at its logical size, and source rectangles are logical too.
+const LAYER_SS = 2;
+const makeLayer = (w, h) => makeCanvas(w, h, LAYER_SS);
+(() => {
+  const di = CanvasRenderingContext2D.prototype.drawImage;
+  CanvasRenderingContext2D.prototype.drawImage = function (img, ...a) {
+    const s = img && img.__ss;
+    if (!s) return di.call(this, img, ...a);
+    if (a.length === 2) return di.call(this, img, a[0], a[1], img.width / s, img.height / s);
+    if (a.length === 8) return di.call(this, img, a[0] * s, a[1] * s, a[2] * s, a[3] * s, a[4], a[5], a[6], a[7]);
+    return di.call(this, img, ...a);
+  };
+})();
 function radialSprite(size, stops) {
   const c = makeCanvas(size, size), g = c.getContext("2d"), r = size / 2;
   const gr = g.createRadialGradient(r, r, 0, r, r, r);

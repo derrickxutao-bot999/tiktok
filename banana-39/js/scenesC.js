@@ -2,10 +2,10 @@
 /* scenesC.js — the fade, the fall, Wembley 1999, the money, a shoebox, the verdict */
 
 /* ---------- the tape stops; empty seats; a deflated banana in the rain ---------- */
-const tapeBuf = makeCanvas(W, H), tbg = tapeBuf.getContext("2d");
+const tapeBuf = makeCanvas(W, H), tbg = tapeBuf.getContext("2d"); tbg.imageSmoothingQuality = "high";
 const SEATS = (() => { let c = null; return () => {
   if (c) return c;
-  c = makeCanvas(W + 200, H); const g = c.getContext("2d"); g.translate(100, 0);
+  c = makeLayer(W + 200, H); const g = c.getContext("2d"); g.translate(100, 0);
   g.fillStyle = "#26303a"; g.fillRect(-100, 0, W + 200, H);
   for (let row = 0; row < 11; row++) {
     const k = row / 10, y = 260 + Math.pow(k, 1.6) * 1250, s = lerp(34, 150, Math.pow(k, 1.5)), step = s * 1.25;
@@ -63,7 +63,7 @@ const WEM = (() => {
   let L = null;
   function build() {
     L = {};
-    const c = makeCanvas(W + 400, H + 200), g = c.getContext("2d"); g.translate(200, 0);
+    const c = makeLayer(W + 400, H + 200), g = c.getContext("2d"); g.translate(200, 0);
     const sky = g.createLinearGradient(0, 0, 0, 700); sky.addColorStop(0, "#9fb6c9"); sky.addColorStop(1, "#e3e4dc"); g.fillStyle = sky; g.fillRect(-200, 0, W + 400, 720);
     for (const tx of [380, 700]) {
       g.fillStyle = "#f1efe8"; g.fillRect(tx - 40, 300, 80, 330); g.beginPath(); g.arc(tx, 300, 40, Math.PI, TAU); g.fill();
@@ -116,7 +116,7 @@ const SKY08 = (() => {
   let L = null;
   function build() {
     L = {};
-    const c = makeCanvas(W + 300, H), g = c.getContext("2d"), r = rng(8); g.translate(150, 0);
+    const c = makeLayer(W + 300, H), g = c.getContext("2d"), r = rng(8); g.translate(150, 0);
     const sky = g.createLinearGradient(0, 0, 0, 1300); sky.addColorStop(0, "#050b1a"); sky.addColorStop(.6, "#13305a"); sky.addColorStop(1, "#2f6c9c"); g.fillStyle = sky; g.fillRect(-150, 0, W + 300, H);
     const tw = (x, w, h, col) => { g.fillStyle = col; g.fillRect(x, 1320 - h, w, h + 600); for (let y = 1320 - h + 14; y < 1320; y += 22) for (let xx = x + 6; xx < x + w - 8; xx += 14) if (r() < .45) { g.fillStyle = r() < .2 ? "#9fd3ff" : "#f2c46a"; g.globalAlpha = .55 + r() * .4; g.fillRect(xx, y, 7, 10); g.globalAlpha = 1; } };
     for (let x = -150; x < W + 150; x += 70 + r() * 60) tw(x, 60 + r() * 70, 160 + r() * 240, "#0b1424");

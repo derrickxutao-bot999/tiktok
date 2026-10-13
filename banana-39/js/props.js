@@ -98,7 +98,7 @@ const JACKETS = ["#2b3a55", "#3d3d42", "#5a4a3a", "#3e5a74", "#6b2f35", "#2f4a3a
 const SKIN = ["#e2b896", "#c99475", "#a8775a", "#d9a985", "#8a5c42"];
 // rows: [{y, s}] -> pre-rendered canvas of people facing the camera, and the hand points above their heads
 function crowdLayer(seed, rows, o = {}) {
-  const c = makeCanvas(W + 400, H + 200), g = c.getContext("2d"), r = rng(seed), heads = [];
+  const c = makeLayer(W + 400, H + 200), g = c.getContext("2d"), r = rng(seed), heads = [];
   g.translate(200, 0);
   for (const row of rows) {
     for (let x = -180 + r() * row.s; x < W + 180; x += row.s * (1.5 + r() * .9)) {

@@ -17,7 +17,7 @@ const ANF = (() => {
   const bananas = (() => { const r = rng(2026), out = []; for (let i = 0; i < 150; i++) { const k = r(); out.push({ x: -40 + r() * 690, y: 905 + k * 330, s: (30 + k * 44) * (.85 + r() * .3), ph: r() * TAU, on: Math.pow(r(), .7) * 3.4, tilt: (r() - .5) * 1.0, k }); } return out.sort((a, b) => a.y - b.y); })();
   function build() {
     L = {};
-    const c = makeCanvas(W + 400, H + 200), g = c.getContext("2d"); g.translate(200, 0);
+    const c = makeLayer(W + 400, H + 200), g = c.getContext("2d"); g.translate(200, 0);
     const sky = g.createLinearGradient(0, 0, 0, 520); sky.addColorStop(0, "#08111b"); sky.addColorStop(.6, "#16273a"); sky.addColorStop(1, "#33445a");
     g.fillStyle = sky; g.fillRect(-200, 0, W + 400, 540);
     g.fillStyle = "#0a0e13"; g.beginPath(); g.moveTo(-200, 300); g.lineTo(W + 200, 270); g.lineTo(W + 200, 420); g.lineTo(-200, 452); g.fill();
@@ -39,8 +39,8 @@ const ANF = (() => {
     for (let y = 1302, i = 0; y < H + 200; i++) { const h = 30 * Math.pow(1.25, i); g.fillStyle = i % 2 ? "#2d6b39" : "#275f33"; g.fillRect(-200, y, W + 400, h + 1); y += h; }
     L.bg = c;
     // shallow depth of field: a softened copy of the upper tier, and two out-of-focus foreground bananas
-    L.top = makeCanvas(W + 400, 890); const tg = L.top.getContext("2d"); tg.filter = "blur(3px)"; tg.drawImage(c, 0, 0);
-    L.fg = makeCanvas(700, 420); const fg = L.fg.getContext("2d"); fg.filter = "blur(14px)"; drawBanana(fg, 350, 210, 560, -.25);
+    L.top = makeLayer(W + 400, 890); const tg = L.top.getContext("2d"); tg.filter = `blur(${3 * LAYER_SS}px)`; tg.drawImage(c, 0, 0);
+    L.fg = makeLayer(700, 420); const fg = L.fg.getContext("2d"); fg.filter = `blur(${14 * LAYER_SS}px)`; drawBanana(fg, 350, 210, 560, -.25);
   }
   function draw(g, t, o) {
     if (!L) build();
@@ -103,7 +103,7 @@ const CITY87 = (() => {
   let L = null;
   function build() {
     L = {};
-    const c = makeCanvas(W + 400, H), g = c.getContext("2d"), r = rng(87); g.translate(200, 0);
+    const c = makeLayer(W + 400, H), g = c.getContext("2d"), r = rng(87); g.translate(200, 0);
     const sky = g.createLinearGradient(0, 0, 0, 900); sky.addColorStop(0, "#8d969b"); sky.addColorStop(1, "#b9bdb9"); g.fillStyle = sky; g.fillRect(-200, 0, W + 400, 1000);
     g.fillStyle = "#6e5a50"; g.fillRect(560, 430, 520, 420); g.fillRect(-200, 520, 420, 330);
     for (let y = 450; y < 840; y += 46) for (let x = 580; x < 1060; x += 40) { g.fillStyle = r() < .15 ? "#2a2a2a" : "#4a4f55"; g.fillRect(x, y, 24, 30); }
@@ -164,7 +164,7 @@ const MAINE = (() => {
   let L = null;
   function build() {
     L = {};
-    const c = makeCanvas(W + 400, H + 200), g = c.getContext("2d"); g.translate(200, 0);
+    const c = makeLayer(W + 400, H + 200), g = c.getContext("2d"); g.translate(200, 0);
     const sky = g.createLinearGradient(0, 0, 0, 620); sky.addColorStop(0, "#a7aeb2"); sky.addColorStop(1, "#d3d5cf"); g.fillStyle = sky; g.fillRect(-200, 0, W + 400, 640);
     g.fillStyle = "#3d4248"; g.fillRect(-200, 500, W + 400, 26); g.fillStyle = "#23272c"; g.fillRect(-200, 526, W + 400, 70);
     for (let x = -160; x < W + 200; x += 210) { g.fillStyle = "#1b1e22"; g.fillRect(x, 526, 10, 90); }

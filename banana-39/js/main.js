@@ -62,7 +62,7 @@ const SHOTS = [
 ];
 const lookOf = (s, t) => typeof s.look === "function" ? s.look(t) : LOOKS[s.look];
 const shotAt = t => SHOTS.find(s => t >= s.a && t < s.b) || SHOTS[SHOTS.length - 1];
-function reset(g) { g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; g.filter = "none"; }
+function reset(g) { g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; g.filter = "none"; g.imageSmoothingQuality = "high"; }
 function drawShot(s, g, t) {
   reset(g); g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
   const fn = window[s.fn];
@@ -261,7 +261,7 @@ function drawTitles(g, t) {
   // title over the rewind
   let k = smooth(prog(t, 10.55, 11.05)), a = k * (1 - smooth(prog(t, 12.0, 12.45)));
   textBlock(g, a, (1 - k) * 12, () => {
-    line(g, "足球与城市 · 第三集", 540, 640, "500 30px NotoSerifSC", 10, CREAM, a * .8);
+    line(g, "足球与城市 · 第一集", 540, 640, "500 30px NotoSerifSC", 10, CREAM, a * .8);
     line(g, "一根香蕉的39年", 540, 780, "600 100px NotoSerifSC", 12, "255,226,120", a);
     line(g, "1987 — 2026", 540, 870, "600 40px Oswald", 14, CREAM, a * .85);
   });
@@ -275,7 +275,7 @@ function drawTitles(g, t) {
   k = smooth(prog(t, 127.9, 128.7)); a = k;
   textBlock(g, a, (1 - k) * 10, () => {
     line(g, "一根香蕉的39年", 540, 1400, "600 62px NotoSerifSC", 10, "255,226,120", a);
-    line(g, "足球与城市 · 第三集", 540, 1470, "500 30px NotoSerifSC", 10, CREAM, a * .85);
+    line(g, "足球与城市 · 第一集", 540, 1470, "500 30px NotoSerifSC", 10, CREAM, a * .85);
   });
 }
 
@@ -297,6 +297,7 @@ function renderFrame(t) {
   for (const q of CUES) if (t > q.t0 - .05 && t < q.t1 + .05) drawCue(og, q, t);
   drawTitles(og, t);
   L.fade = Math.max(L.fade, 1 - smooth(prog(t, 0, .5)), smooth(prog(t, DURATION - 1.3, DURATION - .05)));
+  L.grain *= .65;   // lighter grain: it survives the platform's re-encode as mush, and costs bitrate
   Grade.render(scene, overlay, L, frame);
 }
 
