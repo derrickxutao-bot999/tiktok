@@ -1,5 +1,5 @@
 "use strict";
-/* scenesC.js — the fade, the fall, Wembley 1999, the money, a shoebox, the verdict, the last banana */
+/* scenesC.js — the fade, the fall, Wembley 1999, the money, a shoebox, the verdict */
 
 /* ---------- the tape stops; empty seats; a deflated banana in the rain ---------- */
 const tapeBuf = makeCanvas(W, H), tbg = tapeBuf.getContext("2d");
@@ -20,15 +20,16 @@ const SEATS = (() => { let c = null; return () => {
   return c;
 }; })();
 function shotFade(g, t, lt) {
-  if (lt < .9) {
-    tbg.setTransform(1, 0, 0, 1, 0, 0); STOKE.draw(tbg, t, 11 + lt);
-    const k = easeIn(lt / .9);
+  if (lt < .725) {   // the tape stops: the 1988 picture collapses into a line (the score winds down with it)
+    tbg.setTransform(1, 0, 0, 1, 0, 0); STOKE.draw(tbg, t, 10.875 + lt);
+    const k = easeIn(lt / .725);
     g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
     g.drawImage(tapeBuf, 0, H / 2 - H * (1 - k) / 2 + k * 40, W, Math.max(2, H * (1 - k)));
     g.fillStyle = `rgba(255,255,255,${k * .6})`; g.fillRect(0, H / 2 - 2, W, 4);
     return;
   }
-  const s = 1 + .04 * (lt - .9);
+  if (lt < .825) return;
+  const s = 1 + .04 * (lt - .825);
   g.save(); g.translate(540, 1300); g.scale(s, s); g.translate(-540, -1300);
   g.drawImage(SEATS(), -100, 0);
   drawBanana(g, 560, 1585, 520, .08, { deflate: .8, sheen: .35 });
@@ -48,7 +49,7 @@ function shotLadder(g, t, lt) {
     g.fillStyle = "rgba(240,240,240,0.92)"; g.font = "500 40px NotoSerifSC"; g.fillText(zh, 200, y + 70);
     g.fillStyle = "rgba(240,240,240,0.55)"; g.font = "600 26px Oswald"; g.letterSpacing = "4px"; g.fillText(en, 200, y + 112); g.letterSpacing = "0px";
   });
-  const d1 = easeOutBounce(prog(lt, .4, 1.2)), d2 = easeOutBounce(prog(lt, 1.6, 2.5));
+  const d1 = easeOutBounce(prog(lt, .91, 1.71)), d2 = easeOutBounce(prog(lt, 2.11, 2.91));   // first impacts on the score's timpani: 62.0 s and 63.2 s
   const y = 635 + d1 * 230 + d2 * 230;
   g.fillStyle = "#79b8e4"; g.beginPath(); g.arc(800, y, 46, 0, TAU); g.fill();
   g.fillStyle = "#0d1622"; g.font = "600 24px Oswald"; g.textAlign = "center"; g.fillText("CITY", 800, y + 9); g.textAlign = "left";
@@ -86,25 +87,27 @@ const WEM = (() => {
   }
   function draw(g, t, lt) {
     if (!L) build();
-    const boom = smooth(prog(lt, 4.7, 5.1)), s = 1.02 + .03 * lt + boom * .04 * Math.exp(-(lt - 4.9) * 3) * (lt > 4.7 ? 1 : 0);
+    const boom = smooth(prog(lt, 4.9, 5.3)), s = 1.02 + .03 * lt + boom * .04 * Math.exp(-(lt - 5.1) * 3) * (lt > 4.9 ? 1 : 0);
     g.save(); g.translate(540, 1150); g.scale(s, s); g.translate(-540, -1150);
     g.drawImage(L.bg, -200, 0);
-    const joy = lt > 4.7 ? 1 : (lt > 1.8 && lt < 3 ? .35 : 0);
+    const joy = lt > 4.95 ? 1 : (lt > 1.95 && lt < 3.1 ? .35 : 0);
     for (const h of L.heads) if (h.k < joy * .8) arm(g, h.x, h.y - Math.abs(Math.sin(t * 7 + h.ph)) * 6, h.s, h.k < .4 ? 1 : -1, 2.0 + .4 * Math.sin(t * 9 + h.ph), "#22324a");
-    if (lt > 6.8 && lt < 8.4) {
-      const k = easeOut(prog(lt, 6.8, 7.4));
+    if (lt > 7.5 && lt < 8.9) {
+      const k = easeOut(prog(lt, 7.55, 8.05));
       g.save(); g.translate(lerp(380, 640, k), 1700 - Math.sin(k * Math.PI) * 120); g.rotate(-1.25 * k);
       figure(g, 0, 0, 380, { pose: "cheer", hat: false, col: "#111418" }); g.restore();
       g.fillStyle = "#f6f6f6"; g.beginPath(); g.arc(lerp(900, 760, k), lerp(1500, 1560, k), 22, 0, TAU); g.fill();
     }
+    // after the shoot-out the photographers' flashes start popping (they become the flash cut)
+    if (lt > 8.2) { const r = rng(Math.round(t * 30)); for (let i = 0; i < 10; i++) if (r() < .3 + .5 * prog(lt, 8.2, 10)) blit(g, SPR.glowWhite, r() * W, 760 + r() * 600, 30 + r() * 50, .95); }
     g.restore();
-    if (lt > 4.8 && lt < 6.2) { g.fillStyle = `rgba(255,255,255,${.5 * Math.exp(-(lt - 4.8) * 4)})`; g.fillRect(0, 0, W, H); }
-    const sec = lt < 1.8 ? lerp(88 * 60 + 41, 89 * 60 + 2, lt / 1.8) : lt < 4.4 ? lerp(89 * 60 + 2, 90 * 60, (lt - 1.8) / 2.6) : 90 * 60;
+    if (lt > 5.0 && lt < 6.4) { g.fillStyle = `rgba(255,255,255,${.5 * Math.exp(-(lt - 5.0) * 4)})`; g.fillRect(0, 0, W, H); }
+    const sec = lt < 2.0 ? lerp(88 * 60 + 41, 89 * 60 + 5, lt / 2.0) : lt < 4.6 ? lerp(89 * 60 + 5, 90 * 60, (lt - 2.0) / 2.6) : 90 * 60;
     const mm = Math.floor(sec / 60), ss = Math.floor(sec % 60), clock = `${mm}:${String(ss).padStart(2, "0")}`;
-    if (lt < 6.4) bug(g, 2, lt > 1.9 ? (lt > 4.8 ? 2 : 1) : 0, clock, lt > 3.6 ? "+5" : null);
-    else bug(g, 2, 2, "FT", lt > 7.0 ? "PENS 1-3" : "PENS");
+    if (lt < 6.5) bug(g, 2, lt > 2.0 ? (lt > 5.0 ? 2 : 1) : 0, clock, lt > 3.6 ? "+5" : null);
+    else bug(g, 2, 2, "FT", lt > 8.1 ? "PENS 1-3" : "PENS");
   }
-  return { draw };
+  return { draw, bug };
 })();
 function shotWembley(g, t, lt) { WEM.draw(g, t, lt); }
 
@@ -152,15 +155,16 @@ function shotTrophies(g, t, lt) {
   g.fillStyle = "#06080d"; g.fillRect(0, 0, W, H);
   blit(g, SPR.glowWarm, 540, 1020, 1300, .35); beam(g, 540, -100, 540, 1300, 80, 520, "rgba(255,230,180,", .09);
   [[300, 0, .3], [540, 1, .9], [780, 2, 1.5]].forEach(([x, kind, at]) => { const a = smooth(prog(lt, at, at + .7)); if (a <= 0) return; g.globalAlpha = a; trophy(g, x, 1250, 130, kind); blit(g, SPR.glowWarm, x, 1080, 340, .35 * a); g.globalAlpha = 1; });
-  const a1 = smooth(prog(lt, .2, .8)) * (1 - smooth(prog(lt, 2.4, 2.8))), a2 = smooth(prog(lt, 2.8, 3.4));
+  const a1 = smooth(prog(lt, .2, .8)) * (1 - smooth(prog(lt, 2.6, 3.0))), a2 = smooth(prog(lt, 3.0, 3.5));
   g.save(); g.textAlign = "center"; g.fillStyle = `rgba(255,236,190,${a1})`; g.font = "600 170px Oswald"; g.fillText("93:20", 540, 620);
   g.font = "600 40px Oswald"; g.letterSpacing = "12px"; g.fillStyle = `rgba(255,236,190,${a1 * .7})`; g.fillText("2012", 546, 690); g.letterSpacing = "0px";
   g.fillStyle = `rgba(255,236,190,${a2})`; g.font = "700 150px Playfair"; g.fillText("2023", 540, 600);
   g.font = "600 70px NotoSerifSC"; g.fillText("★ ★ ★", 540, 720); g.restore();
 }
 function shotShoebox(g, t, lt) {
+  const lamp = lt < 2.75 ? 1 : 0;   // clicked off at 87.15 s, before the music box can play its last note
   const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#1b120b"); bg.addColorStop(1, "#0c0806"); g.fillStyle = bg; g.fillRect(0, 0, W, H);
-  beam(g, 980, 120, 420, 1500, 60, 380, "rgba(255,210,150,", .16);
+  if (lamp) beam(g, 980, 120, 420, 1500, 60, 380, "rgba(255,210,150,", .16);
   const s = 1 + .03 * lt; g.save(); g.translate(540, 1150); g.scale(s, s); g.translate(-540, -1150);
   g.fillStyle = "#6e4f31"; g.beginPath(); g.moveTo(230, 1000); g.lineTo(850, 1000); g.lineTo(880, 1330); g.lineTo(200, 1330); g.fill();
   g.fillStyle = "#8a6743"; g.beginPath(); g.moveTo(200, 1330); g.lineTo(880, 1330); g.lineTo(880, 1420); g.lineTo(200, 1420); g.fill();
@@ -169,6 +173,7 @@ function shotShoebox(g, t, lt) {
   g.save(); g.translate(690, 1160); g.rotate(.18); g.fillStyle = "#e9dcc0"; g.fillRect(-90, -45, 180, 90); g.fillStyle = "#3a2f22"; g.font = "600 20px Oswald"; g.fillText("BOXING DAY", -70, -8); g.fillText("1988", -70, 22); g.restore();
   drawBanana(g, 560, 1260, 420, -.06, { deflate: .85, sheen: .5 });
   g.restore();
+  if (!lamp) { g.fillStyle = "rgba(4,5,9,0.93)"; g.fillRect(0, 0, W, H); return; }
   const r = rng(3); g.globalCompositeOperation = "lighter";
   for (let i = 0; i < 70; i++) { const x = 400 + r() * 600 + Math.sin(t * .3 + i) * 20, y = 200 + ((r() * 1300 + t * 12) % 1300); g.globalAlpha = .2 + r() * .4; g.fillStyle = "#ffe2b0"; g.fillRect(x, y, 2.5, 2.5); }
   g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
@@ -191,21 +196,4 @@ function shotVerdict(g, t, lt) {
   g.save(); g.textAlign = "center"; g.fillStyle = `rgba(240,242,245,${a})`; g.font = "700 300px Playfair"; g.fillText("114", 520, 860);
   g.font = "700 90px Playfair"; g.fillStyle = `rgba(240,242,245,${a * .5})`; g.fillText("/115", 860, 860); g.restore();
   g.filter = "blur(6px)"; g.globalAlpha = .85; for (const p of PAGES.filter(p => p.z >= 1)) page(g, p, ((p.y0 + lt * 260 * p.sp) % 2400) - 300); g.filter = "none"; g.globalAlpha = 1;
-}
-
-/* ---------- the last banana, rising ---------- */
-function shotRise(g, t, lt) {
-  const up = easeInOut(prog(lt, 0, 7.5)) * 1500;
-  const sky = g.createLinearGradient(0, -1500 + up, 0, 1900 + up); sky.addColorStop(0, "#03060d"); sky.addColorStop(.55, "#0d2238"); sky.addColorStop(.85, "#2b4a63"); sky.addColorStop(1, "#5b6470");
-  g.fillStyle = sky; g.fillRect(0, 0, W, H);
-  const r = rng(77);
-  for (let i = 0; i < 120; i++) { const x = r() * W, y = r() * 2400 - 1500 + up * .9; if (y < 0 || y > H) continue; g.fillStyle = `rgba(255,255,255,${.3 + r() * .5})`; g.fillRect(x, y, 2, 2); }
-  for (let i = 0; i < 6; i++) { const y = 200 + i * 380 - 900 + up * (.5 + i * .08); g.save(); g.translate(((i * 337 + t * 10) % 1400) - 200, y); g.scale(5, 1); g.globalAlpha = .1; g.drawImage(SPR.soft, -90, -90, 180, 180); g.restore(); }
-  g.globalAlpha = 1;
-  // stadium roof lights falling away below
-  const ry = 1500 + up * 1.2;
-  if (ry < H + 200) { g.fillStyle = "#06090d"; g.fillRect(0, ry, W, H); for (let x = 10; x < W; x += 46) { blit(g, SPR.glowWhite, x, ry + 6, 20, .9); blit(g, SPR.glowCool, x, ry + 6, 120, .2); } }
-  const by = lerp(1250, 700, easeInOut(prog(lt, 0, 7.5))), sz = lerp(260, 150, easeInOut(prog(lt, 0, 9)));
-  blit(g, SPR.glowWarm, 540, by, sz * 2.2, .25);
-  drawBanana(g, 540 + Math.sin(t * .6) * 30, by, sz, Math.sin(t * .4) * .5 + lt * .05);
 }

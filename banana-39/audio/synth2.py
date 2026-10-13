@@ -180,3 +180,62 @@ def boos(d, vel=1.0):
         ph = 2 * np.pi * np.cumsum(f) / SR
         s += sum(np.sin(h * ph) * np.exp(-((f0 * h - 380) / 220) ** 2) for h in range(1, 8))
     return band(s, 80, 1500) * adsr(len(t), .4, .2, .9, .8) * .02 * vel
+
+
+# ---------------- transition sounds ----------------
+def whoosh(d=.45, lo=200, hi=5000, vel=1.0, peak=.55):
+    """air past the lens: noise through a band that sweeps up and back down, loudest at `peak` (0..1)"""
+    t = tt(d)
+    n = noise(d)
+    pos = np.clip(t / d, 0, 1)
+    c = np.where(pos < peak, pos / peak, (1 - pos) / (1 - peak))
+    bands = np.geomspace(lo, hi, 7)
+    out = np.zeros_like(t)
+    for i, fc in enumerate(bands):
+        out += band(n, fc * .7, fc * 1.4) * np.exp(-((c * (len(bands) - 1) - i) ** 2) / 1.2)
+    env = np.where(pos < peak, (pos / peak) ** 2, ((1 - pos) / (1 - peak)) ** 1.5)
+    return out * env * vel * .5
+
+
+def glitch(d=.18, vel=1.0):
+    """a camcorder pause: head-switch buzz, a dropout and a few digital chirps"""
+    t = tt(d)
+    buzz = band(noise(d), 800, 8000) * .5 + np.sign(np.sin(2 * np.pi * 120 * t)) * .15
+    out = buzz * ((np.sin(2 * np.pi * 60 * t) > 0) * .7 + .3)
+    for _ in range(3):
+        a, L = int(rng.random() * len(t) * .6), int(.012 * SR)
+        out[a:a + L] += np.sin(2 * np.pi * (1500 + rng.random() * 3000) * tt(L / SR)) * .5
+    return band(out, 200, 9000) * np.exp(-t * 16) * vel * .35
+
+
+def click(vel=1.0):
+    """a lamp switch"""
+    t = tt(.09)
+    return (band(noise(.09), 1800, 7000) * np.exp(-t * 420) + np.sin(2 * np.pi * 170 * t) * np.exp(-t * 70) * .35) * vel * .55
+
+
+def shutter(vel=1.0):
+    """a stills camera: click-clack"""
+    out = np.zeros(int(.12 * SR))
+    for off, g in ((0, 1.0), (.045, .7)):
+        t = tt(.03)
+        s = band(noise(.03), 1500, 9000) * np.exp(-t * 300) * g
+        i = int(off * SR)
+        out[i:i + len(s)] += s
+    return out * vel * .4
+
+
+def crackle(d, vel=1.0):
+    """firework crackle"""
+    out = np.zeros(int(d * SR))
+    for _ in range(int(d * 70)):
+        i = int(rng.random() * (len(out) - 600))
+        out[i:i + 600] += band(noise(600 / SR), 2000, 10000) * np.exp(-np.arange(600) / 40) * rng.random()
+    return out * vel * .3
+
+
+def pop(vel=1.0):
+    """a confetti cannon / firework launch"""
+    t = tt(.5)
+    f = 40 + 90 * np.exp(-t * 40)
+    return (np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t * 14) + band(noise(.5), 500, 6000) * np.exp(-t * 30) * .5) * vel * .5

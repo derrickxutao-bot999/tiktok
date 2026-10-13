@@ -69,14 +69,29 @@ const ANF = (() => {
   return { draw };
 })();
 
-/* ---------- the rewind: 2026 → 1987 ---------- */
+/* ---------- the rewind: the Anfield footage runs backwards (the bananas sink), then blank tape, then 1987 ---------- */
+const REW = { dur: 1.35, pow: 1.7 };                                   // soundtrack.py rewinds the score with the same curve
+const rewSrc = lt => 10.4 * (1 - Math.pow(clamp(lt / REW.dur), REW.pow));
 function shotRewind(g, t, lt) {
-  g.fillStyle = "#0b0d12"; g.fillRect(0, 0, W, H);
-  const r = rng(Math.floor(t * 30));
-  const cols = ["#f5d33a", "#79b8e4", "#c8102e", "#2d6b39", "#e8e8e8", "#13263a"];
-  for (let i = 0; i < 26; i++) { const y = r() * H, h = 8 + r() * 90; g.globalAlpha = .25 + r() * .5; g.fillStyle = cols[r() * cols.length | 0]; g.fillRect(-50 + r() * 200, y, W * (.6 + r() * .6), h); }
-  g.globalAlpha = 1;
-  for (let i = 0; i < 1400; i++) { g.fillStyle = r() < .5 ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)"; g.fillRect(r() * W, r() * H, 3 + r() * 10, 2); }
+  const src = rewSrc(lt), jolt = lt < .16 ? Math.sin(lt / .16 * Math.PI) * 26 : 0;
+  g.save(); g.translate(0, jolt); shotAnfield(g, src, src); g.restore();
+  g.fillStyle = `rgba(4,6,10,${.55 * smooth(prog(lt, 0, .3))})`; g.fillRect(0, 0, W, H);   // the footage sinks back so the title can sit on it
+  const r = rng(Math.floor(t * 30)), speed = clamp(lt / REW.dur);
+  // picture-search noise: bands of static racing up the frame, wider as the tape speeds up
+  for (let i = 0; i < 3; i++) {
+    const y = ((i * 640 - t * 2600 * (1 + i * .3)) % (H + 300) + H + 300) % (H + 300) - 150, h = 40 + 90 * speed;
+    g.fillStyle = "rgba(200,200,210,0.14)"; g.fillRect(0, y, W, h);
+    for (let k = 0; k < 170; k++) { g.fillStyle = r() < .5 ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.55)"; g.fillRect(r() * W, y + r() * h, 4 + r() * 16, 2 + r() * 3); }
+  }
+  // blank tape between the two recordings
+  const blank = smooth(prog(lt, 1.15, 1.45));
+  if (blank > 0) {
+    g.globalAlpha = blank; g.fillStyle = "#0b0d12"; g.fillRect(0, 0, W, H);
+    const cols = ["#f5d33a", "#79b8e4", "#c8102e", "#2d6b39", "#e8e8e8", "#13263a"];
+    for (let i = 0; i < 22; i++) { const y = r() * H, h = 8 + r() * 80; g.globalAlpha = blank * (.2 + r() * .45); g.fillStyle = cols[r() * cols.length | 0]; g.fillRect(-50 + r() * 200, y, W * (.6 + r() * .6), h); }
+    g.globalAlpha = blank; for (let i = 0; i < 1400; i++) { g.fillStyle = r() < .5 ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)"; g.fillRect(r() * W, r() * H, 3 + r() * 10, 2); }
+    g.globalAlpha = 1;
+  }
   const year = Math.round(lerp(2026, 1987, easeIn(prog(lt, .1, 1.6))));
   g.save(); g.font = "200px VT323"; g.textAlign = "center"; g.fillStyle = "rgba(245,245,240,0.95)"; g.shadowColor = "rgba(0,0,0,0.6)"; g.shadowOffsetX = 6; g.shadowOffsetY = 6;
   g.fillText(String(year), 540, 1240); g.restore();
@@ -122,11 +137,7 @@ const CITY87 = (() => {
   }
   return { draw };
 })();
-function shotCity87(g, t, lt) {
-  if (lt < 3.7) CITY87.draw(g, t, lt);
-  else shotFence(g, t, lt - 3.7);
-  osd(g, t, lt < 3.7 ? ["MANCHESTER 1987"] : ["1987"]);
-}
+function shotCity87(g, t, lt) { CITY87.draw(g, t, lt); osd(g, t, ["MANCHESTER 1987"]); }
 const FENCE = (() => { let L = null; return { draw(g, t, lt) {
   if (!L) { L = crowdLayer(31, Array.from({ length: 6 }, (_, i) => ({ y: 520 + i * 150, s: 34 + i * 9 })), { scarves: .4, hats: .3 }); }
   const s = 1.04 + .03 * lt;
@@ -146,7 +157,7 @@ const FENCE = (() => { let L = null; return { draw(g, t, lt) {
   }
   drawRain(g, lt + 3, .7);
 } }; })();
-function shotFence(g, t, lt) { FENCE.draw(g, t, lt); }
+function shotFence(g, t, lt) { FENCE.draw(g, t, lt); osd(g, t, ["1987"]); }
 
 /* ---------- Maine Road, 15 August 1987: a man and a banana ---------- */
 const MAINE = (() => {
@@ -172,20 +183,20 @@ const MAINE = (() => {
     g.save(); g.translate(540, 1200); g.scale(s, s); g.translate(-540, -1200);
     g.drawImage(L.bg, -200, 0);
     // laughter and, later, the chant: arms go up around him
-    const chant = smooth(prog(lt, 7.2, 8.0)), beat = Math.abs(Math.sin(lt * Math.PI * 1.6));
+    const chant = smooth(prog(lt, 6.96, 7.54)), beat = Math.abs(Math.cos(lt * Math.PI / .58));
     for (const h of L.heads) {
       const near = Math.abs(h.x - 540) < 260 && h.y > 900;
-      if (h.k < chant * .45 || (near && lt > 4.2 && h.k < .25)) { arm(g, h.x, h.y - beat * h.s * .2 * chant, h.s, h.k < .2 ? 1 : -1, 1.6 + beat * .5, "#2c3138"); }
+      if (h.k < chant * .45 || (near && lt > 4.64 && h.k < .25)) { arm(g, h.x, h.y - beat * h.s * .2 * chant, h.s, h.k < .2 ? 1 : -1, 1.6 + beat * .5, "#2c3138"); }
     }
-    if (lt > 7.4) for (let i = 0; i < 9; i++) { const r = rng(i + 9), x = 120 + r() * 840, y = 700 + r() * 520, sz = 60 + (y - 700) * .12; drawBanana(g, x, y - beat * 10, sz * smooth(prog(lt, 7.4 + i * .25, 7.9 + i * .25)), Math.sin(lt * 3 + i) * .3); }
+    if (lt > 7.25) for (let i = 0; i < 9; i++) { const r = rng(i + 9), x = 120 + r() * 840, y = 700 + r() * 520, sz = 60 + (y - 700) * .12; drawBanana(g, x, y - beat * 10, sz * smooth(prog(lt, 7.25 + i * .29, 7.6 + i * .29)), Math.sin(lt * 3 + i) * .3); }
     // Frank Newton walks in along the front, then raises the banana
-    const walkX = lerp(-140, 540, easeOut(prog(lt, 0, 3.9))), raise = smooth(prog(lt, 4.0, 4.8)), y0 = 1336, hh = 330;
-    const pose = raise > .5 ? "cheer" : "walk", hands = figure(g, walkX, y0, hh, { pose, phase: lt * 7, dir: 1, col: "#1a1f2a", scarf: "#79b8e4" });
+    const walkX = lerp(-140, 540, easeOut(prog(lt, 0, 3.9))), raise = smooth(prog(lt, 4.06, 4.64)), y0 = 1336, hh = 330;
+    const pose = raise > .5 ? "cheer" : "walk", hands = figure(g, walkX, y0, hh, { pose, phase: lt * Math.PI / .58, dir: 1, col: "#1a1f2a", scarf: "#79b8e4" });
     const bx = raise > .5 ? walkX : walkX + hh * .12, byy = lerp(y0 - hh * .86, y0 - hh * 1.22 - beat * 12 * chant, raise);
     drawBanana(g, bx, byy, 280, lerp(-.35, Math.sin(lt * 2) * .12, raise));
     g.restore();
     drawRain(g, lt, .25, "rgba(230,232,235,");
-    osd(g, t, [lt < 7.2 ? "AUG.15 1987" : "1988", "MAINE ROAD"]);
+    osd(g, t, [lt < 6.96 ? "AUG.15 1987" : "1988", "MAINE ROAD"]);
   }
   return { draw };
 })();
@@ -195,6 +206,7 @@ function shotAnfield(g, t, lt) {
   ANF.draw(g, t, { cam: { x: lerp(380, 220, k), y: lerp(-70, -20, k), s: lerp(1.62, 1.28, k) }, rise: lt, dof: 1, fg: smooth(prog(lt, 1.5, 3.0)) });
 }
 function shotAnfield2(g, t, lt) {
-  const k = easeInOut(prog(lt, 0, 8.6));
-  ANF.draw(g, t, { cam: { x: lerp(-10, 30, k), y: lerp(30, -10, k), s: lerp(1.0, 1.1, k) }, banner: smooth(prog(lt, 4.2, 5.0)), dof: .6 });
+  // drift, then lean in on the away end just before the reverse angle
+  const k = easeInOut(prog(lt, 0, 8.75)), push = easeIn(prog(lt, 7.5, 8.75));
+  ANF.draw(g, t, { cam: { x: lerp(-10, 30, k) + 130 * push, y: lerp(30, -10, k) - 40 * push, s: lerp(1.0, 1.1, k) + .14 * push }, banner: smooth(prog(lt, 4.5, 5.3)), dof: .6 });
 }

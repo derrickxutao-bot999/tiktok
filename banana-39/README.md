@@ -1,6 +1,6 @@
 # 一根香蕉的39年 · 足球与城市 第三集
 
-**39 Years of a Banana.** A 116-second vertical film (1080×1920, 30 fps) for Douyin about Manchester City's inflatable bananas: from a joke in the club's worst years to the away end at Anfield in October 2026.
+**39 Years of a Banana.** A 120-second vertical film (1080×1920, 30 fps) for Douyin about Manchester City's inflatable bananas: from a joke in the club's worst years to the away end at Anfield in October 2026.
 
 Final video: `banana-39.mp4`
 
@@ -20,7 +20,15 @@ Why bananas? The answer goes back to the late 1980s.
    - The supporters' group 1894 said: "this fan base has always been on a rollercoaster".
    - The home end's banner read: "a generation of supporters cheated".
 
-The film ends with a question rather than a verdict: *the banana hasn't changed, so what has?* Thirty-nine years ago it was a joke for hard times. Today some call it loyalty, others a shield.
+The film ends with a conclusion: the verdict is about the club's accounts, and the fans holding bananas did nothing wrong. In a match-cut montage, the same supporter stands in the same spot through the lows and the peaks:
+
+- a banana at Maine Road in 1987
+- a scarf in the rain in the third tier in 1998
+- Wembley in 1999
+- the treble in 2023
+- Anfield in 2026, with his grandchild
+
+The last line is *香蕉没变，举香蕉的人，一直都在*: the banana hasn't changed, and the people holding it never left.
 
 ### Sources
 
@@ -32,6 +40,17 @@ The film ends with a question rather than a verdict: *the banana hasn't changed,
 ## How it is made
 
 - **Pictures:** every shot is drawn on a 2D canvas (`js/props.js`, `js/scenes*.js`).
+- **Transitions:** every cut lands on a downbeat of the score. Each transition is motivated by the picture (`CUTS` in `js/main.js`):
+  - the Anfield footage rewinds on tape, and the bananas sink back down
+  - the VHS picture rolls and locks onto 1987, and camcorder pauses glitch between shots
+  - whip pans run along the terraces, landing on the groove's bar lines
+  - a crash zoom dives into a yellow banana and comes out of the acid-house smiley
+  - a strobe drops into Boxing Day, and the tape stops
+  - the camera tilts down as City fall, then a 1999 TV graphic wipes to Wembley
+  - photographers' flashes lead out of Wembley, then a gold light sweeps across
+  - the trophies dissolve into a shoebox, whose lamp clicks off
+  - floodlights flare between shots
+  - the closing montage is matched on one fan's raised hand
 - **Grading:** `js/grade.js` grades each frame in WebGL2. Each era has its own look:
   - **1987–88 camcorder:** scanline jitter, chroma smear, tracking band, head-switch noise, on-screen date.
   - **1990s DV:** cold tones and interlace.
@@ -39,16 +58,23 @@ The film ends with a question rather than a verdict: *the banana hasn't changed,
   - **Glossy HD:** for the trophy years.
   - **Cold verdict.**
   - **Modern dusk:** for Anfield 2026.
-- **Music:** `soundtrack.py` is cued to the picture. A five-note "banana" motif changes instrument with each era:
+- **Music:** `soundtrack.py` is cued to the picture. Each section has its own tempo, and its downbeats fall on the cuts. A five-note "banana" motif changes instrument with each era:
   - high piano at Anfield
   - lonely piano in the 1987 rain
-  - comic bassoon and clarinet as Newton walks in
+  - comic bassoon and clarinet as Newton walks in, with a bassoon pickup leading into the cut
   - flute and trumpet over a Madchester acid-house groove (synthesised 303 bass and drums, real piano stabs)
-  - a tape-stop when the era ends
   - heroic D-major brass after Wembley
   - a music box for the shoebox
-  - near-silence and a ticking clock for the verdict
-  - an unresolved piano at the end
+
+  The music changes with the cuts:
+  - The score rewinds with the picture, and the tape wobbles up to speed at PLAY.
+  - The groove closes into a low-pass filter as the camera dives into the banana, and opens up again in the club.
+  - The tape stops when the 1980s end.
+  - Timpani land when City drop a division.
+  - The music box slows down, and the lamp clicks off before it can play its last note.
+  - A ticking clock speeds up into the tempo of Anfield.
+  - A deceptive cadence opens the montage of the lows. Each era's crowd sound plays only while its shot is on screen.
+  - The motif finally resolves under the end card, and the music box's missing note is played by everyone.
 
   The instruments are real recordings from the [University of Iowa Musical Instrument Samples](https://theremin.music.uiowa.edu/MIS.html), which are free for any use.
 
@@ -59,7 +85,7 @@ The film ends with a question rather than a verdict: *the banana hasn't changed,
 python3 audio/fetch_samples.py      # instrument samples -> audio/samples/ (once)
 python3 soundtrack.py               # -> out/soundtrack.wav
 ln -s /path/to/node_modules .       # needs playwright; Chromium with WebGL
-node render.mjs --workers 4         # -> out/banana-39.mp4 (~80 MB, for upload) + out/master.mp4 + a 720p preview
+node render.mjs --workers 4         # -> out/banana-39.mp4 (for upload) + out/master.mp4 + a 720p preview
 node render.mjs --stills 4.5,40,69  # quick PNG checks
 ```
 

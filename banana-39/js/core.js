@@ -110,7 +110,7 @@ function poseAngles(pose, ph) {
 // x,y = feet; h = height to the top of the head. Returns hand positions so props can be attached.
 function figure(g, x, y, h, o = {}) {
   const dir = o.dir ?? 1, col = o.col ?? "#0b0d10", pose = o.pose ?? "stand", u = h / 100;
-  const [aL1, aL2, aR1, aR2, lL1, lL2, lR1, lR2, lean0] = poseAngles(pose, o.phase ?? 0);
+  const [aL1, aL2, aR1, aR2, lL1, lL2, lR1, lR2, lean0] = o.angles || poseAngles(pose, o.phase ?? 0);
   const lean = lean0 + (o.lean || 0), bulk = o.bulk ?? 1;
   const side = o.side ?? ["walk", "push", "shovel", "hammer", "carry", "climb", "pocket"].includes(pose);
   const wS = side ? 6.4 : 10, wH = side ? 7.6 : 10.8, armX = side ? 1.4 : 8.4, legX = side ? 1.2 : 3.4;
