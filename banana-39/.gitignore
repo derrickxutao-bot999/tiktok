@@ -1,0 +1,5 @@
+out/
+fonts/
+audio/samples
+audio/__pycache__/
+node_modules
