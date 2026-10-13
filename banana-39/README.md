@@ -92,7 +92,7 @@ The last line is *香蕉没变，举香蕉的人，一直都在*: the banana has
 python3 audio/fetch_samples.py      # instrument samples -> audio/samples/ (once)
 python3 soundtrack.py               # -> out/soundtrack.wav
 ln -s /path/to/node_modules .       # needs playwright; Chromium with WebGL
-node render.mjs --workers 4         # -> out/banana-39.mp4 (for upload) + out/master.mp4 + a 720p preview
+node render.mjs --workers 4         # -> out/banana-39.mp4 (1080x1920, two-pass to ~95 MB) + out/master.mp4 + a 720p preview
 node render.mjs --stills 4.5,40,69  # quick PNG checks
 ```
 

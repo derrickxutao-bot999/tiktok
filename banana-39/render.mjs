@@ -64,7 +64,11 @@ if (arg("--stills")) {
   // delivery encodes: grain-aware, size-capped (the CRF 17 master is ~300 MB because of the film grain)
   const enc = (name, rate) => run(["-y", "-loglevel", "error", "-i", master, "-c:v", "libx264", "-preset", "slow", "-tune", "grain", ...rate,
     "-pix_fmt", "yuv420p", "-profile:v", "high", "-c:a", "copy", "-movflags", "+faststart", join(out, name)]);
-  await enc("banana-39.mp4", ["-crf", "20", "-maxrate", "8M", "-bufsize", "16M"]);
+  // the upload file: two-pass, sized to ~95 MB so it stays under GitHub's 100 MB limit
+  const vb = Math.floor(95e6 * 8 / duration - 256e3), log = join(out, "x264pass");
+  await run(["-y", "-loglevel", "error", "-i", master, "-c:v", "libx264", "-preset", "slow", "-tune", "grain", "-b:v", String(vb), "-maxrate", "9M", "-bufsize", "18M",
+    "-pix_fmt", "yuv420p", "-profile:v", "high", "-pass", "1", "-passlogfile", log, "-an", "-f", "null", "/dev/null"]);
+  await enc("banana-39.mp4", ["-b:v", String(vb), "-maxrate", "9M", "-bufsize", "18M", "-pass", "2", "-passlogfile", log]);
   await enc("banana-39-preview.mp4", ["-vf", "scale=720:1280:flags=lanczos", "-b:v", "1.5M", "-maxrate", "2.1M", "-bufsize", "4.2M"]);
   console.log(`done in ${((Date.now() - t0) / 1000).toFixed(0)} s -> out/banana-39.mp4 (+ master.mp4, banana-39-preview.mp4)`);
 }
