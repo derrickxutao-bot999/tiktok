@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>@font-face{font-family:"Oswald";font-weight:700;src:url(fonts/Oswald-SemiBold.ttf)}@font-face{font-family:"NotoSerifSC";font-weight:600;src:url(fonts/NotoSerifSC-SemiBold.ttf)}</style></head>
+<body style="margin:0;background:#000"><canvas id="c" width="2400" height="1500"></canvas>
+<script src="character.js"></script>
+<script>
+const g=document.getElementById("c").getContext("2d");
+window.draw=()=>{g.fillStyle="#efece4";g.fillRect(0,0,2400,1500);
+ messiFront(g,420,1300,1000,{arms:"sky",tilt:1,eyes:"closed"});
+ messiFront(g,1000,1300,1000,{arms:"down",tilt:-1,eyes:"open",frown:1});
+ messiBack(g,1560,1300,1000,{});
+ g.save();g.translate(2080,700);mHead(g,0,0,3.2,{tilt:0,eyes:"open"});g.restore();
+ g.fillStyle="#333";g.font="600 36px NotoSerifSC";g.textAlign="center";
+ [["指向天空",420],["低头走过",1000],["背影 · 10",1560],["面部",2080]].forEach(([s,x])=>g.fillText(s,x,1420));};
+window.ready=document.fonts.ready.then(()=>Promise.all(["700 40px Oswald","600 40px NotoSerifSC"].map(f=>document.fonts.load(f,"10指向天空"))));
+</script></body></html>
