@@ -59,7 +59,7 @@ The film ends with a question rather than a verdict: *the banana hasn't changed,
 python3 audio/fetch_samples.py      # instrument samples -> audio/samples/ (once)
 python3 soundtrack.py               # -> out/soundtrack.wav
 ln -s /path/to/node_modules .       # needs playwright; Chromium with WebGL
-node render.mjs --workers 4         # -> out/banana-39.mp4 (+ master.mp4, banana-39-preview.mp4)
+node render.mjs --workers 4         # -> out/banana-39.mp4 (~80 MB, for upload) + out/master.mp4 + a 720p preview
 node render.mjs --stills 4.5,40,69  # quick PNG checks
 ```
 

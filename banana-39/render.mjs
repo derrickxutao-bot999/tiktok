@@ -64,7 +64,7 @@ if (arg("--stills")) {
   // delivery encodes: grain-aware, size-capped (the CRF 17 master is ~300 MB because of the film grain)
   const enc = (name, rate) => run(["-y", "-loglevel", "error", "-i", master, "-c:v", "libx264", "-preset", "slow", "-tune", "grain", ...rate,
     "-pix_fmt", "yuv420p", "-profile:v", "high", "-c:a", "copy", "-movflags", "+faststart", join(out, name)]);
-  await enc("banana-39.mp4", ["-crf", "22", "-maxrate", "7M", "-bufsize", "14M"]);
-  await enc("banana-39-preview.mp4", ["-b:v", "3.6M", "-maxrate", "4.5M", "-bufsize", "9M"]);
+  await enc("banana-39.mp4", ["-crf", "23", "-maxrate", "6M", "-bufsize", "12M"]);
+  await enc("banana-39-preview.mp4", ["-vf", "scale=720:1280:flags=lanczos", "-b:v", "1.75M", "-maxrate", "2.4M", "-bufsize", "4.8M"]);
   console.log(`done in ${((Date.now() - t0) / 1000).toFixed(0)} s -> out/banana-39.mp4 (+ master.mp4, banana-39-preview.mp4)`);
 }
