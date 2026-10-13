@@ -34,6 +34,7 @@ const SHOTS = [
 const lookOf = (s, t) => typeof s.look === "function" ? s.look(t) : LOOKS[s.look];
 function drawShot(s, g, t) {
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; g.filter = "none";
+  g.fillStyle = "#000"; g.fillRect(0, 0, W, H);      // never let a previous frame show through
   const fn = window[s.fn];
   if (typeof fn === "function") fn(g, t, t - s.a); else { g.fillStyle = "#000"; g.fillRect(0, 0, W, H); }
 }
@@ -128,6 +129,7 @@ function renderFrame(t) {
   for (const c of CUES) if (t > c.t0 - .05 && t < c.t1 + .05) drawCue(og, c, t);
   drawTitles(og, t);
   L.fade = Math.max(L.fade, 1 - smooth(prog(t, 0, .7)), smooth(prog(t, DURATION - .8, DURATION - .05)));
+  L.grain *= .8;
   Grade.render(scene, overlay, L, frame);
 }
 

@@ -100,6 +100,19 @@ const STAD = (() => {
     layer(g, cam, .08, () => g.drawImage(L.sky, -200, -100));
     layer(g, cam, .22, () => g.drawImage(L.forestFar, -250, 0));
     layer(g, cam, .32, () => g.drawImage(L.forestNear, -250, 0));
+    layer(g, cam, .75, () => {
+      // the pitch is drawn first and reaches up under the stand, so parallax can never open a gap
+      g.fillStyle = "#1a252c"; g.fillRect(-300, 1240, W + 600, 80);
+      g.drawImage(L.pitch, -300, 1312);
+      if (F > 0) {
+        let y = 1312;
+        for (let i = 0; y < 2150; i++) { const h = 26 * Math.pow(1.32, i); g.fillStyle = i % 2 ? `rgba(58,104,66,${.85 * F})` : `rgba(48,90,57,${.85 * F})`; g.fillRect(-300, y, W + 600, h + 1); y += h; }
+        g.strokeStyle = `rgba(235,240,235,${.7 * F})`; g.lineWidth = 3;
+        g.beginPath(); g.moveTo(-300, 1334); g.lineTo(W + 300, 1334); g.moveTo(540, 1334); g.lineTo(540, 2150); g.stroke();
+        g.beginPath(); g.ellipse(540, 1560, 300, 82, 0, 0, TAU); g.stroke();
+        g.globalAlpha = .35 * F; g.drawImage(L.pitch, -300, 1312); g.globalAlpha = 1;
+      }
+    });
     layer(g, cam, .55, () => {
       // floodlit sky glow behind the roof
       if (F > 0) { g.globalCompositeOperation = "lighter"; g.globalAlpha = .45 * F; g.drawImage(SPR.glowCool, -400, 500, W + 800, 900); g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; }
@@ -116,17 +129,6 @@ const STAD = (() => {
       }
       drawCandles(g, t, o.count || 0, F);
       if (F > 0) drawMasts(g, t, o.ignite);
-    });
-    layer(g, cam, .75, () => {
-      g.drawImage(L.pitch, -300, 1312);
-      if (F > 0) {
-        let y = 1312;
-        for (let i = 0; y < 2150; i++) { const h = 26 * Math.pow(1.32, i); g.fillStyle = i % 2 ? `rgba(58,104,66,${.85 * F})` : `rgba(48,90,57,${.85 * F})`; g.fillRect(-300, y, W + 600, h + 1); y += h; }
-        g.strokeStyle = `rgba(235,240,235,${.7 * F})`; g.lineWidth = 3;
-        g.beginPath(); g.moveTo(-300, 1334); g.lineTo(W + 300, 1334); g.moveTo(540, 1334); g.lineTo(540, 2150); g.stroke();
-        g.beginPath(); g.ellipse(540, 1560, 300, 82, 0, 0, TAU); g.stroke();
-        g.globalAlpha = .35 * F; g.drawImage(L.pitch, -300, 1312); g.globalAlpha = 1;
-      }
     });
     if (o.crowd) {
       const lit = o.crowdLit ?? 1;

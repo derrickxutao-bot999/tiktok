@@ -1,5 +1,5 @@
 // Renders index.html frame by frame in headless Chromium (WebGL via SwiftShader) and encodes with ffmpeg.
-//   node render.mjs                    -> out/forest-stadium.mp4 (muxes out/soundtrack.wav when present)
+//   node render.mjs                    -> out/forest-stadium.mp4 (+ CRF 17 master.mp4 and a <30 MB preview; muxes out/soundtrack.wav)
 //   node render.mjs --workers 4        parallel browsers, each encoding one segment (default 4)
 //   node render.mjs --stills 3,12.5    -> out/still-<t>.png
 import { chromium } from "playwright";
@@ -58,7 +58,13 @@ if (arg("--stills")) {
   writeFileSync(list, segs.filter(Boolean).map(s => `file '${s}'`).join("\n"));
   const wav = join(out, "soundtrack.wav");
   const audio = existsSync(wav) ? ["-i", wav, "-c:a", "aac", "-b:a", "256k", "-shortest"] : [];
-  await run(["-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", list, ...audio, "-c:v", "copy", "-movflags", "+faststart", join(out, "forest-stadium.mp4")]);
+  const master = join(out, "master.mp4");
+  await run(["-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", list, ...audio, "-c:v", "copy", "-movflags", "+faststart", master]);
   segs.forEach(s => s && rmSync(s)); rmSync(list);
-  console.log(`done in ${((Date.now() - t0) / 1000).toFixed(0)} s -> out/forest-stadium.mp4`);
+  // delivery encodes: grain-aware, size-capped (the CRF 17 master is ~300 MB because of the film grain)
+  const enc = (name, rate) => run(["-y", "-loglevel", "error", "-i", master, "-c:v", "libx264", "-preset", "slow", "-tune", "grain", ...rate,
+    "-pix_fmt", "yuv420p", "-profile:v", "high", "-c:a", "copy", "-movflags", "+faststart", join(out, name)]);
+  await enc("forest-stadium.mp4", ["-crf", "22", "-maxrate", "7M", "-bufsize", "14M"]);
+  await enc("forest-stadium-preview.mp4", ["-b:v", "3.6M", "-maxrate", "4.5M", "-bufsize", "9M"]);
+  console.log(`done in ${((Date.now() - t0) / 1000).toFixed(0)} s -> out/forest-stadium.mp4 (+ master.mp4, forest-stadium-preview.mp4)`);
 }
