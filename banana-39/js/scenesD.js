@@ -204,7 +204,7 @@ function shotM23(g, t, lt) {
   g.font = "700 96px Playfair"; g.fillText("2023", 90, 290); g.font = "600 44px NotoSerifSC"; g.letterSpacing = "10px"; g.fillText("★★★", 96, 360); g.restore();
 }
 function shotHome(g, t, lt) {
-  const k = easeOut(prog(lt, 0, 5.4));
+  const k = easeOut(prog(lt, 0, 7.4));
   ANF.draw(g, t, { cam: { x: lerp(150, 40, k), y: lerp(-60, 10, k), s: lerp(1.3, 1.08, k) }, dof: .5, fg: .55 });
   const d = smooth(prog(t, 117.2, 118.4));
   if (d > 0) { const gr = g.createLinearGradient(0, 1150, 0, H); gr.addColorStop(0, "rgba(0,0,0,0)"); gr.addColorStop(1, `rgba(0,0,0,${.55 * d})`); g.fillStyle = gr; g.fillRect(0, 1150, W, H - 1150); }

@@ -1,6 +1,6 @@
 "use strict";
 /* main.js — 一根香蕉的39年: shot list, cut-synced transitions, era looks, bilingual subtitles, frame assembly */
-const DURATION = 120;
+const DURATION = 122;
 const scene = makeCanvas(W, H), sg = scene.getContext("2d");
 const bufA = makeCanvas(W, H), ag = bufA.getContext("2d");
 const bufB = makeCanvas(W, H), bg = bufB.getContext("2d");
@@ -55,7 +55,7 @@ const SHOTS = [
   { a: 110.85, b: 112.1, fn: "shotM98", look: "dv" },
   { a: 112.1, b: 113.35, fn: "shotM99", look: "broadcast" },
   { a: 113.35, b: 114.6, fn: "shotM23", look: "hdGold" },
-  { a: 114.6, b: 120.0, fn: "shotHome", look: t => withL(LOOKS.fans, { exposure: LOOKS.fans.exposure - .22 * smooth(prog(t, 117.4, 118.6)) }) },
+  { a: 114.6, b: 122.0, fn: "shotHome", look: t => withL(LOOKS.fans, { exposure: LOOKS.fans.exposure - .22 * smooth(prog(t, 117.4, 118.6)) }) },
 ];
 const lookOf = (s, t) => typeof s.look === "function" ? s.look(t) : LOOKS[s.look];
 const shotAt = t => SHOTS.find(s => t >= s.a && t < s.b) || SHOTS[SHOTS.length - 1];
@@ -240,7 +240,7 @@ const CUES = [
   { t0: 104.85, t1: 109.4, zh: ["账本上的对错，交给裁决", "举起香蕉的球迷，没有做错什么"], en: "Let the verdict judge the accounts. The fans holding bananas did nothing wrong." },
   { t0: 109.75, t1: 112.0, zh: ["跌到第三级别时，他们在"], en: "When City fell to the third tier, they were there." },
   { t0: 112.15, t1: 114.45, zh: ["站上欧洲之巅时，他们也在"], en: "When City stood on top of Europe, they were there too." },
-  { t0: 114.8, t1: 121, big: 1, zh: ["香蕉没变", "举香蕉的人，一直都在"], en: "The banana hasn't changed. The people holding it never left." },
+  { t0: 114.8, t1: 123, big: 1, zh: ["香蕉没变", "举香蕉的人，一直都在"], en: "The banana hasn't changed. The people holding it never left." },
 ];
 const CREAM = "246,241,232", GOLD = "236,200,96";
 const isCJK = s => /[㐀-鿿]/.test(s);

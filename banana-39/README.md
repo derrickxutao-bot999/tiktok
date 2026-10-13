@@ -1,6 +1,6 @@
 # 一根香蕉的39年 · 足球与城市 第三集
 
-**39 Years of a Banana.** A 120-second vertical film (1080×1920, 30 fps) for Douyin about Manchester City's inflatable bananas: from a joke in the club's worst years to the away end at Anfield in October 2026.
+**39 Years of a Banana.** A 122-second vertical film (1080×1920, 30 fps) for Douyin about Manchester City's inflatable bananas: from a joke in the club's worst years to the away end at Anfield in October 2026.
 
 Final video: `banana-39.mp4`
 

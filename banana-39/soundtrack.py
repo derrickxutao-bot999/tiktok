@@ -1,4 +1,4 @@
-"""Score + sound design for 一根香蕉的39年 (120 s), cued to js/main.js -> out/soundtrack.wav
+"""Score + sound design for 一根香蕉的39年 (122 s), cued to js/main.js -> out/soundtrack.wav
 
 Every cut in the film lands on a downbeat, and every transition has its own musical gesture: the Anfield
 score rewinds with the picture, the tape lurches into 1987, camcorder cuts glitch, a bassoon pickup walks
@@ -21,7 +21,7 @@ from synth import SR, adsr, band, boom, choir, convolve, crowd, heartbeat, hz, n
 from synth2 import (acid, boos, clap, claps, click, crackle, glitch, hat, hiss, kick, organ, pad, pop, pulse, rain,  # noqa: E402
                     rewind, rustle, shaker, shutter, snare, tamb, tape_clunk, tick, whistle, whoosh)
 
-DUR = 120.0
+DUR = 122.0
 N = int(DUR * SR)
 BUS = {k: np.zeros((2, N)) for k in ("orch", "groove", "choir", "perc", "sfx")}
 POST = np.zeros((2, N))   # dry sounds added after the rewind / choke edits
@@ -452,9 +452,9 @@ for at in (113.42, 113.85, 114.2):                                        # the 
     put(pop(.8), at, 1, (rng.random() - .5), "sfx")
     put(crackle(.9, .6), at + .25, 1, (rng.random() - .5), "sfx")
 
-# ======================= 114.6 – 120  the whole away end: the motif resolves ======================
+# ======================= 114.6 – 122  the whole away end: the motif resolves ======================
 H2 = 1.25                                                                 # maestoso: half the tempo of the montage
-put(crowd(5.6, 1.2) * env_in_out(int(5.6 * SR), .05, 1.5), CUT["home"], 1, 0, "sfx")
+put(crowd(7.4, 1.2) * env_in_out(int(7.4 * SR), .05, 3.0), CUT["home"], 1, 0, "sfx")
 for at, ch, d in ((114.6, "F", .625), (115.225, "Bb", .625), (115.85, "C", 1.25), (117.1, "C7", .625)):
     strings(ch, at, d, vel=.9, soft=.05, att=.04, rel=.25)
     brass("horn", V[ch]["cello"][:1] + V[ch]["viola"], at, d, vel=.8, att=.04, rel=.2)
@@ -466,7 +466,7 @@ put(choir(hz("F3"), 3.2, "ah", 16, .05, .6) + choir(hz("A3"), 3.2, "ah", 16, .05
 
 def maestoso(n, t, d):
     last = n == "A4"
-    dd, rr = (2.4, 1.2) if last else (d * .97, .3)
+    dd, rr = (3.2, 1.4) if last else (d * .97, .3)
     solo("trumpet", n, t, dd, vel=.85, att=.03, rel=rr)
     solo("violin", up(n, 1), t, dd, vel=.8, pan=-.35, att=.03, rel=rr)
     solo("horn", up(n, -1), t, dd, vel=.7, pan=-.2, att=.03, rel=rr)
@@ -474,15 +474,17 @@ def maestoso(n, t, d):
 
 motif("maj", CUT["home"], H2, maestoso)
 # 117.725: the note the music box never played, on F major — with everyone
-strings("F", CUT["card"], 2.4, vel=.85, soft=.15, att=.06, rel=1.2)
-brass("horn", ["F3", "A3", "C4"], CUT["card"], 2.4, vel=.7, att=.06, rel=1.2)
-brass("trombone", ["F2", "C3"], CUT["card"], 2.4, vel=.6, att=.06, rel=1.2)
-put(choir(hz("F3"), 2.4, "ah", 16, .1, 1.2) + choir(hz("A3"), 2.4, "ah", 16, .1, 1.2) + choir(hz("C4"), 2.4, "ah", 16, .1, 1.2), CUT["card"], .55, 0, "choir")
+strings("F", CUT["card"], 3.3, vel=.85, soft=.15, att=.06, rel=1.4)
+brass("horn", ["F3", "A3", "C4"], CUT["card"], 3.0, vel=.7, att=.06, rel=1.4)
+brass("trombone", ["F2", "C3"], CUT["card"], 3.0, vel=.6, att=.06, rel=1.4)
+put(choir(hz("F3"), 4.2, "ah", 16, .1, 1.8) + choir(hz("A3"), 4.2, "ah", 16, .1, 1.8) + choir(hz("C4"), 4.2, "ah", 16, .1, 1.8), CUT["card"], .55, 0, "choir")
 for n in ("F2", "C3", "F3", "A3", "C4"):
     piano(n, CUT["card"], .5, pan=0)
 ring("glock", "A5", CUT["card"] + .02, .5, .1)
 ring("crotale", "A6", CUT["card"] + .3, .3, .25)
 put(timpani(hz("F2"), 2.4, .7), CUT["card"], 1, 0, "perc")
+for k in range(36):                                                       # a soft timpani roll holds the last chord, dying away
+    put(timpani(hz("F2"), .5, .16 * (1 - k / 36) ** 1.5), CUT["card"] + 1.2 + k * .07, 1, 0, "perc")
 
 
 # ======================= mix & master ======================
