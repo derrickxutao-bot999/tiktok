@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>巴萨 1925 · 沉默的六个月</title>
+<style>
+  @font-face { font-family: "NotoSerifSC"; font-weight: 600; src: url(fonts/NotoSerifSC-SemiBold.ttf); }
+  @font-face { font-family: "NotoSerifSC"; font-weight: 900; src: url(fonts/NotoSerifSC-Black.ttf); }
+  @font-face { font-family: "Cormorant"; font-weight: 500; src: url(fonts/Cormorant-Medium.ttf); }
+  @font-face { font-family: "Cormorant"; font-weight: 700; src: url(fonts/Cormorant-Bold.ttf); }
+  @font-face { font-family: "Cormorant"; font-weight: 500; font-style: italic; src: url(fonts/Cormorant-Italic.ttf); }
+  @font-face { font-family: "Playfair"; font-weight: 700; src: url(fonts/PlayfairDisplay-Bold.ttf); }
+  html, body { margin: 0; height: 100%; background: #0b0b0c; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { height: 100vh; max-width: 100vw; aspect-ratio: 9 / 16; display: block; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+"use strict";
+/* ------------------------------------------------------------------
+   Barcelona 1925 · 沉默的六个月
+   A deterministic 28.5 s vertical animation. window.renderFrame(t)
+   draws the frame at time t (seconds); render.mjs steps it at 30 fps.
+------------------------------------------------------------------- */
+const W = 1080, H = 1920, DURATION = 28.5;
+const cv = document.getElementById("c");
+const ctx = cv.getContext("2d");
+
+/* ---------- palette ---------- */
+const C = {
+  paper: "#EAE0CA", night: "#101216", ink: "#1C1A16", cream: "#EDE3CF",
+  blau: "#1B4A9C", grana: "#A3203A", gold: "#D4A93A", goldHi: "#FFE08A",
+  pitch: "#7D8A5E", red: "#B3202A", iron: "#2C3036", ironHi: "#7E8590",
+};
+
+/* ---------- math ---------- */
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, k) => a + (b - a) * k;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = k => 1 - Math.pow(1 - k, 3);
+const easeIn = k => k * k * k;
+const easeInOut = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+const easeOutBack = k => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); };
+const easeOutBounce = k => {
+  const n = 7.5625, d = 2.75;
+  if (k < 1 / d) return n * k * k;
+  if (k < 2 / d) return n * (k -= 1.5 / d) * k + .75;
+  if (k < 2.5 / d) return n * (k -= 2.25 / d) * k + .9375;
+  return n * (k -= 2.625 / d) * k + .984375;
+};
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const hash = n => { const r = rng(n * 9301 + 49297); r(); return r(); };
+
+/* ---------- colour ---------- */
+const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const mixRGB = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
+const rgba = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+const mix = (h1, h2, k, a = 1) => rgba(mixRGB(hex(h1), hex(h2), k), a);
+const desat = (h, k) => { const c = hex(h); const g = c[0] * .3 + c[1] * .59 + c[2] * .11; return mixRGB(c, [g, g, g], k); };
+
+/* ---------- timeline helpers ---------- */
+// darkness: day (paper) -> night after the ban -> dawn at the finale
+const dark = t => clamp(prog(t, 8.45, 9.1) * .9 - prog(t, 23.45, 24.2) * .9, 0, .9);
+const inkC = t => mixRGB(hex(C.ink), hex(C.cream), dark(t) / .9);
+
+/* ---------- pre-rendered textures ---------- */
+function makeCanvas(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
+
+const paperTex = (() => {
+  const c = makeCanvas(W, H), g = c.getContext("2d"), r = rng(7);
+  g.fillStyle = C.paper; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 70; i++) {
+    const x = r() * W, y = r() * H, rad = 80 + r() * 380;
+    const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+    const dk = r() < .5;
+    gr.addColorStop(0, dk ? "rgba(120,90,50,0.07)" : "rgba(255,250,235,0.10)");
+    gr.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+  }
+  const id = g.getImageData(0, 0, W, H), d = id.data;
+  for (let i = 0; i < d.length; i += 4) { const n = (r() - .5) * 22; d[i] += n; d[i + 1] += n; d[i + 2] += n * .9; }
+  g.putImageData(id, 0, 0);
+  // fibres
+  g.strokeStyle = "rgba(90,70,40,0.05)"; g.lineWidth = 1;
+  for (let i = 0; i < 400; i++) { const x = r() * W, y = r() * H, a = r() * 6.28, l = 6 + r() * 26; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); }
+  return c;
+})();
+
+const grains = [0, 1, 2, 3].map(s => {
+  const c = makeCanvas(540, 960), g = c.getContext("2d"), r = rng(100 + s);
+  const id = g.createImageData(540, 960), d = id.data;
+  for (let i = 0; i < d.length; i += 4) { const v = r() * 255; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; }
+  g.putImageData(id, 0, 0); return c;
+});
+
+function glowSprite(col, size) {
+  const c = makeCanvas(size, size), g = c.getContext("2d"), h = size / 2;
+  const gr = g.createRadialGradient(h, h, 0, h, h, h);
+  gr.addColorStop(0, "rgba(255,248,215,1)");
+  gr.addColorStop(.18, col);
+  gr.addColorStop(.45, col.replace(/,1\)$/, ",0.28)"));
+  gr.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, size, size); return c;
+}
+const glowGold = glowSprite("rgba(232,182,72,1)", 64);
+const glowBig = glowSprite("rgba(232,182,72,1)", 256);
+
+/* ---------- red seal stamp (Chinese-seal look, Spanish edict text) ---------- */
+let seal = null;
+function makeSeal() {
+  const S = 420, c = makeCanvas(S, S), g = c.getContext("2d"), r = rng(31);
+  g.fillStyle = C.red; g.strokeStyle = C.red;
+  g.lineWidth = 14; roundRect(g, 20, 20, S - 40, S - 40, 26); g.stroke();
+  g.lineWidth = 4; roundRect(g, 42, 42, S - 84, S - 84, 16); g.stroke();
+  g.textAlign = "center"; g.textBaseline = "middle";
+  g.font = "900 230px NotoSerifSC"; g.fillText("禁", S / 2, S / 2 - 22);
+  g.font = "700 40px Cormorant"; g.letterSpacing = "6px";
+  g.fillText("CLAUSURA · 6 MESES", S / 2, S - 92);
+  // worn ink: knock out speckles and scratches
+  g.globalCompositeOperation = "destination-out";
+  for (let i = 0; i < 1600; i++) { g.globalAlpha = .25 + r() * .75; g.beginPath(); g.arc(r() * S, r() * S, r() * 2.6, 0, 6.29); g.fill(); }
+  g.lineWidth = 2;
+  for (let i = 0; i < 26; i++) { g.globalAlpha = .5; g.beginPath(); const x = r() * S, y = r() * S; g.moveTo(x, y); g.lineTo(x + (r() - .5) * 90, y + (r() - .5) * 20); g.stroke(); }
+  return c;
+}
+function roundRect(g, x, y, w, h, rr) { g.beginPath(); g.moveTo(x + rr, y); g.arcTo(x + w, y, x + w, y + h, rr); g.arcTo(x + w, y + h, x, y + h, rr); g.arcTo(x, y + h, x, y, rr); g.arcTo(x, y, x + w, y, rr); g.closePath(); }
+
+/* ---------- stadium geometry (world coords) ---------- */
+const ROWS = 14, ROW_TOP = 612, ROW_BOT = 850;
+const seats = (() => {
+  const r = rng(11), out = [];
+  const crowd = [C.blau, C.grana, C.blau, C.grana, C.ink, "#E8DCC0", "#5A4632"];
+  for (let i = 0; i < ROWS; i++) {
+    const k = i / (ROWS - 1), y = lerp(ROW_TOP, ROW_BOT, k);
+    const xl = lerp(212, 160, k) + 10, xr = lerp(868, 920, k) - 10;
+    const n = Math.floor((xr - xl) / lerp(13.5, 15.5, k));
+    for (let j = 0; j <= n; j++) {
+      const x = lerp(xl, xr, j / n) + (r() - .5) * 3;
+      const dx = (x - 540) / 380, dy = k;
+      out.push({
+        x, y: y + (r() - .5) * 2, k, rad: lerp(4.2, 5.6, k) + r() * .8,
+        col: crowd[(r() * crowd.length) | 0],
+        appear: 3.55 + Math.hypot(dx, dy * .6) * .9 + r() * .35,
+        fall: 8.75 + r() * .9 + (1 - k) * .2,
+        jit: r() * 6.28, refill: 24.05 + Math.abs(dx) * .7 + r() * .3,
+        gold: Infinity, src: null,
+      });
+    }
+  }
+  // gold: members who kept paying. 72% light up during the six months
+  // (density increases over time), the rest arrive from the city.
+  const idx = out.map((_, i) => i).sort(() => r() - .5);
+  const nA = Math.floor(idx.length * .72);
+  for (let i = 0; i < nA; i++) out[idx[i]].gold = 13.5 + 5.3 * Math.sqrt((i + r()) / nA);
+  out.cityIdx = idx.slice(nA);
+  return out;
+})();
+const goldTimesA = seats.filter(s => s.gold < 19).map(s => s.gold).sort((a, b) => a - b);
+
+/* ---------- skyline (screen coords, S4) ---------- */
+const BASE = 1192;
+const skyline = (() => {
+  const r = rng(51), b = []; let x = -20;
+  while (x < W + 20) {
+    const w = 46 + r() * 70, h = 70 + r() * 150;
+    b.push({ x, w, h, roof: r() < .3 ? "tri" : (r() < .5 ? "flat" : "step") });
+    x += w + 2 + r() * 6;
+  }
+  const win = [];
+  for (const bd of b) for (let yy = BASE - bd.h + 16; yy < BASE - 12; yy += 22) for (let xx = bd.x + 8; xx < bd.x + bd.w - 10; xx += 17) if (r() < .55) win.push({ x: xx, y: yy, on: 19.25 + r() * 1.6 });
+  return { b, win };
+})();
+// gold sparks: from city windows to the remaining dark seats
+const sparks = (() => {
+  const r = rng(77), out = [];
+  const lit = skyline.win;
+  seats.cityIdx.forEach((si, i) => {
+    const w = lit[(r() * lit.length) | 0];
+    const t0 = Math.max(w.on + .1, 19.7 + 2.9 * (i / seats.cityIdx.length) + r() * .3);
+    const dur = 1.0 + r() * .5;
+    seats[si].src = w; seats[si].gold = t0 + dur;
+    out.push({ si, w, t0, dur, bend: (r() - .5) * 260 });
+  });
+  return out;
+})();
+
+/* ---------- camera ---------- */
+function camera(t) {
+  let s = 1, ty = 0, cy = 760;
+  s = lerp(1, 1.05, easeInOut(prog(t, 3.2, 8.2)));
+  s = lerp(s, 1, easeInOut(prog(t, 12.6, 18.6)));
+  s = lerp(s, .62, easeInOut(prog(t, 19, 20.9)));
+  ty = lerp(0, -150, easeInOut(prog(t, 19, 20.9)));
+  s = lerp(s, .78, easeInOut(prog(t, 23.4, 25.2)));
+  ty = lerp(ty, 40, easeInOut(prog(t, 23.4, 25.2)));
+  // shake when the seal hits / gate slams
+  let sx = 0, sy = 0;
+  const shake = (t0, amp) => { const k = prog(t, t0, t0 + .45); if (k > 0 && k < 1) { const a = amp * (1 - k) * (1 - k); sx += Math.sin(t * 93) * a; sy += Math.cos(t * 71) * a; } };
+  shake(8.62, 22); shake(9.42, 10);
+  return { s, ty, cy, sx, sy };
+}
+const toScreen = (cam, x, y) => [540 + (x - 540) * cam.s + cam.sx, cam.cy + (y - cam.cy) * cam.s + cam.ty + cam.sy];
+
+/* ---------- text ---------- */
+function charReveal(str, x, y, font, col, t, t0, t1, opt = {}) {
+  const per = opt.per ?? .045, align = opt.align ?? "left", spacing = opt.spacing ?? 0;
+  ctx.font = font; ctx.textBaseline = "alphabetic";
+  const chars = [...str], ws = chars.map(ch => ctx.measureText(ch).width + spacing);
+  const total = ws.reduce((a, b) => a + b, 0) - spacing;
+  let cx = align === "center" ? x - total / 2 : align === "right" ? x - total : x;
+  const out = clamp((t1 - t) / .35);
+  chars.forEach((ch, i) => {
+    const k = easeOut(prog(t, t0 + i * per, t0 + i * per + .45));
+    const a = k * out;
+    if (a > 0) { ctx.fillStyle = rgba(col, a); ctx.fillText(ch, cx, y + (1 - k) * 22 + (1 - out) * -10); }
+    cx += ws[i];
+  });
+  return total;
+}
+function spaced(str, x, y, font, col, a, sp, align = "center") {
+  ctx.font = font; ctx.letterSpacing = sp + "px"; ctx.textAlign = align; ctx.fillStyle = rgba(col, a);
+  ctx.fillText(str, x + (align === "center" ? sp / 2 : 0), y); ctx.letterSpacing = "0px"; ctx.textAlign = "left";
+}
+
+/* subtitle cues: Chinese first, English beneath (left aligned, clear of Douyin UI) */
+const CUES = [
+  { t0: .55, t1: 3.05, zh: ["一百年前，一阵嘘声", "让一家球会沉默了半年"], en: "A century ago, one crowd's whistles silenced a club." },
+  { t0: 3.5, t1: 5.75, label: "1925 · 06 · 14", zh: ["巴塞罗那", "莱斯科尔茨球场"], en: "Les Corts stadium, Barcelona" },
+  { t0: 5.9, t1: 8.25, zh: ["西班牙国歌奏响", "看台上嘘声四起"], en: "As the Spanish anthem played, the stands whistled." },
+  { t0: 8.75, t1: 10.75, label: "里维拉独裁政府", zh: ["勒令俱乐部", "停止一切活动六个月"], en: "The dictatorship banned all club activity for six months." },
+  { t0: 10.85, t1: 12.75, zh: ["球场大门被封", "创始人甘伯被迫离开"], en: "The gates were sealed. Founder Joan Gamper was forced out." },
+  { t0: 13.0, t1: 15.9, zh: ["球场空了", "可会员没有离开"], en: "The stadium fell silent. The members stayed." },
+  { t0: 16.0, t1: 19.0, zh: ["近一万名会员", "照常缴纳会费"], en: "Some ten thousand socis kept paying their dues." },
+  { t0: 19.25, t1: 21.4, zh: ["就连不是球迷的市民", "也伸出了援手"], en: "Even people who weren't fans sent money." },
+  { t0: 21.5, t1: 23.3, zh: ["城市，托住了", "它的球会"], en: "A city held its club up." },
+  { t0: 24.6, t1: 28.6, zh: ["球会是城市的骄傲", "城市是球会的底气"], en: "The club is the city's pride. The city is the club's strength." },
+];
+function drawCues(t) {
+  const ink = inkC(t), gold = hex(C.gold);
+  for (const c of CUES) {
+    if (t < c.t0 - .05 || t > c.t1 + .05) continue;
+    const x = 92; let y = 1290;
+    const out = clamp((c.t1 - t) / .35);
+    // gold rule
+    const rk = easeOut(prog(t, c.t0, c.t0 + .5));
+    ctx.fillStyle = rgba(gold, out); ctx.fillRect(x, y - 70, 96 * rk, 4);
+    if (c.label) charReveal(c.label, x + 118, y - 58, "700 30px Playfair", gold, t, c.t0, c.t1, { per: .02, spacing: 3 });
+    c.zh.forEach((line, i) => { charReveal(line, x, y + 18 + i * 84, "600 64px NotoSerifSC", ink, t, c.t0 + .1 + i * .28, c.t1); });
+    const ek = easeOut(prog(t, c.t0 + .55, c.t0 + 1.1)) * out;
+    ctx.font = "italic 500 36px Cormorant"; ctx.fillStyle = rgba(ink, .72 * ek);
+    ctx.fillText(c.en, x, y + 18 + c.zh.length * 84 + 6);
+  }
+}
+
+/* ---------- stadium drawing ---------- */
+function drawStadium(t, cam) {
+  const d = dark(t) / .9, ink = inkC(t);
+  const reveal = easeOut(prog(t, 3.1, 3.9));
+  if (reveal <= 0) return;
+  ctx.save();
+  ctx.translate(540 + cam.sx, cam.cy + cam.ty + cam.sy); ctx.scale(cam.s, cam.s); ctx.translate(-540, -cam.cy);
+  ctx.globalAlpha = reveal;
+  ctx.translate(0, (1 - reveal) * 60);
+
+  // pitch
+  const pc = mixRGB(desat(C.pitch, .25), [34, 40, 36], d);
+  ctx.fillStyle = rgba(pc); ctx.beginPath(); ctx.moveTo(110, 902); ctx.lineTo(970, 902); ctx.lineTo(1130, 1160); ctx.lineTo(-50, 1160); ctx.closePath(); ctx.fill();
+  // mowing stripes
+  for (let i = 0; i < 9; i++) {
+    if (i % 2) continue;
+    const a0 = i / 9, a1 = (i + 1) / 9;
+    ctx.fillStyle = rgba([0, 0, 0], .05);
+    ctx.beginPath(); ctx.moveTo(lerp(110, 970, a0), 902); ctx.lineTo(lerp(110, 970, a1), 902); ctx.lineTo(lerp(-50, 1130, a1), 1160); ctx.lineTo(lerp(-50, 1130, a0), 1160); ctx.fill();
+  }
+  ctx.strokeStyle = rgba([240, 234, 216], .75 - d * .45); ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(122, 912); ctx.lineTo(958, 912); ctx.moveTo(540, 912); ctx.lineTo(540, 1160); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(540, 1030, 150, 46, 0, 0, 6.29); ctx.stroke();
+
+  // stand body
+  ctx.fillStyle = mix("#D9CDB2", "#1A1D22", d);
+  ctx.beginPath(); ctx.moveTo(206, 600); ctx.lineTo(874, 600); ctx.lineTo(926, 862); ctx.lineTo(154, 862); ctx.closePath(); ctx.fill();
+  // tier lines
+  ctx.strokeStyle = rgba(ink, .25); ctx.lineWidth = 1.4;
+  for (let i = 0; i <= ROWS; i++) { const k = i / ROWS, y = lerp(604, 858, k); ctx.beginPath(); ctx.moveTo(lerp(205, 156, k), y); ctx.lineTo(lerp(875, 924, k), y); ctx.stroke(); }
+  // aisles
+  for (const a of [.25, .5, .75]) { ctx.beginPath(); ctx.moveTo(lerp(206, 874, a), 600); ctx.lineTo(lerp(154, 926, a), 862); ctx.stroke(); }
+
+  drawSeats(t, d);
+
+  // facade with arches
+  ctx.fillStyle = mix("#C9BB9C", "#16181C", d); ctx.fillRect(150, 862, 780, 34);
+  ctx.fillStyle = mix("#3B342A", "#060708", d);
+  for (let i = 0; i < 16; i++) { const x = 170 + i * 47.5; ctx.beginPath(); ctx.moveTo(x, 896); ctx.lineTo(x, 878); ctx.arc(x + 14, 878, 14, Math.PI, 0); ctx.lineTo(x + 28, 896); ctx.fill(); }
+  ctx.strokeStyle = rgba(ink, .9); ctx.lineWidth = 3; ctx.strokeRect(150, 862, 780, 34);
+
+  // roof + columns
+  ctx.fillStyle = rgba(ink, .92);
+  ctx.beginPath(); ctx.moveTo(176, 566); ctx.lineTo(904, 566); ctx.lineTo(880, 536); ctx.lineTo(200, 536); ctx.closePath(); ctx.fill();
+  ctx.fillRect(176, 566, 728, 8);
+  ctx.lineWidth = 4; ctx.strokeStyle = rgba(ink, .85);
+  for (let i = 0; i <= 8; i++) { const x = lerp(196, 884, i / 8); ctx.beginPath(); ctx.moveTo(x, 574); ctx.lineTo(x + (x - 540) * .02, 606); ctx.stroke(); }
+  // pediment + name board
+  ctx.fillStyle = rgba(ink, .92);
+  ctx.beginPath(); ctx.moveTo(430, 536); ctx.lineTo(540, 492); ctx.lineTo(650, 536); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = mix(C.paper, "#20242A", d); ctx.fillRect(452, 542, 176, 20);
+  spaced("LES CORTS", 540, 559, "700 20px Cormorant", ink, 1, 6);
+
+  // flag
+  drawFlag(t, d);
+
+  ctx.restore();
+}
+
+function drawSeats(t, d) {
+  const cream = hex("#E8DCC0");
+  for (const s of seats) {
+    let x = s.x, y = s.y, a = 0, col = hex(s.col), r = s.rad;
+    // S1: crowd appears; agitated when the anthem is whistled
+    if (t < 9.8) {
+      a = easeOut(prog(t, s.appear, s.appear + .4));
+      if (t > 5.95) { const k = prog(t, 5.95, 6.4) * (1 - prog(t, 8.3, 8.7)); y -= Math.abs(Math.sin(t * 15 + s.jit)) * 5 * k; }
+      // S2: the crowd drains away
+      const fk = prog(t, s.fall, s.fall + .8);
+      if (fk > 0) { y += easeIn(fk) * 80; a *= 1 - fk; col = mixRGB(col, desat(s.col, 1), clamp(fk * 2)); }
+    }
+    // empty seat marks
+    ctx.fillStyle = rgba(mixRGB([150, 138, 112], [70, 76, 86], d), .55);
+    ctx.fillRect(s.x - r * .6, s.y + r * .3, r * 1.2, 2);
+    // S5 refill with colour
+    if (t > s.refill) {
+      const k = easeOutBack(prog(t, s.refill, s.refill + .45));
+      a = clamp(k); col = hex(s.col); r = s.rad * clamp(k, 0, 1.3);
+      y -= Math.abs(Math.sin(t * 9 + s.jit)) * 3 * prog(t, 25, 25.6);
+    }
+    if (a > 0.01) { ctx.fillStyle = rgba(col, a); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.29); ctx.fill(); }
+    // gold: a member's dues, still paid
+    if (t > s.gold && t < 25.2) {
+      const k = prog(t, s.gold, s.gold + .35), fade = 1 - prog(t, 24.2, 25.2);
+      const pulse = .85 + .15 * Math.sin(t * 3 + s.jit);
+      ctx.globalAlpha = clamp(k) * fade * pulse * (.75 + .25 * (1 - k));
+      const g = 26 + (1 - k) * 30;
+      ctx.drawImage(glowGold, s.x - g / 2, s.y - g / 2, g, g);
+      ctx.globalAlpha = 1;
+      if (t < s.refill) { ctx.fillStyle = rgba(hex(C.goldHi), clamp(k) * fade); ctx.beginPath(); ctx.arc(s.x, s.y, s.rad * .8, 0, 6.29); ctx.fill(); }
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawFlag(t, d) {
+  const ink = inkC(t);
+  ctx.strokeStyle = rgba(ink, .95); ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(540, 494); ctx.lineTo(540, 420); ctx.stroke();
+  ctx.fillStyle = rgba(ink); ctx.beginPath(); ctx.arc(540, 418, 5, 0, 6.29); ctx.fill();
+  // limp & grey during the ban, waving otherwise
+  const limp = clamp(prog(t, 8.7, 9.6) - prog(t, 23.6, 24.4));
+  const gray = clamp(prog(t, 8.7, 9.6) - prog(t, 23.6, 24.4));
+  const fw = 108, fh = 64, strips = 5, seg = 18;
+  for (let sIdx = 0; sIdx < strips; sIdx++) {
+    const col = mixRGB(hex(sIdx % 2 ? C.grana : C.blau), desat(sIdx % 2 ? C.grana : C.blau, 1), gray * .9);
+    ctx.fillStyle = rgba(mixRGB(col, [20, 22, 26], d * .35));
+    ctx.beginPath();
+    const y0 = 424 + sIdx * fh / strips, y1 = y0 + fh / strips;
+    const pt = (u, yy) => {
+      const wave = Math.sin(u * 5 - t * 6) * 6 * u;
+      const xx = 542 + u * fw * (1 - limp * .55);
+      const yd = yy + wave * (1 - limp) + limp * (u * u * 40 + (yy - 424) * .3 * u);
+      return [xx + limp * Math.sin(u * 3) * 2, yd];
+    };
+    for (let i = 0; i <= seg; i++) { const [px, py] = pt(i / seg, y0); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+    for (let i = seg; i >= 0; i--) { const [px, py] = pt(i / seg, y1); ctx.lineTo(px, py); }
+    ctx.fill();
+  }
+}
+
+/* ---------- gates ---------- */
+function drawGates(t, cam) {
+  if (t < 9.0 || t > 24.3) return;
+  ctx.save();
+  ctx.translate(540 + cam.sx, cam.cy + cam.ty + cam.sy); ctx.scale(cam.s, cam.s); ctx.translate(-540, -cam.cy);
+  const lift = easeIn(prog(t, 23.5, 24.2)) * -700;
+  const N = 13;
+  for (let i = 0; i < N; i++) {
+    const x = lerp(160, 920, i / (N - 1));
+    const k = prog(t, 9.0 + Math.abs(i - 6) * .025, 9.4 + Math.abs(i - 6) * .025);
+    const drop = (1 - easeOutBounce(k)) * -620 + lift;
+    const gr = ctx.createLinearGradient(x - 7, 0, x + 7, 0);
+    gr.addColorStop(0, C.iron); gr.addColorStop(.45, C.ironHi); gr.addColorStop(1, C.iron);
+    ctx.fillStyle = gr; ctx.fillRect(x - 6, 470 + drop, 12, 440);
+    ctx.beginPath(); ctx.moveTo(x - 11, 474 + drop); ctx.lineTo(x, 446 + drop); ctx.lineTo(x + 11, 474 + drop); ctx.fill();
+  }
+  const kb = prog(t, 9.3, 9.6), barDrop = (1 - easeOutBounce(kb)) * -620 + lift;
+  ctx.fillStyle = C.iron;
+  for (const y of [560, 820]) { ctx.fillRect(140, y + barDrop, 800, 14); ctx.fillStyle = C.ironHi; ctx.fillRect(140, y + barDrop, 800, 3); ctx.fillStyle = C.iron; }
+  // padlock + chain
+  const pk = easeOutBack(prog(t, 9.55, 9.85));
+  if (pk > 0) {
+    ctx.save(); ctx.translate(540, 840 + lift); ctx.scale(pk, pk);
+    ctx.strokeStyle = "#8C929B"; ctx.lineWidth = 9; ctx.beginPath(); ctx.arc(0, 0, 24, Math.PI, 0); ctx.stroke();
+    const g2 = ctx.createLinearGradient(-34, 0, 34, 0); g2.addColorStop(0, "#5D4A1E"); g2.addColorStop(.5, "#B8963F"); g2.addColorStop(1, "#5D4A1E");
+    ctx.fillStyle = g2; roundRect(ctx, -34, 0, 68, 56, 8); ctx.fill();
+    ctx.fillStyle = "#1A1408"; ctx.beginPath(); ctx.arc(0, 22, 7, 0, 6.29); ctx.fill(); ctx.fillRect(-3, 22, 6, 18);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+/* ---------- S1 extras: anthem staff + whistles ---------- */
+const whistles = (() => { const r = rng(91); return Array.from({ length: 30 }, () => ({ si: (r() * seats.length) | 0, t0: 6.0 + r() * 2.0, size: 30 + r() * 30, dx: (r() - .5) * 80, rot: (r() - .5) * .5 })); })();
+function drawAnthem(t, cam) {
+  if (t < 5.4 || t > 8.6) return;
+  const ink = inkC(t);
+  const a = easeOut(prog(t, 5.4, 5.9)) * (1 - prog(t, 6.6, 7.2));
+  const shatter = prog(t, 6.2, 7.4);
+  ctx.save(); ctx.translate(cam.sx, cam.sy);
+  // staff lines
+  if (a > 0) {
+    ctx.strokeStyle = rgba(ink, .45 * a); ctx.lineWidth = 2;
+    const scroll = (t - 5.4) * 120;
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      for (let x = 60; x <= 1020; x += 20) { const y = 300 + i * 16 + Math.sin(x * .012 + t * 2) * 6 + (shatter > 0 ? Math.sin(x * .2 + i) * shatter * 30 : 0); x === 60 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+      ctx.stroke();
+    }
+    // notes drifting in, then scattering
+    const notes = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+    ctx.font = "600 58px NotoSerifSC";
+    notes.forEach(n => {
+      const nx = 100 + n * 105 - 40 + scroll * .4, ny = 300 + ((n * 37) % 5) * 16 + Math.sin(t * 2 + n) * 6;
+      const r = hash(n + 3);
+      const sx = nx + (r - .5) * 500 * easeOut(shatter), sy = ny + (-200 - r * 200) * easeOut(shatter) + 600 * shatter * shatter;
+      ctx.save(); ctx.translate(sx, sy); ctx.rotate((r - .5) * 6 * shatter);
+      ctx.fillStyle = rgba(ink, a * (1 - shatter));
+      ctx.beginPath(); ctx.ellipse(0, 0, 13, 9, -.4, 0, 6.29); ctx.fill();
+      ctx.fillRect(10, -52, 3.5, 52);
+      if (n % 2) { ctx.beginPath(); ctx.moveTo(13, -52); ctx.quadraticCurveTo(30, -36, 26, -18); ctx.lineTo(24, -20); ctx.quadraticCurveTo(26, -34, 13, -42); ctx.fill(); }
+      ctx.restore();
+    });
+  }
+  ctx.restore();
+  // whistle waves rising from the stands
+  const wk = prog(t, 5.95, 6.2) * (1 - prog(t, 8.2, 8.6));
+  if (wk > 0) {
+    const [cx, cy] = toScreen(cam, 540, 640);
+    ctx.lineWidth = 4;
+    for (let i = 0; i < 9; i++) {
+      const p = ((t - 5.95) * 1.4 + i / 9) % 1;
+      ctx.strokeStyle = rgba(hex(C.grana), (1 - p) * .55 * wk);
+      ctx.beginPath(); ctx.ellipse(cx, cy, 120 + p * 520, 40 + p * 300, 0, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
+    }
+  }
+  // 嘘 glyphs
+  for (const w of whistles) {
+    const k = prog(t, w.t0, w.t0 + 1.4); if (k <= 0 || k >= 1) continue;
+    const s = seats[w.si], [x, y] = toScreen(cam, s.x, s.y);
+    ctx.save(); ctx.translate(x + w.dx * k, y - 40 - easeOut(k) * 230); ctx.rotate(w.rot);
+    ctx.font = `900 ${w.size}px NotoSerifSC`; ctx.textAlign = "center";
+    ctx.fillStyle = rgba(hex(C.grana), Math.sin(k * Math.PI) * .9);
+    ctx.fillText("嘘", 0, 0); ctx.restore();
+  }
+}
+
+/* ---------- S2: the seal ---------- */
+function drawSeal(t) {
+  if (t < 8.5 || t > 12.9) return;
+  seal ||= makeSeal();
+  const k = prog(t, 8.5, 8.68);
+  const s = lerp(2.6, 1, easeIn(k)) * (k >= 1 ? 1 + .04 * Math.exp(-(t - 8.68) * 12) * Math.sin((t - 8.68) * 60) : 1);
+  const fade = 1 - prog(t, 10.5, 11.2) * .82 - prog(t, 12.3, 12.9) * .18;
+  ctx.save(); ctx.translate(540, 700); ctx.rotate(-.13); ctx.scale(s, s);
+  ctx.globalAlpha = clamp(k * 1.4) * fade;
+  ctx.globalCompositeOperation = dark(t) > .3 ? "source-over" : "multiply";
+  ctx.drawImage(seal, -210, -210);
+  ctx.restore(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+  // impact dust ring
+  const ik = prog(t, 8.68, 9.3);
+  if (ik > 0 && ik < 1) { ctx.strokeStyle = rgba(hex(C.cream), (1 - ik) * .5); ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(540, 700, 230 + ik * 260, 230 + ik * 260, 0, 0, 6.29); ctx.stroke(); }
+}
+
+/* ---------- S3: calendar + member counter ---------- */
+const MONTHS = [["六月", "JUNIO"], ["七月", "JULIO"], ["八月", "AGOSTO"], ["九月", "SEPTIEMBRE"], ["十月", "OCTUBRE"], ["十一月", "NOVIEMBRE"], ["十二月", "DICIEMBRE"]];
+function drawCalendar(t) {
+  const a = easeOut(prog(t, 12.7, 13.3)) * (1 - prog(t, 19.0, 19.6));
+  if (a <= 0) return;
+  const cx = 540, top = 232, w = 236, h = 196;
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(0, (1 - a) * -30);
+  const flipAt = i => 13.6 + i * .82; // page i torn at this time
+  let cur = 0; for (let i = 0; i < 6; i++) if (t > flipAt(i) + .38) cur = i + 1;
+  const page = (i, sy = 1, alpha = 1, rot = 0, dy = 0) => {
+    ctx.save(); ctx.translate(cx, top + dy); ctx.rotate(rot); ctx.scale(1, sy); ctx.globalAlpha = a * alpha;
+    ctx.fillStyle = "#F3EBD8"; ctx.fillRect(-w / 2, 0, w, h);
+    ctx.fillStyle = C.grana; ctx.fillRect(-w / 2, 0, w, 44);
+    spaced("1925", 0, 33, "700 30px Cormorant", hex(C.cream), 1, 8);
+    ctx.textAlign = "center"; ctx.fillStyle = C.ink; ctx.font = "900 70px NotoSerifSC"; ctx.fillText(MONTHS[i][0], 0, 128);
+    spaced(MONTHS[i][1], 0, 172, "700 22px Cormorant", hex(C.ink), .7, 5);
+    ctx.textAlign = "left"; ctx.restore();
+  };
+  // shadow + stack
+  ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillRect(cx - w / 2 + 8, top + 10, w, h);
+  if (cur + 1 < MONTHS.length) page(cur + 1);
+  page(cur);
+  // currently flipping page
+  for (let i = 0; i < 6; i++) {
+    const k = prog(t, flipAt(i), flipAt(i) + .38);
+    if (k > 0 && k < 1) { if (i + 1 < MONTHS.length) page(i + 1); page(i, Math.cos(k * Math.PI / 2), 1 - k * .3, -k * .25, -k * 30); }
+  }
+  // binding rings
+  ctx.fillStyle = "#3A3A3A"; for (const dx of [-70, 70]) { ctx.beginPath(); ctx.arc(cx + dx, top + 2, 8, 0, 6.29); ctx.fill(); }
+  ctx.restore();
+}
+function drawCounter(t) {
+  const a = easeOut(prog(t, 13.4, 14.0)) * (1 - prog(t, 18.9, 19.5));
+  if (a <= 0) return;
+  let n = 0; for (const g of goldTimesA) if (g <= t) n++;
+  const v = Math.round(10000 * easeOut(n / goldTimesA.length));
+  const gold = hex(C.goldHi);
+  ctx.save(); ctx.globalAlpha = a;
+  ctx.globalAlpha = a * .5; ctx.drawImage(glowBig, 540 - 260, 1050 - 130, 520, 200); ctx.globalAlpha = a;
+  ctx.textAlign = "center"; ctx.font = "700 112px Playfair"; ctx.fillStyle = rgba(gold, 1);
+  ctx.fillText(v.toLocaleString("en-US"), 540, 1078);
+  spaced("SOCIS · 会员", 540, 1126, "600 26px NotoSerifSC", hex(C.cream), .8, 8);
+  ctx.restore();
+}
+
+/* ---------- S4: the city ---------- */
+function drawCity(t, cam) {
+  const rise = easeOut(prog(t, 19.0, 20.6)) * (1 - easeIn(prog(t, 23.3, 24.0)));
+  if (rise <= 0) return;
+  const off = (1 - rise) * 420;
+  ctx.save(); ctx.translate(0, off);
+  const sil = "#040507";
+  // night haze so the scaled-down pitch melts into the skyline
+  const hz = ctx.createLinearGradient(0, BASE - 440, 0, BASE + 300);
+  hz.addColorStop(0, "rgba(16,18,23,0)"); hz.addColorStop(.2, "rgba(16,18,23,.85)");
+  hz.addColorStop(.7, "rgba(16,18,23,.85)"); hz.addColorStop(1, "rgba(16,18,23,0)");
+  ctx.fillStyle = hz; ctx.fillRect(0, BASE - 440, W, 740);
+  ctx.fillStyle = sil;
+  // Sagrada Família spires
+  const spire = (x, hgt, w) => { ctx.beginPath(); ctx.moveTo(x - w / 2, BASE); ctx.lineTo(x - w / 2, BASE - hgt + w); ctx.quadraticCurveTo(x - w / 2, BASE - hgt, x, BASE - hgt - w * 1.4); ctx.quadraticCurveTo(x + w / 2, BASE - hgt, x + w / 2, BASE - hgt + w); ctx.lineTo(x + w / 2, BASE); ctx.fill(); ctx.beginPath(); ctx.arc(x, BASE - hgt - w * 1.6, w * .35, 0, 6.29); ctx.fill(); };
+  spire(108, 360, 30); spire(150, 410, 32); spire(196, 420, 32); spire(240, 368, 30);
+  ctx.fillRect(84, BASE - 200, 184, 200);
+  // church dome on the right
+  ctx.beginPath(); ctx.moveTo(840, BASE); ctx.lineTo(840, BASE - 200); ctx.arc(905, BASE - 200, 65, Math.PI, 0); ctx.lineTo(970, BASE); ctx.fill();
+  ctx.fillRect(900, BASE - 300, 10, 40);
+  // factory chimneys (Poblenou) with smoke
+  for (const [x, hh] of [[330, 330], [745, 300]]) {
+    ctx.beginPath(); ctx.moveTo(x - 14, BASE); ctx.lineTo(x - 9, BASE - hh); ctx.lineTo(x + 9, BASE - hh); ctx.lineTo(x + 14, BASE); ctx.fill();
+    for (let i = 0; i < 6; i++) { const p = ((t * .25 + i / 6) % 1); ctx.fillStyle = `rgba(150,150,160,${(1 - p) * .12})`; ctx.beginPath(); ctx.arc(x + p * 60 + Math.sin(p * 6 + i) * 8, BASE - hh - p * 120, 10 + p * 26, 0, 6.29); ctx.fill(); }
+    ctx.fillStyle = sil;
+  }
+  // blocks
+  for (const b of skyline.b) {
+    ctx.beginPath(); ctx.moveTo(b.x, BASE); ctx.lineTo(b.x, BASE - b.h);
+    if (b.roof === "tri") ctx.lineTo(b.x + b.w / 2, BASE - b.h - 26); else if (b.roof === "step") { ctx.lineTo(b.x + b.w * .25, BASE - b.h); ctx.lineTo(b.x + b.w * .25, BASE - b.h - 14); ctx.lineTo(b.x + b.w * .75, BASE - b.h - 14); ctx.lineTo(b.x + b.w * .75, BASE - b.h); }
+    ctx.lineTo(b.x + b.w, BASE - b.h); ctx.lineTo(b.x + b.w, BASE); ctx.fill();
+  }
+  ctx.fillRect(0, BASE, W, 6);
+  // windows light up one by one
+  for (const w of skyline.win) {
+    const k = prog(t, w.on, w.on + .3); if (k <= 0) continue;
+    ctx.fillStyle = rgba(hex(C.gold), .85 * k); ctx.fillRect(w.x, w.y, 7, 10);
+    ctx.globalAlpha = .35 * k; ctx.drawImage(glowGold, w.x - 12, w.y - 11, 32, 32); ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+  // sparks travelling from windows to the stadium
+  for (const s of sparks) {
+    const k = prog(t, s.t0, s.t0 + s.dur); if (k <= 0 || k >= 1) continue;
+    const seat = seats[s.si];
+    const [tx, ty] = toScreen(cam, seat.x, seat.y);
+    const sx = s.w.x + 3, sy = s.w.y + 5 + off;
+    const qx = (sx + tx) / 2 + s.bend, qy = Math.min(sy, ty) - 180;
+    for (let j = 0; j < 5; j++) {
+      const u = easeInOut(clamp(k - j * .03));
+      const x = (1 - u) * (1 - u) * sx + 2 * (1 - u) * u * qx + u * u * tx;
+      const y = (1 - u) * (1 - u) * sy + 2 * (1 - u) * u * qy + u * u * ty;
+      ctx.globalAlpha = (1 - j / 5) * .9; const g = 22 - j * 3;
+      ctx.drawImage(glowGold, x - g / 2, y - g / 2, g, g);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* ---------- S5: blaugrana wipe + title ---------- */
+function drawWipe(t) {
+  const N = 10, sw = W / N;
+  for (let i = 0; i < N; i++) {
+    const d0 = 23.35 + i * .035, inK = easeInOut(prog(t, d0, d0 + .4)), outK = easeInOut(prog(t, d0 + .55, d0 + .95));
+    if (inK <= 0 || outK >= 1) continue;
+    ctx.fillStyle = i % 2 ? C.grana : C.blau;
+    const y0 = outK * H, y1 = inK * H;
+    ctx.fillRect(i * sw - .5, y0, sw + 1, y1 - y0);
+  }
+}
+const confetti = (() => { const r = rng(5); return Array.from({ length: 70 }, () => ({ x: r() * W, t0: 24.1 + r() * 2.5, sp: 260 + r() * 260, sw: r() * 6, c: r() < .5 ? C.blau : (r() < .5 ? C.grana : C.gold), s: 8 + r() * 10 })); })();
+function drawFinale(t) {
+  if (t < 24.2) return;
+  const ink = hex(C.ink);
+  // title
+  const ta = 1 - prog(t, 28.2, 28.5) * 0;
+  const k = prog(t, 24.35, 25.2);
+  ctx.globalAlpha = ta;
+  charReveal("MÉS QUE UN CLUB", 540, 352, "700 92px Cormorant", hex(C.blau), t, 24.35, 99, { align: "center", per: .04, spacing: 6 });
+  ctx.fillStyle = C.gold; const rw = 300 * easeOut(prog(t, 24.9, 25.6)); ctx.fillRect(540 - rw / 2, 384, rw, 3);
+  charReveal("不止是一家俱乐部", 540, 452, "600 46px NotoSerifSC", hex(C.grana), t, 25.1, 99, { align: "center", per: .06, spacing: 10 });
+  ctx.globalAlpha = 1;
+  // confetti
+  for (const c of confetti) {
+    const dt = t - c.t0; if (dt < 0) continue;
+    const y = -20 + dt * c.sp; if (y > 1220) continue;
+    ctx.save(); ctx.translate(c.x + Math.sin(dt * 3 + c.sw) * 30, y); ctx.rotate(dt * 4 + c.sw); ctx.scale(1, Math.cos(dt * 6 + c.sw));
+    ctx.fillStyle = c.c; ctx.fillRect(-c.s / 2, -c.s / 4, c.s, c.s / 2); ctx.restore();
+  }
+  // end tag (inside safe area, above Douyin caption)
+  const ea = easeOut(prog(t, 26.4, 27.0));
+  spaced("足球与城市 · 第一集", 92, 1560, "600 30px NotoSerifSC", hex(C.grana), ea, 4, "left");
+}
+
+/* ---------- persistent chrome ---------- */
+function drawChrome(t) {
+  const a = easeOut(prog(t, 3.3, 3.9)) * (1 - prog(t, 23.3, 23.5)) + easeOut(prog(t, 24.6, 25.2)) * 0;
+  if (a <= 0) return;
+  const ink = inkC(t);
+  spaced("足球与城市", 92, 168, "600 28px NotoSerifSC", ink, .75 * a, 6, "left");
+  spaced("FOOTBALL & CITY", 92, 204, "700 22px Cormorant", ink, .55 * a, 5, "left");
+}
+
+/* ---------- S0: hook ---------- */
+function drawHook(t) {
+  if (t > 3.6) return;
+  const ink = inkC(t);
+  const k = easeInOut(prog(t, .15, 1.45));
+  const year = Math.round(2025 - 100 * k);
+  const out = easeIn(prog(t, 2.95, 3.5));
+  ctx.save();
+  ctx.translate(540, 760 - out * 120); ctx.scale(1 - out * .5, 1 - out * .5);
+  ctx.globalAlpha = (1 - out) * easeOut(prog(t, 0, .4));
+  spaced("BARCELONA", 0, -230, "700 40px Cormorant", ink, .8, 22);
+  ctx.textAlign = "center"; ctx.font = "700 300px Playfair"; ctx.fillStyle = rgba(ink);
+  ctx.fillText(String(year), 0, 100);
+  // landing flash
+  const lk = prog(t, 1.45, 2.2);
+  ctx.fillStyle = C.gold; const rw = 420 * easeOut(prog(t, 1.4, 2.0)); ctx.fillRect(-rw / 2, 150, rw, 5);
+  if (lk > 0 && lk < 1) { ctx.globalAlpha *= (1 - lk) * .5; ctx.drawImage(glowBig, -400, -260, 800, 420); }
+  ctx.globalAlpha = (1 - out) * easeOut(prog(t, 1.6, 2.2));
+  spaced("1925 年 · 西班牙", 0, 220, "600 34px NotoSerifSC", ink, .7, 10);
+  ctx.textAlign = "left";
+  ctx.restore(); ctx.globalAlpha = 1;
+}
+
+/* ---------- post: grain, vignette, flicker, dust ---------- */
+function drawPost(t, frame) {
+  ctx.globalAlpha = .07; ctx.globalCompositeOperation = "overlay";
+  ctx.drawImage(grains[frame % 4], 0, 0, W, H);
+  ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+  const v = ctx.createRadialGradient(540, 860, 300, 540, 960, 1250);
+  v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, `rgba(20,12,4,${.42 + dark(t) * .2})`);
+  ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  // flicker
+  const f = (hash(frame) - .5) * .035; ctx.fillStyle = f > 0 ? `rgba(255,245,220,${f})` : `rgba(0,0,0,${-f})`; ctx.fillRect(0, 0, W, H);
+  // dust & occasional scratch
+  const r = rng(frame * 13 + 1);
+  for (let i = 0; i < 5; i++) { if (r() < .5) continue; ctx.fillStyle = `rgba(${dark(t) > .4 ? "230,220,200" : "30,24,16"},${.15 + r() * .25})`; ctx.beginPath(); ctx.arc(r() * W, r() * H, .8 + r() * 2.2, 0, 6.29); ctx.fill(); }
+  if (r() < .12) { ctx.fillStyle = "rgba(240,230,210,0.12)"; ctx.fillRect(r() * W, 0, 1.5, H); }
+  // fade in / out
+  const fi = 1 - prog(t, 0, .35), fo = prog(t, 28.0, 28.5);
+  if (fi > 0) { ctx.fillStyle = `rgba(0,0,0,${fi})`; ctx.fillRect(0, 0, W, H); }
+  if (fo > 0) { ctx.fillStyle = `rgba(234,224,202,${fo * .6})`; ctx.fillRect(0, 0, W, H); }
+}
+
+/* ---------- frame ---------- */
+function renderFrame(t) {
+  const frame = Math.round(t * 30);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+  ctx.drawImage(paperTex, 0, 0);
+  const dk = dark(t); if (dk > 0) { ctx.fillStyle = `rgba(14,16,20,${dk})`; ctx.fillRect(0, 0, W, H); }
+  // a night-sky glow behind the stadium during the ban, warming as gold arrives
+  const warm = prog(t, 14, 22) * (1 - prog(t, 23.4, 24.2));
+  if (warm > 0) { ctx.globalAlpha = warm * .35; ctx.drawImage(glowBig, 540 - 700, 300, 1400, 900); ctx.globalAlpha = 1; }
+
+  const cam = camera(t);
+  drawHook(t);
+  drawChrome(t);
+  drawStadium(t, cam);
+  drawAnthem(t, cam);
+  drawGates(t, cam);
+  drawSeal(t);
+  drawCalendar(t);
+  drawCounter(t);
+  drawCity(t, cam);
+  drawFinale(t);
+  drawCues(t);
+  drawWipe(t);
+  drawPost(t, frame);
+}
+window.renderFrame = renderFrame;
+window.DURATION = DURATION;
+
+/* ---------- live preview (skipped when driven by render.mjs) ---------- */
+window.fontsReady = document.fonts.ready.then(() => Promise.all([
+  document.fonts.load("600 64px NotoSerifSC", "巴"), document.fonts.load("900 64px NotoSerifSC", "禁"),
+  document.fonts.load("700 64px Cormorant", "1925"), document.fonts.load("700 64px Playfair", "1925"), document.fonts.load("500 64px Cormorant", "a"), document.fonts.load("italic 500 64px Cormorant", "a"),
+]));
+if (!location.search.includes("render")) {
+  window.fontsReady.then(() => {
+    const seek = parseFloat(new URLSearchParams(location.search).get("t"));
+    const start = performance.now() - (isNaN(seek) ? 0 : seek * 1000);
+    const loop = now => { renderFrame(((now - start) / 1000) % DURATION); requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+  });
+}
+</script>
+</body>
+</html>
