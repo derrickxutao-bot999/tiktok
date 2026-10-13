@@ -54,7 +54,7 @@ Final video: `forest-stadium.mp4`
 python3 audio/fetch_samples.py      # ~1 GB of instrument samples -> audio/samples/ (once)
 python3 soundtrack.py               # -> out/soundtrack.wav
 ln -s /path/to/node_modules .       # needs playwright; Chromium with WebGL (SwiftShader is fine)
-node render.mjs --workers 4         # -> out/forest-stadium.mp4
+node render.mjs --workers 4         # -> out/forest-stadium.mp4 (~54 MB, for upload), out/master.mp4 (CRF 17), out/forest-stadium-preview.mp4 (<30 MB)
 node render.mjs --stills 6.5,28,46  # quick PNG checks
 ```
 
