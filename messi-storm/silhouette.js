@@ -30,13 +30,9 @@ const lerp2 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 const HEAD_SIDE = [[-0.048, 0.036], [-0.06, 0.004], [-0.056, -0.036], [-0.034, -0.063], [0.004, -0.071],
   [0.04, -0.058], [0.056, -0.032], [0.06, -0.012], [0.055, -0.002], [0.07, 0.017], [0.057, 0.025],
   [0.061, 0.035], [0.061, 0.051], [0.046, 0.068], [0.016, 0.064], [-0.008, 0.052], [-0.03, 0.05]];
-const HEAD_FRONT = [[0, -0.071], [0.03, -0.066], [0.046, -0.046], [0.05, -0.016], [0.05, 0.0], [0.054, 0.006], [0.053, 0.02],
-  [0.046, 0.027], [0.043, 0.047], [0.026, 0.065], [0, 0.071], [-0.026, 0.065], [-0.043, 0.047],
-  [-0.046, 0.027], [-0.053, 0.02], [-0.054, 0.006], [-0.05, 0.0], [-0.05, -0.016], [-0.046, -0.046], [-0.03, -0.066]];
+const HEAD_FRONT = [[0, -0.075], [0.024, -0.071], [0.041, -0.061], [0.05, -0.042], [0.052, -0.02], [0.048, -0.003], [0.052, 0.004], [0.051, 0.017], [0.044, 0.021], [0.039, 0.042], [0.026, 0.059], [0, 0.068], [-0.026, 0.059], [-0.039, 0.042], [-0.044, 0.021], [-0.051, 0.017], [-0.052, 0.004], [-0.048, -0.003], [-0.052, -0.02], [-0.05, -0.042], [-0.041, -0.061], [-0.024, -0.071]];
 
-const HEAD_BACK = [[0, -0.074], [0.026, -0.07], [0.045, -0.055], [0.054, -0.03], [0.054, -0.012], [0.05, 0.004], [0.056, 0.01],
-  [0.054, 0.026], [0.044, 0.03], [0.036, 0.05], [0.02, 0.06], [0, 0.063], [-0.02, 0.06], [-0.036, 0.05],
-  [-0.044, 0.03], [-0.054, 0.026], [-0.056, 0.01], [-0.05, 0.004], [-0.054, -0.012], [-0.054, -0.03], [-0.045, -0.055], [-0.026, -0.07]];
+const HEAD_BACK = [[0, -0.074], [0.026, -0.07], [0.044, -0.058], [0.053, -0.036], [0.053, -0.012], [0.049, 0], [0.053, 0.008], [0.051, 0.022], [0.043, 0.026], [0.036, 0.046], [0.02, 0.058], [0, 0.062], [-0.02, 0.058], [-0.036, 0.046], [-0.043, 0.026], [-0.051, 0.022], [-0.053, 0.008], [-0.049, 0], [-0.053, -0.012], [-0.053, -0.036], [-0.044, -0.058], [-0.026, -0.07]];
 
 function drawFig(g, X, Y, H, P, o = {}) {
   const f = o.face || 1, ink = o.ink || INK, far = o.far || INK_FAR;
@@ -46,12 +42,13 @@ function drawFig(g, X, Y, H, P, o = {}) {
   const J = {}; for (const k in P.j) J[k] = T(P.j[k]);
   const hipC = lerp2(J.hipA, J.hipB, 0.5);
 
-  function arm(s, col) {
-    g.fillStyle = col;
+  function arm(s, col, upper) {
     const sh = J["sh" + s], el = J["el" + s], wr = J["wr" + s];
-    capsule(g, lerp2(sh, el, 0.08), lerp2(sh, el, 0.48), R(0.04), R(0.037)); // sleeve
-    capsule(g, sh, el, R(0.033), R(0.027));
-    capsule(g, el, wr, R(0.028), R(0.019));
+    g.fillStyle = upper || col;
+    capsule(g, lerp2(sh, el, 0.12), lerp2(sh, el, 0.46), R(0.036), R(0.034)); // sleeve
+    capsule(g, sh, el, R(0.031), R(0.026));
+    g.fillStyle = col;
+    capsule(g, el, wr, R(0.026), R(0.018));
     g.beginPath(); g.arc(wr[0], wr[1], R(0.021), 0, 7); g.fill();
     const fg = P.finger && P.finger[s];
     if (fg) { const tip = T([P.j["wr" + s][0] + fg[0], P.j["wr" + s][1] + fg[1]]); capsule(g, wr, tip, R(0.009), R(0.006)); }
@@ -83,8 +80,8 @@ function drawFig(g, X, Y, H, P, o = {}) {
     let pts;
     if (side) pts = [at(-0.12, 0.075), at(0.25, 0.07), at(0.6, 0.08), at(0.85, 0.07), at(1.0, 0.03),
       at(1.0, -0.035), at(0.9, -0.07), at(0.65, -0.07), at(0.3, -0.06), at(-0.12, -0.075)];
-    else pts = [at(-0.02, 0.112), at(0.3, 0.1), at(0.72, 0.108), at(0.9, 0.118), at(0.985, 0.08), at(1.0, 0.035),
-      at(1.0, -0.035), at(0.985, -0.08), at(0.9, -0.118), at(0.72, -0.108), at(0.3, -0.1), at(-0.02, -0.112)];
+    else pts = [at(-0.02, 0.112), at(0.3, 0.1), at(0.72, 0.106), at(0.88, 0.116), at(0.955, 0.1), at(0.99, 0.06), at(1.02, 0.03),
+      at(1.02, -0.03), at(0.99, -0.06), at(0.955, -0.1), at(0.88, -0.116), at(0.72, -0.106), at(0.3, -0.1), at(-0.02, -0.112)];
     catmull(g, pts); g.fill();
     // neck
     const hc = headC();
@@ -99,26 +96,29 @@ function drawFig(g, X, Y, H, P, o = {}) {
   function head(col) {
     g.fillStyle = col; const c = headC();
     g.save(); g.translate(c[0], c[1]); g.rotate((P.tilt || 0) * f); g.scale(f * H * 1.1, H * 1.1);
-    catmull(g, side ? HEAD_SIDE : P.view === "back" ? HEAD_BACK : HEAD_FRONT); g.fill(); g.restore();
+    let hp = side ? HEAD_SIDE : P.view === "back" ? HEAD_BACK : HEAD_FRONT;
+    if (o.young && P.view === "front") hp = hp.map(([x, y]) => [y > 0.03 ? x * 0.86 : x, y > 0.05 ? y - 0.006 : y]);
+    catmull(g, hp); g.fill(); g.restore();
   }
 
   function shorts(col) { // front/back: one piece with a crotch notch
     g.fillStyle = col; const out = [], inn = [];
     for (const [s, sg] of [["A", -1], ["B", 1]]) {
-      const hp = J["hip" + s], kn = J["kn" + s], b = lerp2(hp, kn, 0.4);
+      const hp = J["hip" + s], kn = J["kn" + s], b = lerp2(hp, kn, 0.36);
       const dx = kn[0] - hp[0], dy = kn[1] - hp[1], l = Math.hypot(dx, dy), px = -dy / l, py = dx / l;
       const o = sg * f * Math.sign(px || 1);
-      out.push([b[0] + px * R(0.068) * o, b[1] + py * R(0.068) * o]);
-      inn.push([b[0] - px * R(0.052) * o, b[1] - py * R(0.052) * o]);
+      out.push([b[0] + px * R(0.058) * o, b[1] + py * R(0.058) * o]);
+      inn.push([b[0] - px * R(0.046) * o, b[1] - py * R(0.046) * o]);
     }
-    const wA = [hipC[0] - R(0.108) * f, hipC[1] - R(0.02)], wB = [hipC[0] + R(0.108) * f, hipC[1] - R(0.02)];
-    const crotch = [hipC[0], hipC[1] + R(0.1)];
+    const wA = [hipC[0] - R(0.1) * f, hipC[1] - R(0.02)], wB = [hipC[0] + R(0.1) * f, hipC[1] - R(0.02)];
+    const crotch = [hipC[0], hipC[1] + R(0.086)];
     g.beginPath(); g.moveTo(wA[0], wA[1]); g.lineTo(out[0][0], out[0][1]); g.lineTo(inn[0][0], inn[0][1]);
     g.lineTo(crotch[0], crotch[1]); g.lineTo(inn[1][0], inn[1][1]); g.lineTo(out[1][0], out[1][1]); g.lineTo(wB[0], wB[1]);
     g.closePath(); g.fill();
   }
   if (side) { arm("B", far); leg("B", far); torso(ink); leg("A", ink); head(ink); arm("A", ink); }
-  else { leg("A", ink); leg("B", ink); shorts(ink); torso(ink); arm("A", ink); arm("B", ink); head(ink); }
+  else { leg("A", ink); leg("B", ink); shorts(ink); torso(ink); head(ink);
+    const ai = P.armsFront ? (o.armInk || "#2e2e2e") : ink; arm("A", ai, ink); arm("B", ai, ink); if (P.handOverHead) head(ink); }
 
   if (P.view === "back" && o.number !== false) { // faint 10 on the shirt
     const c = lerp2(hipC, J.neck, 0.62);
@@ -126,7 +126,7 @@ function drawFig(g, X, Y, H, P, o = {}) {
     g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("10", c[0], c[1]);
     if (o.name) { g.font = `700 ${R(0.036)}px Oswald, Impact, sans-serif`; g.fillText(o.name, c[0], c[1] - R(0.095)); }
   }
-  if (P.ball) { const b = T(P.ball); g.fillStyle = o.ballInk || ink; g.beginPath(); g.arc(b[0], b[1], R(0.034), 0, 7); g.fill(); }
+  if (P.ball) { const b = T(P.ball); g.fillStyle = o.ballInk || ink; g.beginPath(); g.arc(b[0], b[1], R(P.ballR || 0.064), 0, 7); g.fill(); }
 }
 
 // --- poses (A = near / left-of-image in front view) ---
@@ -142,6 +142,20 @@ const POSES = {
     wrA: [-0.205, 0.945], wrB: [0.222, 0.95], hipA: [-0.064, 0.495], hipB: [0.064, 0.495],
     knA: [-0.066, 0.255], knB: [0.078, 0.25], anA: [-0.035, 0.1], anB: [0.062, 0.06] },
     finger: { A: [0.0, 0.065], B: [-0.004, 0.065] }, fist: { A: 1, B: 1 } },
+  // three eras, front view
+  relaxed: { view: "front", j: {
+    neck: [0, 0.835], shA: [-0.098, 0.805], shB: [0.098, 0.805], elA: [-0.145, 0.645], elB: [0.148, 0.645],
+    wrA: [-0.16, 0.48], wrB: [0.165, 0.485], hipA: [-0.062, 0.5], hipB: [0.062, 0.5],
+    knA: [-0.075, 0.27], knB: [0.078, 0.27], anA: [-0.09, 0.045], anB: [0.095, 0.045] } },
+  shush: { view: "front", armsFront: true, ball: [0.175, 0.545], j: {
+    neck: [0, 0.835], shA: [-0.098, 0.805], shB: [0.098, 0.805], elA: [-0.075, 0.665], elB: [0.165, 0.64],
+    wrA: [0.0, 0.84], wrB: [0.15, 0.52], hipA: [-0.064, 0.5], hipB: [0.064, 0.5],
+    knA: [-0.085, 0.27], knB: [0.088, 0.27], anA: [-0.11, 0.045], anB: [0.11, 0.045] },
+    finger: { A: [0.0, 0.06] }, fist: { A: 1 } },
+  crossed: { view: "front", armsFront: true, j: {
+    neck: [0, 0.835], shA: [-0.1, 0.805], shB: [0.1, 0.805], elA: [-0.16, 0.665], elB: [0.165, 0.67],
+    wrA: [0.085, 0.71], wrB: [-0.08, 0.7], hipA: [-0.062, 0.5], hipB: [0.062, 0.5],
+    knA: [-0.072, 0.27], knB: [0.075, 0.27], anA: [-0.085, 0.045], anB: [0.09, 0.045] } },
   // both index fingers to the sky, face up
   sky: { view: "side", tilt: -0.5, j: {
     neck: [-0.012, 0.84], shA: [-0.004, 0.808], shB: [-0.03, 0.812], elA: [0.06, 0.955], elB: [0.035, 0.965],
@@ -160,7 +174,7 @@ const POSES = {
     wrA: [-0.105, 0.545], wrB: [0.105, 0.545], hipA: [-0.06, 0.5], hipB: [0.06, 0.5],
     knA: [-0.072, 0.275], knB: [0.072, 0.275], anA: [-0.08, 0.045], anB: [0.08, 0.045] } },
   // low left-foot dribble
-  dribble: { view: "side", tilt: 0.55, ball: [0.25, 0.034], j: {
+  dribble: { view: "side", tilt: 0.55, ball: [0.27, 0.064], j: {
     neck: [0.1, 0.79], shA: [0.098, 0.762], shB: [0.075, 0.77], elA: [0.0, 0.64], elB: [0.17, 0.68],
     wrA: [-0.09, 0.57], wrB: [0.24, 0.58], hipA: [0.0, 0.47], hipB: [-0.02, 0.475],
     knA: [0.13, 0.28], knB: [-0.04, 0.25], anA: [0.14, 0.06], anB: [-0.17, 0.12] },

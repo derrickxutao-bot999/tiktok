@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;background:#000"><canvas id="c" width="1080" height="1920"></canvas>
+<script src="silhouette.js"></script>
+<script>
+const g=document.getElementById("c").getContext("2d");
+window.draw=()=>{const W=1080,H=1920;
+ const bg=g.createRadialGradient(540,900,100,540,900,1300);bg.addColorStop(0,"#a3a39f");bg.addColorStop(1,"#55555a");
+ g.fillStyle=bg;g.fillRect(0,0,W,H);
+ let s=5;const rnd=()=>(s=(s*16807)%2147483647)/2147483647;
+ for(let i=0;i<50000;i++){g.fillStyle=rnd()<.5?"rgba(0,0,0,0.05)":"rgba(255,255,255,0.04)";g.fillRect(rnd()*W,rnd()*H,2,2);}
+ const shadow=(x,y,w)=>{g.save();g.fillStyle="rgba(0,0,0,0.25)";g.filter="blur(12px)";g.beginPath();g.ellipse(x,y,w,w*0.18,0,0,7);g.fill();g.restore();};
+ // back row — further away, lighter ink (atmosphere)
+ shadow(230,1460,120);shadow(850,1460,120);
+ drawFig(g,230,1460,820,POSES.relaxed,{young:true,ink:"#2f2f2f",armInk:"#3a3a3a"});
+ drawFig(g,850,1460,840,POSES.crossed,{ink:"#2f2f2f",armInk:"#3d3d3d"});
+ // front — closest, darkest
+ shadow(500,1580,150);
+ drawFig(g,500,1580,1000,POSES.shush,{ink:"#121212",armInk:"#2a2a2a"});
+ g.strokeStyle="rgba(30,30,30,0.2)";g.lineWidth=2;
+ for(let i=0;i<300;i++){const x=rnd()*W,y=rnd()*H,l=30+rnd()*60;g.beginPath();g.moveTo(x,y);g.lineTo(x-l*0.15,y+l);g.stroke();}
+};
+window.ready=Promise.resolve();
+</script></body></html>
