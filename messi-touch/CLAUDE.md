@@ -5,7 +5,7 @@ This is the base project for *The Touch* (最后一触), a 60-second vertical fi
 - **Built:** Scenes 1 and 4. They are finished, reviewed twice, and rendered.
 - **Not built:** Scenes 2 and 3 are slates. Their plan is in `README.md` under "Plan for Scenes 2 and 3".
 - **Start here:** read `README.md` for the architecture and beats, and `STYLE.md` for the look.
-- **Base snapshot:** git tag `messi-touch-base-v1`.
+- **Base snapshot:** the commit that added this file on branch `claude/barcelona-1925-animation-i9yjtx`. To mark it on GitHub, tag that commit as `messi-touch-base-v1`; this cloud session could push branches but not tags.
 
 ## Rules that keep the film correct
 
