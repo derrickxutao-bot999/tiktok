@@ -20,3 +20,15 @@ rim-lit by the screen. Shirts are plain red with no badge or sponsor.
 
 Render a shot: `node tools/shot.mjs storyboard.html out/sb1.png 1080 1920 "?f=1"`.
 The real interview clip goes on the TV via `screenContent(..., { image })`.
+
+## Opening (`opening.html`, 12.5 s)
+
+The real interview (Prime Video Sport on X, 2:29.3–2:38.8) fills the screen, then the camera
+pulls back to the TV in his flat; on "I can't say more" he switches it off.
+Words (checked with two transcription passes): "You start changing, changing, changing
+manager and… But what about other areas? … I can't say more."
+Subtitles: 一直在换、换、换主教练…… / 但其他方面呢？ / 我不能再多说了。 Credit on screen: 画面：Prime Video.
+
+The footage is not in git: `tools/fetch_footage.sh` downloads it (yt-dlp) and extracts the
+frames and audio into `footage/`. Then `python3 sound.py` (interview dry -> in the room,
+rain, remote click) and `node render.mjs opening.html out/opening.mp4 out/opening.wav`.

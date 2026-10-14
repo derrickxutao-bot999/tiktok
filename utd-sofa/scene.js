@@ -27,6 +27,7 @@ function glow(g, x, y, r, col, a = 1) {
 
 // figures drawn by fn get a rim of screen light around their outline
 function rimLit(g, fn, L) {
+  if (!L) { fn(g); return; }
   const [A, a] = cv("rimA"); fn(a);
   const [E, e] = cv("rimE"); e.drawImage(A, 0, 0); e.globalCompositeOperation = "destination-in";
   const k = L.w || 6; for (const [dx, dy] of [[0, k], [k * .55, k * .5], [-k * .55, k * .5]]) e.drawImage(A, dx, dy);
@@ -48,8 +49,19 @@ function bustBack(G, x, yS, s, o = {}) {
   const [L, g] = cv("bust"); bustBackLayer(g, x, yS, s, o); G.drawImage(L, 0, 0);
 }
 function bustBackLayer(g, x, yS, s, o) {
-  const sh = o.sh || 1.75, hy = yS - 1.5 * s, skin = o.skin || "#3d2b29";
+  const sh = o.sh || 1.75, hy = yS - (1.5 - 0.45 * (o.bow || 0)) * s, skin = o.skin || "#3d2b29";
   const shirt = o.shirt || "#5c0c14";
+  if (o.remote) { // right arm raised toward the screen, remote in hand (behind the torso)
+    const r = o.remote, hx = x + (1.75 + 0.5 * r) * s, hyy = yS + (2.2 - 2.0 * r) * s;
+    g.strokeStyle = skin; g.lineCap = "round"; g.lineWidth = 0.55 * s;
+    g.beginPath(); g.moveTo(x + 1.5 * s, yS + 1.2 * s); g.quadraticCurveTo(x + 2.1 * s, yS + 1.4 * s, hx, hyy); g.stroke(); g.lineCap = "butt";
+    g.fillStyle = skin; g.beginPath(); g.ellipse(hx, hyy, 0.32 * s, 0.3 * s, 0, 0, 7); g.fill();
+    // remote pointed up and in toward the screen
+    g.save(); g.translate(hx, hyy); g.rotate(-0.85 * r);
+    g.fillStyle = "#0b0c10"; rr(g, -0.13 * s, -0.95 * s, 0.26 * s, 0.85 * s, 0.07 * s); g.fill();
+    if (o.led) { g.fillStyle = "#ff3b30"; g.beginPath(); g.arc(0, -0.9 * s, 0.06 * s, 0, 7); g.fill(); }
+    g.restore();
+  }
   // torso
   const torso = (wTop, col) => {
     g.fillStyle = col; g.beginPath();
@@ -289,14 +301,14 @@ function room2026(g, st) {
   door(g, 830, 560, 190, floorY - 560, st.door || 0, {});
   // low cabinet + TV
   g.fillStyle = "#222a39"; g.fillRect(250, 1060, 560, 120); g.fillStyle = "#1a2030"; g.fillRect(250, 1170, 560, 14);
-  const tv = { x: 280, y: 720, w: 500, h: 290 };
+  const tv = { x: 280, y: 720, w: 500, h: 281 };
   if (st.tv !== "off") glow(g, tv.x + tv.w / 2, tv.y + tv.h / 2, 900, "rgba(170,195,235,0.30)");
   flatTV(g, tv.x, tv.y, tv.w, tv.h, st.tv === "off" ? "off" : (st.tv || "interview"), st);
   // side table: a can and a phone face down
   g.fillStyle = "#1d2433"; g.fillRect(40, 1330, 190, 24); g.fillRect(60, 1354, 14, 140); g.fillRect(196, 1354, 14, 140);
   g.fillStyle = "#5a2026"; rr(g, 90, 1266, 34, 66, 6); g.fill(); g.fillStyle = "rgba(255,255,255,0.15)"; g.fillRect(96, 1272, 6, 52);
   doorSpill(g, 830, 560, 190, floorY - 560, st.door || 0, floorY);
-  return { tv, light: st.tv === "off" ? null : { x: tv.x + tv.w / 2, y: tv.y + tv.h / 2, r: 1300, col: "rgba(200,220,255,0.9)", col2: "rgba(170,195,235,0.5)" } };
+  return { tv, light: st.tv === "off" ? null : { x: tv.x + tv.w / 2, y: tv.y + tv.h / 2, r: 1300, col: "rgba(200,220,255,0.5)", col2: "rgba(170,195,235,0.28)" } };
 }
 
 function room1999(g, st) {
