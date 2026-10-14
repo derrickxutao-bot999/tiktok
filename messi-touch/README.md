@@ -9,6 +9,8 @@ A 60-second vertical film (1080×1920, 60 fps, 3600 frames) built in [Remotion](
 | 3 The great journey | 25–45 s | 1500–2700 | planned (slate) |
 | 4 The fateful touch | 45–60 s | 2700–3600 | **built** |
 
+Previews (720p): `previews/scene1-pursuit.mp4` and `previews/scene4-the-touch.mp4`. `previews/matchcut-frame3000.png` shows the cut frame as both variants side by side, with the engine's toe point (magenta) and ball outline (cyan). `npm run render` writes the full 1080p film to `out/messi-touch.mp4` in about 11 minutes on 4 cores.
+
 The look is "Chronograph" (see `STYLE.md`). Light is the only material: figures are dark volumes drawn by a glowing contour, and the jersey is the one saturated colour at night, the sun at dusk. Lines are hairline-fine, and time is made visible in Marey-style echoes, footfall rings, a stopwatch countdown and a measured last centimetre.
 
 ## How the match cut is exact
