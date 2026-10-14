@@ -23,7 +23,8 @@ The real interview clip goes on the TV via `screenContent(..., { image })`.
 
 ## Opening (`opening.html`, 12.5 s)
 
-The real interview (Prime Video Sport on X, 2:29.3–2:38.8) fills the screen, then the camera
+The real interview (Prime Video Sport on X, 2:29.3–2:38.8) fills the screen (rain runs down the
+window throughout), then the camera
 pulls back to the TV in his flat; on "I can't say more" he switches it off.
 Words (checked with two transcription passes): "You start changing, changing, changing
 manager and… But what about other areas? … I can't say more."
@@ -31,4 +32,4 @@ Subtitles: 一直在换、换、换主教练…… / 但其他方面呢？ / 我
 
 The footage is not in git: `tools/fetch_footage.sh` downloads it (yt-dlp) and extracts the
 frames and audio into `footage/`. Then `python3 sound.py` (interview dry -> in the room,
-rain, remote click) and `node render.mjs opening.html out/opening.mp4 out/opening.wav`.
+real rain recordings (CC0, see `audio/LICENSES.md`), remote click) and `node render.mjs opening.html out/opening.mp4 out/opening.wav`.

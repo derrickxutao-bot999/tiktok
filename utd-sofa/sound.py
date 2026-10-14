@@ -26,13 +26,22 @@ tv = clip * (1 - p) + room * p * 0.62
 tv[-int(0.006 * SR):] *= np.linspace(1, 0, int(0.006 * SR))[:, None]   # hard cut when the TV goes off
 out[:m] += tv
 
-# rain on the window: filtered noise plus single drops
-rain = bandpass(rng.standard_normal((n, 2)).astype(np.float32), 300, 7000) * 0.05
-for _ in range(int(D * 30)):
-    i = rng.integers(0, n - 2000); k = np.exp(-np.arange(2000) / 90) * rng.standard_normal(2000) * 0.06
-    rain[i:i + 2000, rng.integers(0, 2)] += k
-rain_env = (0.25 + 0.75 * ease((t - 3.5) / 4.0)) * (1 - ease((t - 12.0) / 0.5))
-rain_env = np.where(t > T_OFF, rain_env * 1.35, rain_env)               # louder once the room is quiet
+# rain: a real window recording (alxl, CC0) looped with a crossfade, plus a
+# second, darker recording (Ylmir, CC0) underneath so the loop never repeats audibly
+import subprocess
+def load(p):
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", p, "-f", "s16le", "-ac", "2", "-ar", str(SR), "-"], capture_output=True, check=True).stdout
+    return np.frombuffer(raw, np.int16).reshape(-1, 2).astype(np.float32) / 32768
+def looped(x, need, xf=1.0):
+    k = int(xf * SR); fade = np.sqrt(np.linspace(0, 1, k))[:, None]; y = x.copy()
+    while len(y) < need: y = np.concatenate([y[:-k], y[-k:] * fade[::-1] + x[:k] * fade, x[k:]])
+    return y[:need]
+def rms(x): return float(np.sqrt((x ** 2).mean()))
+A = lowpass(looped(load("audio/rain_on_window_loop.wav"), n), 7000)
+B = lowpass(load("audio/rain_ylmir_3.ogg")[int(5 * SR):int(5 * SR) + n], 2500)
+rain = A / rms(A) * 0.03 + B / rms(B) * 0.012                          # about -30 dBFS under the voice
+rain_env = (0.3 + 0.7 * ease((t - 3.5) / 4.0)) * (1 - ease((t - 12.0) / 0.5))
+rain_env = rain_env * np.where(t > T_OFF, 1.0 + 0.3 * ease((t - T_OFF) / 0.6), 1.0)   # the rain fills the quiet room
 out += rain * rain_env[:, None] * ease(t / 0.4)[:, None]
 
 # remote button, then the TV relay

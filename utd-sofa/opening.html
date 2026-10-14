@@ -41,7 +41,7 @@ window.renderFrame = async t => {
   const z = Z0 + (1 - Z0) * seg(t, 4.0, 7.6), p = (z - 1) / (Z0 - 1);
   const sx = TVC[0] + (540 - TVC[0]) * p, sy = TVC[1] + (800 - TVC[1]) * p;
   g.setTransform(z, 0, 0, z, sx - TVC[0] * z, sy - TVC[1] * z);
-  const R = room2026(g, { tv: on ? "interview" : "off", image: img });
+  const R = room2026(g, { tv: on ? "interview" : "off", image: img, t });
   const remote = t < 10.6 ? seg(t, 8.5, 9.15) * (1 - seg(t, 10.0, 10.6)) : 0;
   rimLit(g, c => bustBack(c, 600, 1395, 92, { sh: 1.8, hair: "short", number: "7", collar: "rgba(255,255,255,0.12)",
     remote, led: t > 9.3 && t < 9.45, bow: seg(t, 10.2, 11.8) }), R.light);

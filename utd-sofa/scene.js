@@ -145,26 +145,47 @@ function armAcross(g, x0, y0, x1, y1, s, skin) {
 }
 
 // ---------------------------------------------------------------- props
+// window at night in the rain; animated by o.t (seconds): rain falling outside,
+// beads on the glass, and drops that run down leaving a trail
 function rainWindow(g, x, y, w, h, o = {}) {
-  const r = rng(o.seed || 21);
+  const r = rng(o.seed || 21), t = o.t || 0;
   g.save(); rr(g, x, y, w, h, 6); g.clip();
   const sky = g.createLinearGradient(0, y, 0, y + h); sky.addColorStop(0, o.sky0 || "#0a0e18"); sky.addColorStop(1, o.sky1 || "#18202f");
   g.fillStyle = sky; g.fillRect(x, y, w, h);
-  // distant windows / city lights, out of focus
+  // distant windows / city lights, out of focus, breathing slightly through the rain
   g.filter = "blur(5px)";
   for (let i = 0; i < (o.lights || 26); i++) {
-    const lx = x + r() * w, ly = y + h * (0.35 + r() * 0.65), lr = 4 + r() * 10, warm = r() < 0.6;
-    g.fillStyle = warm ? `rgba(255,190,120,${0.25 + r() * 0.35})` : `rgba(150,180,255,${0.2 + r() * 0.3})`;
+    const lx = x + r() * w, ly = y + h * (0.35 + r() * 0.65), lr = 4 + r() * 10, warm = r() < 0.6, a0 = 0.25 + r() * 0.35, ph = r() * 6.3;
+    const a = a0 * (0.85 + 0.15 * Math.sin(t * 1.3 + ph));
+    g.fillStyle = warm ? `rgba(255,190,120,${a})` : `rgba(150,180,255,${a * 0.85})`;
     g.beginPath(); g.arc(lx, ly, lr, 0, 7); g.fill();
   }
   g.filter = "none";
-  // streaks and drops on the glass
-  g.strokeStyle = "rgba(190,205,230,0.22)"; g.lineWidth = 1.4;
-  for (let i = 0; i < w * h / 900; i++) { const sx = x + r() * w, sy = y + r() * h, l = 10 + r() * 34;
-    g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx - 1, sy + l); g.stroke(); }
-  for (let i = 0; i < w * h / 700; i++) { const dx = x + r() * w, dy = y + r() * h, d = 1.5 + r() * 3.5;
-    g.fillStyle = "rgba(200,215,240,0.25)"; g.beginPath(); g.arc(dx, dy, d, 0, 7); g.fill();
-    g.fillStyle = "rgba(255,255,255,0.35)"; g.beginPath(); g.arc(dx - d * 0.3, dy - d * 0.3, d * 0.35, 0, 7); g.fill(); }
+  // rain falling outside (two depths)
+  for (const [n, len, sp, al, lw] of [[70, 26, 900, 0.16, 1], [26, 46, 1500, 0.24, 1.6]]) {
+    const q = rng((o.seed || 21) + len); g.strokeStyle = `rgba(185,200,230,${al})`; g.lineWidth = lw;
+    for (let i = 0; i < n; i++) { const sx = x + q() * (w + 40), y0 = q() * (h + len), yy = y - len + ((y0 + t * sp) % (h + len));
+      g.beginPath(); g.moveTo(sx, yy); g.lineTo(sx - len * 0.12, yy + len); g.stroke(); }
+  }
+  // beads sitting on the glass
+  const b = rng((o.seed || 21) + 5);
+  for (let i = 0; i < w * h / 650; i++) { const dx = x + b() * w, dy = y + b() * h, d = 1.2 + b() * 3.2;
+    g.fillStyle = "rgba(200,215,240,0.22)"; g.beginPath(); g.arc(dx, dy, d, 0, 7); g.fill();
+    g.fillStyle = "rgba(255,255,255,0.32)"; g.beginPath(); g.arc(dx - d * 0.3, dy - d * 0.35, d * 0.35, 0, 7); g.fill(); }
+  // runners: a drop gathers, slides down with a wobble, leaves a wet trail
+  const R = rng((o.seed || 21) + 9);
+  for (let i = 0; i < (o.runners || 9); i++) {
+    const rx = x + 8 + R() * (w - 16), period = 2.6 + R() * 3.4, off = R() * period, sp = h * (0.35 + R() * 0.5), d = 2.6 + R() * 2.2, wob = R() * 6.3;
+    const u = ((t + off) % period) / period, life = Math.min(1, u * period * sp / h);   // fraction of the pane travelled
+    const ry = y + life * h * 1.05, px = rx + Math.sin(life * 9 + wob) * 3;
+    const trailTop = Math.max(y, ry - h * 0.45);
+    const tg = g.createLinearGradient(0, trailTop, 0, ry);
+    tg.addColorStop(0, "rgba(200,215,240,0)"); tg.addColorStop(1, "rgba(200,215,240,0.28)");
+    g.strokeStyle = tg; g.lineWidth = d * 0.75; g.beginPath(); g.moveTo(rx + Math.sin(((trailTop - y) / h) * 9 + wob) * 3, trailTop);
+    for (let yy = trailTop; yy <= ry; yy += 6) g.lineTo(rx + Math.sin(((yy - y) / h) * 9 + wob) * 3, yy); g.stroke();
+    g.fillStyle = "rgba(210,222,245,0.45)"; g.beginPath(); g.ellipse(px, ry, d, d * 1.25, 0, 0, 7); g.fill();
+    g.fillStyle = "rgba(255,255,255,0.55)"; g.beginPath(); g.arc(px - d * 0.3, ry - d * 0.4, d * 0.38, 0, 7); g.fill();
+  }
   g.restore();
   // frame and mullions
   g.strokeStyle = o.frame || "#2a3243"; g.lineWidth = 14; rr(g, x, y, w, h, 6); g.stroke();
@@ -297,7 +318,7 @@ function sofaBack(g, top, o = {}) {
 function room2026(g, st) {
   const floorY = 1240;
   floorAndWall(g, 0, "#1b2232", floorY, "#141925");
-  rainWindow(g, 40, 430, 200, 520, { seed: 7 });
+  rainWindow(g, 40, 430, 200, 520, { seed: 7, t: st.t || 0 });
   door(g, 830, 560, 190, floorY - 560, st.door || 0, {});
   // low cabinet + TV
   g.fillStyle = "#222a39"; g.fillRect(250, 1060, 560, 120); g.fillStyle = "#1a2030"; g.fillRect(250, 1170, 560, 14);
@@ -377,7 +398,7 @@ function grade(g, o = {}) {
   const v = g.createRadialGradient(W / 2, H * 0.45, H * 0.2, W / 2, H * 0.5, H * 0.78);
   v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, `rgba(0,0,0,${o.vignette == null ? 0.6 : o.vignette})`);
   g.fillStyle = v; g.fillRect(0, 0, W, H);
-  const r = rng(o.seed || 5), img = g.getImageData(0, 0, W, H), d = img.data, amt = o.grain == null ? 12 : o.grain;
+  const r = rng(o.seed || 5), img = g.getImageData(0, 0, W, H), d = img.data, amt = o.grain == null ? 5 : o.grain;
   for (let i = 0; i < d.length; i += 4) { const n = (r() - 0.5) * amt; d[i] += n; d[i + 1] += n; d[i + 2] += n; }
   g.putImageData(img, 0, 0);
 }
