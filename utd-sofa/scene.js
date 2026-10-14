@@ -37,8 +37,9 @@ function rimLit(g, fn, L) {
   const gr = r.createRadialGradient(L.x, L.y, 0, L.x, L.y, L.r);
   gr.addColorStop(0, L.col); gr.addColorStop(0.55, L.col2 || L.col); gr.addColorStop(1, "rgba(0,0,0,0)");
   r.fillStyle = gr; r.fillRect(0, 0, W, H);
+  const ga = g.globalAlpha;   // a fading figure is lit at full strength, then faded as a whole
   g.drawImage(A, 0, 0);
-  g.save(); g.globalCompositeOperation = "screen"; g.filter = "blur(3px)"; g.drawImage(R, 0, 0); g.filter = "blur(0.8px)"; g.globalAlpha = 0.7; g.drawImage(R, 0, 0); g.restore();
+  g.save(); g.globalCompositeOperation = "screen"; g.filter = "blur(3px)"; g.drawImage(R, 0, 0); g.filter = "blur(0.8px)"; g.globalAlpha = ga * 0.7; g.drawImage(R, 0, 0); g.restore();
 }
 
 // ---------------------------------------------------------------- people
@@ -96,6 +97,18 @@ function bustBackLayer(g, x, yS, s, o) {
     g.fillStyle = o.numberCol || "rgba(255,226,226,0.2)"; g.textAlign = "center"; g.textBaseline = "middle";
     g.font = `700 ${1.55 * s}px Oswald, sans-serif`; g.fillText(o.number, x, yS + 1.75 * s);
     if (o.name) { g.font = `700 ${0.36 * s}px Oswald, sans-serif`; g.fillText(o.name, x, yS + 0.72 * s); }
+  }
+  if (o.armsUp) { // celebrating: both arms thrown up
+    const a = o.armsUp; g.lineCap = "round";
+    for (const sd of [-1, 1]) {
+      const sx = x + sd * (sh - 0.3) * s, sy = yS + 0.4 * s;
+      const ex = x + sd * (sh + 0.25 - 0.1 * a) * s, ey = yS - (0.1 + 1.25 * a) * s;
+      const fx = x + sd * (sh - 0.1 - 0.35 * a) * s, fy = yS - (0.4 + 2.7 * a) * s;
+      g.strokeStyle = o.vest ? skin : shirt; g.lineWidth = 0.66 * s; g.beginPath(); g.moveTo(sx, sy); g.lineTo((sx + ex) / 2, (sy + ey) / 2); g.stroke();
+      g.strokeStyle = skin; g.lineWidth = 0.5 * s; g.beginPath(); g.moveTo((sx + ex) / 2, (sy + ey) / 2); g.lineTo(ex, ey); g.lineTo(fx, fy); g.stroke();
+      g.fillStyle = skin; g.beginPath(); g.arc(fx, fy, 0.33 * s, 0, 7); g.fill();
+    }
+    g.lineCap = "butt";
   }
   // neck, head, ears
   g.fillStyle = skin; rr(g, x - 0.36 * s, hy + 0.4 * s, 0.72 * s, 1.15 * s, 0.2 * s); g.fill();
@@ -192,6 +205,42 @@ function rainWindow(g, x, y, w, h, o = {}) {
   g.lineWidth = 9; g.beginPath(); g.moveTo(x + w / 2, y); g.lineTo(x + w / 2, y + h); g.moveTo(x, y + h * 0.42); g.lineTo(x + w, y + h * 0.42); g.stroke();
 }
 
+// clear or windy night (o.kind "clear" | "wind"), animated by o.t
+function nightWindow(g, x, y, w, h, o = {}) {
+  const t = o.t || 0, r = rng(o.seed || 31);
+  g.save(); rr(g, x, y, w, h, 6); g.clip();
+  const sky = g.createLinearGradient(0, y, 0, y + h); sky.addColorStop(0, "#0b1530"); sky.addColorStop(1, "#1d2c48");
+  g.fillStyle = sky; g.fillRect(x, y, w, h);
+  for (let i = 0; i < w * h / 1400; i++) { const sx = x + r() * w, sy = y + r() * h * 0.7, ph = r() * 6.3, sp = 1 + r() * 2;
+    g.fillStyle = `rgba(235,240,255,${0.25 + 0.35 * (0.5 + 0.5 * Math.sin(t * sp + ph))})`; g.fillRect(sx, sy, 2, 2); }
+  const mx = x + w * 0.68, my = y + h * 0.2, mr = Math.min(w, h) * 0.12;
+  glow(g, mx, my, mr * 5, "rgba(200,215,255,0.35)");
+  g.fillStyle = "#e8ecf4"; g.beginPath(); g.arc(mx, my, mr, 0, 7); g.fill();
+  g.fillStyle = "rgba(160,170,190,0.25)"; g.beginPath(); g.arc(mx - mr * 0.3, my - mr * 0.1, mr * 0.25, 0, 7); g.arc(mx + mr * 0.25, my + mr * 0.3, mr * 0.18, 0, 7); g.fill();
+  if (o.kind === "wind") { // clouds drifting across the moon
+    g.filter = "blur(6px)";
+    for (let i = 0; i < 4; i++) { const cx = x + ((i * 0.37 + t * 0.045) % 1.4 - 0.2) * w, cy = y + h * (0.12 + 0.12 * i);
+      g.fillStyle = "rgba(40,52,78,0.85)"; g.beginPath(); g.ellipse(cx, cy, w * 0.32, h * 0.05, 0, 0, 7); g.ellipse(cx + w * 0.15, cy - h * 0.025, w * 0.2, h * 0.045, 0, 0, 7); g.fill(); }
+    g.filter = "none";
+  }
+  // rooftops / tree line
+  g.fillStyle = "#0a0e18"; g.beginPath(); g.moveTo(x, y + h);
+  for (let i = 0; i <= 10; i++) g.lineTo(x + w * i / 10, y + h * (0.78 - 0.12 * ((i * 7) % 5) / 5)); g.lineTo(x + w, y + h); g.fill();
+  if (o.kind === "wind") { // branch in the foreground, swaying
+    const bx = x + w * 1.05, by = y + h * 0.15, sway = Math.sin(t * 1.7) * 0.07 + Math.sin(t * 3.1) * 0.025;
+    g.save(); g.translate(bx, by); g.rotate(sway); g.strokeStyle = "#070a12"; g.fillStyle = "#070a12"; g.lineCap = "round";
+    g.lineWidth = 10; g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(-w * 0.4, h * 0.05, -w * 0.75, h * 0.18); g.stroke();
+    g.lineWidth = 5; g.beginPath(); g.moveTo(-w * 0.35, h * 0.06); g.lineTo(-w * 0.5, -h * 0.04); g.moveTo(-w * 0.55, h * 0.12); g.lineTo(-w * 0.7, h * 0.27); g.stroke();
+    const L = rng(77);
+    for (let i = 0; i < 26; i++) { const u = L(), lx = -w * 0.75 * u + (L() - 0.5) * 40, ly = h * 0.18 * u + (L() - 0.5) * 50, fl = Math.sin(t * 6 + i) * 0.4;
+      g.beginPath(); g.ellipse(lx, ly, 13, 6, L() * 3 + fl, 0, 7); g.fill(); }
+    g.restore();
+  }
+  g.restore();
+  g.strokeStyle = o.frame || "#2b2a33"; g.lineWidth = 14; rr(g, x, y, w, h, 6); g.stroke();
+  g.lineWidth = 9; g.beginPath(); g.moveTo(x + w / 2, y); g.lineTo(x + w / 2, y + h); g.moveTo(x, y + h * 0.42); g.lineTo(x + w, y + h * 0.42); g.stroke();
+}
+
 function door(g, x, y, w, h, open, o = {}) {
   g.fillStyle = o.frame || "#283041"; g.fillRect(x - 14, y - 14, w + 28, h + 14);
   if (open > 0) {
@@ -247,8 +296,18 @@ function screenContent(g, x, y, w, h, kind, o) {
       g.fillStyle = "#f2f2f2"; g.fillRect(px - 0.65 * s, py - 1.0 * s, 1.3 * s, 0.6 * s);
       g.fillStyle = "#222"; g.fillRect(px - 0.55 * s, py - 0.4 * s, 0.35 * s, 0.9 * s); g.fillRect(px + 0.2 * s, py - 0.4 * s, 0.35 * s, 0.9 * s);
       if (arms) { g.strokeStyle = col; g.lineWidth = 0.35 * s; g.beginPath(); g.moveTo(px - 0.6 * s, py - 2.3 * s); g.lineTo(px - 1.3 * s, py - 3.6 * s); g.moveTo(px + 0.6 * s, py - 2.3 * s); g.lineTo(px + 1.3 * s, py - 3.6 * s); g.stroke(); } };
-    if (kind === "match1999") {
+    const tt = o.t || 0, jig = k => Math.sin(tt * 2.3 + k) * w * 0.02;
+    if (kind === "match1999" && !o.goal) { // a corner swung into the box
+      p(x + w * 0.3 + jig(1), y + h * 0.72, 1.0, RED, 0); p(x + w * 0.45 + jig(2), y + h * 0.7, 1.0, "#8d8f99", 0); p(x + w * 0.55 + jig(3), y + h * 0.74, 1.05, RED, 0);
+      p(x + w * 0.68 + jig(4), y + h * 0.7, 0.95, "#8d8f99", 0); p(x + w * 0.5, y + h * 0.6, 0.8, "#cfd2c8", 0);
+      g.fillStyle = "#fff"; g.beginPath(); g.arc(x + w * (0.2 + 0.3 * ((tt * 0.4) % 1)), y + h * (0.45 + 0.1 * Math.sin(tt)), 3.5, 0, 7); g.fill();
+    } else if (kind === "match1999") {
       p(x + w * 0.42, y + h * 0.78, 1.3, RED, 1); p(x + w * 0.58, y + h * 0.76, 1.2, RED, 1); p(x + w * 0.5, y + h * 0.7, 1.1, RED, 1); p(x + w * 0.26, y + h * 0.66, 0.9, "#8d8f99", 0);
+    } else if (!o.goal) { // a Chelsea penalty, the keeper set
+      p(x + w * 0.5, y + h * 0.6, 0.85, "#2f3a3a", 0); p(x + w * 0.5 + jig(5) * 0.3, y + h * 0.88, 1.35, "#2b4aa0", 0);
+      g.strokeStyle = "rgba(255,255,255,0.7)"; g.lineWidth = 2; g.strokeRect(x + w * 0.3, y + h * 0.36, w * 0.4, h * 0.26);
+      g.strokeStyle = "rgba(220,230,255,0.25)"; g.lineWidth = 1; const r = rng(4);
+      for (let i = 0; i < 60; i++) { const sx = x + r() * w, sy = y + ((r() * h + tt * 260) % h); g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx - 3, sy + 12); g.stroke(); }
     } else {
       p(x + w * 0.5, y + h * 0.8, 1.25, RED, 1); p(x + w * 0.32, y + h * 0.7, 0.95, RED, 1); p(x + w * 0.7, y + h * 0.68, 0.9, "#2b4aa0", 0);
       g.strokeStyle = "rgba(220,230,255,0.25)"; g.lineWidth = 1; const r = rng(4);
@@ -257,7 +316,8 @@ function screenContent(g, x, y, w, h, kind, o) {
     // score bug
     g.fillStyle = "rgba(10,14,30,0.85)"; rr(g, x + w * 0.04, y + h * 0.05, w * 0.5, h * 0.12, 3); g.fill();
     g.fillStyle = "#fff"; g.font = `600 ${h * 0.07}px NotoSerifSC, serif`; g.textAlign = "left"; g.textBaseline = "middle";
-    g.fillText(o.score, x + w * 0.07, y + h * 0.112);
+    g.fillText(kind === "match1999" ? (o.goal ? "曼联 2 : 1 拜仁" : "曼联 1 : 1 拜仁") : "曼联 6 : 5 切尔西 · 点球", x + w * 0.07, y + h * 0.112);
+    if (o.goal) { g.fillStyle = `rgba(255,255,255,${Math.max(0, 0.6 - (o.goalAge || 0) * 1.5)})`; g.fillRect(x, y, w, h); }
   } else if (kind === "off") {
     const og = g.createLinearGradient(x, y, x + w, y + h); og.addColorStop(0, "#151a24"); og.addColorStop(1, "#0b0e14");
     g.fillStyle = og; g.fillRect(x, y, w, h);
@@ -337,12 +397,14 @@ function room1999(g, st) {
   floorAndWall(g, 0, "#24232c", floorY, "#1a1a20");
   // faint wallpaper
   g.fillStyle = "rgba(255,255,255,0.025)"; for (let i = 0; i < 14; i++) for (let j = 0; j < 16; j++) { g.beginPath(); g.arc(30 + i * 80 + (j % 2) * 40, 40 + j * 80, 9, 0, 7); g.fill(); }
+  nightWindow(g, 40, 420, 190, 440, { kind: "clear", t: st.t, seed: 31 });
   // tear-off calendar and wall clock
-  g.fillStyle = "#3a3438"; g.fillRect(96, 470, 170, 230); g.fillStyle = "#cfc6b8"; g.fillRect(110, 520, 142, 168);
-  g.fillStyle = "#8a1d24"; g.fillRect(110, 486, 142, 30);
-  g.fillStyle = "#e9dfcf"; g.textAlign = "center"; g.textBaseline = "middle"; g.font = "600 21px NotoSerifSC, serif"; g.fillText("1999年5月", 181, 502);
-  g.fillStyle = "#2a2626"; g.font = "700 92px Oswald, sans-serif"; g.fillText("27", 181, 596); g.font = "600 24px NotoSerifSC, serif"; g.fillText("星期四", 181, 664);
-  clockFace(g, 900, 520, 78, 2, 45, "#2e2d35", "#bdb6a8");
+  const cx0 = 820, cy0 = 640;
+  g.fillStyle = "#3a3438"; g.fillRect(cx0, cy0, 160, 214); g.fillStyle = "#cfc6b8"; g.fillRect(cx0 + 12, cy0 + 46, 136, 158);
+  g.fillStyle = "#8a1d24"; g.fillRect(cx0 + 12, cy0 + 14, 136, 30);
+  g.fillStyle = "#e9dfcf"; g.textAlign = "center"; g.textBaseline = "middle"; g.font = "600 21px NotoSerifSC, serif"; g.fillText("1999年5月", cx0 + 80, cy0 + 30);
+  g.fillStyle = "#2a2626"; g.font = "700 88px Oswald, sans-serif"; g.fillText("27", cx0 + 80, cy0 + 118); g.font = "600 24px NotoSerifSC, serif"; g.fillText("星期四", cx0 + 80, cy0 + 182);
+  clockFace(g, 900, 500, 70, 2, 45, "#2e2d35", "#bdb6a8");
   // cabinet with the CRT
   g.fillStyle = "#33281f"; g.fillRect(230, 1040, 600, 150); g.fillStyle = "#2a2019"; g.fillRect(230, 1180, 600, 16);
   g.fillStyle = "rgba(0,0,0,0.25)"; g.fillRect(520, 1060, 4, 110);
@@ -350,8 +412,9 @@ function room1999(g, st) {
   g.fillStyle = "#5e1f25"; rr(g, 745, 900, 56, 140, 14); g.fill(); g.fillStyle = "#3d3a40"; g.fillRect(752, 880, 42, 26);
   const tv = { x: 330, y: 760, w: 360, h: 260 };
   if (st.tv !== "off") glow(g, tv.x + tv.w / 2, tv.y + tv.h / 2, 820, "rgba(160,200,190,0.30)");
-  crtTV(g, tv.x, tv.y, tv.w, tv.h, st.tv || "match1999", { score: "曼联 2 : 1 拜仁", ...st });
-  return { tv, light: { x: tv.x + tv.w / 2, y: tv.y + tv.h / 2, r: 1250, col: "rgba(200,235,220,0.9)", col2: "rgba(150,195,180,0.45)" } };
+  crtTV(g, tv.x, tv.y, tv.w, tv.h, st.tv || "match1999", st);
+  if (st.goal) glow(g, tv.x + tv.w / 2, tv.y + tv.h / 2, 900, "rgba(255,255,255,0.35)", Math.max(0, 1 - (st.goalAge || 0) * 1.2));
+  return { tv, light: { x: tv.x + tv.w / 2, y: tv.y + tv.h / 2, r: 1250, col: "rgba(200,235,220,0.55)", col2: "rgba(150,195,180,0.28)" } };
 }
 
 function room2008(g, st) {
@@ -365,22 +428,26 @@ function room2008(g, st) {
   g.fillStyle = "rgba(190,200,215,0.07)"; g.fillRect(46, 300, 254, 220);
   g.strokeStyle = "rgba(190,200,215,0.08)"; g.lineWidth = 1; for (let i = 0; i < 16; i++) { g.beginPath(); g.moveTo(50 + i * 16, 300); g.lineTo(50 + i * 16, 520); g.stroke(); }
   for (let i = 0; i < 6; i++) { g.fillStyle = "#30363f"; g.fillRect(270, 620 + i * 110, 46, 10); }
+  nightWindow(g, 760, 300, 270, 430, { kind: "wind", t: st.t, seed: 41, frame: "#2e333b" });
   // poster: a red No.7 shirt
-  g.fillStyle = "#2c2a30"; g.fillRect(700, 440, 230, 300);
-  g.fillStyle = "#6e1018"; g.beginPath(); g.moveTo(760, 500); g.lineTo(870, 500); g.lineTo(905, 560); g.lineTo(870, 580); g.lineTo(870, 700); g.lineTo(760, 700); g.lineTo(760, 580); g.lineTo(725, 560); g.closePath(); g.fill();
-  g.fillStyle = "rgba(255,225,225,0.35)"; g.font = "700 90px Oswald, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("7", 815, 620);
+  const px0 = 400, py0 = 470;
+  g.fillStyle = "#2c2a30"; g.fillRect(px0, py0, 200, 260);
+  g.fillStyle = "#6e1018"; g.beginPath(); g.moveTo(px0 + 52, py0 + 50); g.lineTo(px0 + 148, py0 + 50); g.lineTo(px0 + 180, py0 + 102); g.lineTo(px0 + 148, py0 + 120);
+  g.lineTo(px0 + 148, py0 + 225); g.lineTo(px0 + 52, py0 + 225); g.lineTo(px0 + 52, py0 + 120); g.lineTo(px0 + 20, py0 + 102); g.closePath(); g.fill();
+  g.fillStyle = "rgba(255,225,225,0.35)"; g.font = "700 80px Oswald, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("7", px0 + 100, py0 + 160);
   // desk, laptop, noodles, thermos, alarm clock
   g.fillStyle = "#2b2622"; g.fillRect(150, 1130, 800, 40); g.fillStyle = "#211d1a"; g.fillRect(170, 1170, 30, 160); g.fillRect(900, 1170, 30, 160);
   const tv = { x: 410, y: 930, w: 290, h: 180 };
   if (st.tv !== "off") glow(g, tv.x + tv.w / 2, tv.y + tv.h / 2, 760, "rgba(185,205,255,0.32)");
   g.fillStyle = "#1a1c22"; rr(g, tv.x - 14, tv.y - 14, tv.w + 28, tv.h + 26, 8); g.fill();
-  screenContent(g, tv.x, tv.y, tv.w, tv.h, st.tv || "match2008", { score: "曼联 6 : 5 切尔西 · 点球", ...st });
+  screenContent(g, tv.x, tv.y, tv.w, tv.h, st.tv || "match2008", st);
+  if (st.goal) glow(g, tv.x + tv.w / 2, tv.y + tv.h / 2, 800, "rgba(255,255,255,0.35)", Math.max(0, 1 - (st.goalAge || 0) * 1.2));
   g.fillStyle = "#24262d"; g.beginPath(); g.moveTo(tv.x - 30, tv.y + tv.h + 12); g.lineTo(tv.x + tv.w + 30, tv.y + tv.h + 12); g.lineTo(tv.x + tv.w + 50, 1132); g.lineTo(tv.x - 50, 1132); g.fill();
   g.fillStyle = "#c9c2b4"; g.globalAlpha = 0.45; rr(g, 230, 1062, 74, 70, 8); g.fill(); rr(g, 800, 1068, 66, 64, 8); g.fill(); g.globalAlpha = 1;
   g.fillStyle = "#7a1f27"; rr(g, 880, 960, 52, 172, 14); g.fill(); g.fillStyle = "#3d3a40"; g.fillRect(886, 942, 40, 24);
   g.fillStyle = "#16181d"; rr(g, 740, 1080, 92, 50, 8); g.fill();
   g.fillStyle = "#ff5a4f"; g.font = "28px VT323, monospace"; g.textAlign = "center"; g.fillText("02:45", 786, 1106);
-  return { tv, light: { x: tv.x + tv.w / 2, y: tv.y + tv.h / 2, r: 1200, col: "rgba(210,222,255,0.9)", col2: "rgba(175,190,240,0.45)" } };
+  return { tv, light: { x: tv.x + tv.w / 2, y: tv.y + tv.h / 2, r: 1200, col: "rgba(210,222,255,0.55)", col2: "rgba(175,190,240,0.28)" } };
 }
 
 function clockFace(g, x, y, r, hh, mm, face, hand) {
