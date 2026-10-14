@@ -1,0 +1,39 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>@font-face{font-family:"Oswald";font-weight:700;src:url(fonts/Oswald-SemiBold.ttf)}
+@font-face{font-family:"NotoSerifSC";font-weight:600;src:url(fonts/NotoSerifSC-SemiBold.ttf)}
+@font-face{font-family:"VT323";src:url(fonts/VT323-Regular.ttf)}</style></head>
+<body style="margin:0;background:#000"><canvas id="c" width="1080" height="1920"></canvas>
+<script src="../messi-storm/silhouette.js"></script>
+<script src="scene.js"></script>
+<script>
+const g = document.getElementById("c").getContext("2d");
+const F = +(new URLSearchParams(location.search).get("f") || 1);
+const SHOTS = {
+  // 1 / 6: alone in 2026, the interview on the TV
+  1: () => { const R = room2026(g, { tv: "interview" });
+    rimLit(g, c => bustBack(c, 600, 1395, 92, { sh: 1.8, hair: "short", number: "7", collar: "rgba(255,255,255,0.12)" }), R.light);
+    sofaBack(g, 1590); },
+  // 2: TV off, he walks out through the door
+  2: () => { room2026(g, { tv: "off", door: 0.8 });
+    drawFig(g, 925, 1238, 610, POSES.backWalk, { ink: "#0a0b0f", headScale: 1.12, number: false, soft: 0.8 });
+    sofaBack(g, 1500, { rim: "rgba(150,175,215,0.08)" }); },
+  // 3: the empty room, then the door opens on a child
+  3: () => { room2026(g, { tv: "off", door: 0.85 });
+    drawFig(g, 925, 1238, 380, POSES.relaxed, { ink: "#0a0b0f", headScale: 1.5, young: true, soft: 0.8 });
+    sofaBack(g, 1500, { rim: "rgba(150,175,215,0.08)" }); },
+  // 4: 1999, with dad, 02:45
+  4: () => { const R = room1999(g, {});
+    rimLit(g, c => { bustBack(c, 690, 1390, 94, { sh: 1.95, hair: "buzz", vest: "#55565f", skin: "#3a2a28" });
+      bustBack(c, 380, 1470, 70, { sh: 1.4, hair: "kid", number: "7", collar: "rgba(255,255,255,0.14)" });
+      armAcross(c, 535, 1450, 300, 1505, 94, "#3a2a28"); }, R.light);
+    sofaBack(g, 1530, { col: "#15141a" }); },
+  // 5: 2008, the dorm after lights-out
+  5: () => { const R = room2008(g, {});
+    rimLit(g, c => { bustBack(c, 860, 1330, 88, { sh: 1.75, hair: "buzz", shirt: "#1d2236", shirtHi: "rgba(160,170,255,0.08)", headphones: true });
+      bustBack(c, 250, 1450, 80, { sh: 1.68, hair: "short", shirt: "#2c3036", shirtHi: "rgba(200,200,220,0.08)", hood: true });
+      bustBack(c, 560, 1460, 86, { sh: 1.75, hair: "shaggy", seed: 8, number: "7", collar: "rgba(255,255,255,0.12)" }); }, R.light);
+    g.fillStyle = "#0f1116"; rr(g, -40, 1600, W + 80, 400, 30); g.fill(); },
+};
+window.draw = () => { SHOTS[F](); grade(g); };
+window.ready = Promise.all([document.fonts.load("700 40px Oswald", "7"), document.fonts.load("600 40px NotoSerifSC", "曼联拜仁切尔西点球星期四年月马丁内斯赛后采访"), document.fonts.load("28px VT323", "02:45")]);
+</script></body></html>

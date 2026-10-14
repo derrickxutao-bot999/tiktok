@@ -1,7 +1,7 @@
 // Ink silhouette of No.10 (v2): continuous anatomical contours instead of
 // capsules. Poses are joints in figure-height units (feet at 0, up = +y).
 // drawFig(g, x, y, H, pose, opts) — x,y = ground point, H = figure height px.
-//   opts: face (1|-1), ink, young (no beard), name, number, numberInk,
+//   opts: face (1|-1), ink, young (no beard), headScale, name, number, numberInk,
 //         rim {color, dx, dy}, armband ("A"|"B"), sep (separation line colour)
 
 const INK = "#111111";
@@ -198,7 +198,7 @@ function drawFig(G, X, Y, H, P, o = {}) {
     add(Pp, col);
   }
   // ---- neck + head ----
-  const tilt = (P.tilt || 0) * f, HD = 0.092, hb = side ? [0.01 * f, -1] : [0, -1];
+  const tilt = (P.tilt || 0) * f, HD = 0.092 * (o.headScale || 1), hb = side ? [0.01 * f, -1] : [0, -1];
   const hC = [N[0] + (hb[0] * Math.cos(tilt) - hb[1] * Math.sin(tilt)) * HD * H,
               N[1] + (hb[0] * Math.sin(tilt) + hb[1] * Math.cos(tilt)) * HD * H + (side ? 0 : (P.bow || 0) * H)];
   function neckHead(col) {
@@ -210,7 +210,7 @@ function drawFig(G, X, Y, H, P, o = {}) {
       Pp.moveTo(...at(0.98, -0.048)); Pp.quadraticCurveTo(...at(1.04, -0.034), a[0], a[1]); Pp.lineTo(b[0], b[1]);
       Pp.quadraticCurveTo(...at(1.04, 0.034), ...at(0.98, 0.048)); Pp.closePath(); }
     const key = side ? (o.young ? "sideYoung" : "side") : back ? "back" : (o.young ? "frontYoung" : "front");
-    local(Ph, HEAD[key], hC[0], hC[1], tilt, side ? f : 1, 1);
+    local(Ph, HEAD[key], hC[0], hC[1], tilt, (side ? f : 1) * (o.headScale || 1), o.headScale || 1);
     for (const [deg, r] of TUFTS[side ? "side" : back ? "back" : "front"]) {
       const a = deg * Math.PI / 180, sx = side ? f : 1;
       const p = hp(0.047 * Math.cos(a) * sx, 0.069 * Math.sin(a) - 0.004);
