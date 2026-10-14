@@ -10,13 +10,23 @@
 // down from the hips). Each part is redrawn to start at its outline point
 // nearest that joint and grows both ways from there, so every visible stroke
 // grows out of a line that is already drawn: one line, being etched.
+//
+// Interior detail (`detail`): the hairline where hair meets the face and the
+// neck, the beard's edge on the cheek, the ear, brow and jaw, the jersey's
+// stripe seams and a hairline number on the back. It is what makes the
+// legend in the sky unmistakably the 39-year-old rather than a generic
+// outline. It costs a clip and a few paths, so by default it is on only with
+// `glow` and fades in with the figure's projected size; the small Marey
+// echoes keep the cheap path.
 
 import React from "react";
-import { Vec2, clamp, dist, smoothstep } from "../../lib/math";
+import { ShirtPattern } from "../../lib/eras";
+import { FONTS } from "../../lib/palette";
+import { Vec2, clamp, dist, lerp, smoothstep } from "../../lib/math";
 import { Pose } from "../../lib/rig";
 import { Camera } from "../../lib/world";
 import { Line, Part, buildFigure } from "./figure";
-import { segLengths, segsPath } from "./geom";
+import { bezier, polyPath, segLengths, segsPath, smoothPath } from "./geom";
 
 export type EtchedAthleteProps = {
   pose: Pose;
@@ -30,6 +40,33 @@ export type EtchedAthleteProps = {
   opacity?: number;
   /** Adds one soft bloom under the lines (default off). */
   glow?: boolean;
+  /**
+   * Interior detail, 0..1: hairline, beard edge, ear, jersey stripes and the
+   * number. Defaults to on with `glow` once the head is ~18-36 px in radius,
+   * and off without glow (the cheap path for many small echoes).
+   */
+  detail?: number;
+};
+
+/** The jersey's own spot for the number (torso f, u); line art moves it to the nearest spot on the back the near arm leaves clear. */
+const NUMBER_HOME = [-0.062, 0.29] as const;
+
+const insidePolygon = (pl: readonly Vec2[], q: Vec2) => {
+  let c = false;
+  for (let i = 0, j = pl.length - 1; i < pl.length; j = i++) {
+    const a = pl[i];
+    const b = pl[j];
+    if (a.y > q.y !== b.y > q.y && q.x < ((b.x - a.x) * (q.y - a.y)) / (b.y - a.y) + a.x) c = !c;
+  }
+  return c;
+};
+
+/** Where the stripes of a kit meet, as fractions across the torso (same wrap as the jersey's pattern). */
+const seamsOf = (pat: ShirtPattern): number[] => {
+  if (pat.kind === "solid") return [];
+  if (pat.kind === "halves") return [0.5];
+  const span = 1.25;
+  return Array.from({ length: pat.count - 1 }, (_, i) => (1 + Math.sin(-span + (2 * span * (i + 1)) / pat.count) / Math.sin(span)) / 2);
 };
 
 /** When a part's line starts (px of line already drawn) and where along its outline. */
@@ -76,7 +113,7 @@ const growthPlan = (parts: readonly Part[], root: Vec2): Map<string, Grow> => {
   return plan;
 };
 
-export const EtchedAthlete: React.FC<EtchedAthleteProps> = ({ pose, camera, idPrefix, progress, color, width = 1.5, opacity = 1, glow = false }) => {
+export const EtchedAthlete: React.FC<EtchedAthleteProps> = ({ pose, camera, idPrefix, progress, color, width = 1.5, opacity = 1, glow = false, detail }) => {
   if (progress <= 0 || opacity <= 0) return null;
   const g = buildFigure(pose, camera);
   const id = (s: string) => `${idPrefix}-etch-${s}`;
@@ -114,6 +151,74 @@ export const EtchedAthlete: React.FC<EtchedAthleteProps> = ({ pose, camera, idPr
       return f > 0 ? <path key={i} d={l.d} pathLength={1} strokeWidth={sw * 0.4} strokeOpacity={0.5} strokeDasharray={f < 1 ? `${f} 1` : undefined} /> : null;
     });
 
+  // ---------------------------------------------------------------- interior detail
+  const det = clamp(detail ?? (glow ? smoothstep(18, 36, g.head.radiusPx) : 0));
+  const S = g.head.screen;
+  const geo = g.head.geo;
+  const has = (pid: string) => all.some((p) => p.id === pid);
+  /** A detail comes in once its owner's outline is mostly drawn, growing along its own length. */
+  const grown = (owner: string) => smoothstep(0.5, 1, drawn(owner)) * det;
+  const etch = (key: string, d: string, owner: string, sw: number, op: number) => {
+    const f = grown(owner);
+    return f > 0 ? <path key={key} d={d} pathLength={1} strokeWidth={sw} strokeOpacity={op} strokeDasharray={f < 1 ? `${f} 1` : undefined} /> : null;
+  };
+  const T = g.torso;
+  const seams = det > 0 ? seamsOf(pose.look.kit.shirt) : [];
+  const number = pose.look.kit.number;
+  // The number sits on the back panel where the jersey has it, or, if the
+  // near arm crosses that spot (line art shows no fill to carry it), at the
+  // first spot lower down the back that the arm leaves clear.
+  const numberAt = (() => {
+    if (det <= 0 || !number) return null;
+    const polys = arm.map((p) => p.segs.flatMap((sg) => [0, 0.25, 0.5, 0.75].map((t) => bezier(sg, t))));
+    const covered = (q: Vec2) => polys.some((pl) => insidePolygon(pl, q));
+    const clear = (f: number, u: number) => [-0.032, 0, 0.032].every((df) => [-0.05, 0, 0.05].every((du) => !covered(T.at(f + df, u + du))));
+    let best: { f: number; u: number; d: number } | null = null;
+    for (let f = -0.07; f <= -0.019; f += 0.01)
+      for (let u = 0.34; u >= 0.119; u -= 0.02) {
+        const d = Math.hypot(f - NUMBER_HOME[0], u - NUMBER_HOME[1]);
+        if ((!best || d < best.d) && clear(f, u)) best = { f, u, d };
+      }
+    return best ? T.at(best.f, best.u) : null;
+  })();
+  const np = numberAt ?? T.at(-0.062, 0.29);
+  const fontPx = 0.15 * T.s * g.k;
+  const lean = (T.lean * 180) / Math.PI;
+  const faceLines = det > 0 ? geo.lines.filter((l) => l.weight >= 0.6) : [];
+  const details = (sw: number) =>
+    det > 0 ? (
+      <g mask={url("mr")}>
+        {/* The hairline: the hair's own edge wherever it lies over the face, the neck or the shirt. */}
+        {has("hair") ? (
+          <g clipPath={url("cb")}>{etch("hair", plan?.get("hair")?.d ?? all.find((p) => p.id === "hair")!.d, "hair", sw * 0.55, 0.75)}</g>
+        ) : null}
+        {geo.beardEdge ? etch("beard", smoothPath(geo.beardEdge.map(S), false), "head", sw * 0.5, 0.7) : null}
+        {faceLines.map((l, i) => etch(`f${i}`, smoothPath(l.pts.map(S), false), "head", sw * 0.4, 0.55))}
+        <g clipPath={url("cs")}>
+          {seams.map((u, i) => {
+            const f = lerp(-0.13, 0.13, u);
+            return etch(`s${i}`, polyPath([T.at(f, -0.1), T.at(f, 0.56)], false), "shirt", sw * 0.32, 0.45);
+          })}
+          {number && numberAt && fontPx > 8 && grown("shirt") > 0 ? (
+            <text
+              x={0}
+              y={0}
+              transform={`translate(${np.x.toFixed(1)} ${np.y.toFixed(1)}) rotate(${lean.toFixed(2)}) scale(0.6 1)`}
+              fontFamily={FONTS.condensed}
+              fontWeight={700}
+              fontSize={fontPx}
+              textAnchor="middle"
+              dominantBaseline="central"
+              strokeWidth={(sw * 0.32) / 0.8}
+              strokeOpacity={0.6 * grown("shirt")}
+            >
+              {number}
+            </text>
+          ) : null}
+        </g>
+      </g>
+    ) : null;
+
   const art = (sw: number) => (
     <>
       <g mask={url("ma")}>{back.map((p) => outline(p, sw))}</g>
@@ -125,6 +230,7 @@ export const EtchedAthlete: React.FC<EtchedAthleteProps> = ({ pose, camera, idPr
         {arm.map((p) => outline(p, sw))}
         {hairlines([...g.body.lines, ...g.leg.lines], sw)}
       </g>
+      {details(sw)}
       {hairlines(g.arm.lines, sw)}
     </>
   );
@@ -153,6 +259,21 @@ export const EtchedAthlete: React.FC<EtchedAthleteProps> = ({ pose, camera, idPr
         {knockout("ma", all.filter(started))}
         {knockout("ml", [...leg, ...arm].filter(started), started(shirt) ? g.shirt : undefined)}
         {knockout("mr", arm.filter(started))}
+        {det > 0 ? (
+          <>
+            {/* What the hair lies over (its edge shows only there), and the shirt for the stripes and the number. */}
+            <clipPath id={id("cb")}>
+              {g.body.parts
+                .filter((p) => p.id !== "hair" && p.id !== "beard")
+                .map((p) => (
+                  <path key={p.id} d={p.d} />
+                ))}
+            </clipPath>
+            <clipPath id={id("cs")}>
+              <path d={g.shirt} />
+            </clipPath>
+          </>
+        ) : null}
         {glow ? (
           <filter id={id("glow")} filterUnits="userSpaceOnUse" {...boxAttrs}>
             <feGaussianBlur stdDeviation={Math.max(2, width * 2.5)} />

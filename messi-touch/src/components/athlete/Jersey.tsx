@@ -65,6 +65,11 @@ export const JerseyDefs: React.FC<JerseyProps> = ({ g, paint, id, rim }) => {
       <linearGradient id={id("je")} {...lin}>
         {stopsOf([{ o: 0.3, c: paint.heroEdge, a: 0 }, { o: 0.65, c: paint.heroEdge, a: 0.35 }, { o: 1, c: paint.heroEdge, a: 1 }])}
       </linearGradient>
+      {paint.edge ? (
+        <linearGradient id={id("jge")} {...lin}>
+          {stopsOf([{ o: 0.28, c: paint.edge, a: 0 }, { o: 0.6, c: paint.edge, a: 0.55 }, { o: 0.95, c: paint.edge, a: 1 }])}
+        </linearGradient>
+      ) : null}
       <radialGradient id={id("jg")} gradientUnits="userSpaceOnUse" cx={glowC.x} cy={glowC.y} r={0.2 * T.s * g.k}>
         {stopsOf([{ o: 0, c: paint.heroEdge, a: 0.5 }, { o: 0.6, c: paint.heroEdge, a: 0.12 }, { o: 1, c: paint.heroEdge, a: 0 }])}
       </radialGradient>
@@ -83,18 +88,23 @@ type OverlayProps = Omit<JerseyProps, "rim"> & {
   numberColor: string;
   collar: string;
   stars: number;
+  /** Edge light colour along the shirt's lit edge (Qatar's gold), or null. */
+  edge?: string | null;
   hairline: number;
   /** Fill that dims the shirt away from the eye in the eye close-up (or null). */
   focus: string | null;
 };
 
 /** Everything painted on the shirt after its pattern fill. */
-export const JerseyOverlay: React.FC<OverlayProps> = ({ g, paint, id, number, numberColor, collar, stars, hairline, focus }) => {
+export const JerseyOverlay: React.FC<OverlayProps> = ({ g, paint, id, number, numberColor, collar, stars, edge, hairline, focus }) => {
   const T = g.torso;
   const lean = (T.lean * 180) / Math.PI;
   const np = T.at(-0.062, 0.29);
   const fontPx = 0.15 * T.s * g.k;
-  const starR = 0.0078 * T.s * g.k;
+  // Gold stars, a little larger where the era carries a gold edge light (Qatar), so two stars read at figure size.
+  const starR = (edge ? 1.3 : 1) * 0.0078 * T.s * g.k;
+  // A crisp gold edge just inside the lit edge: 2-3.5 px, a hairline that still reads at a 34 px head.
+  const edgeW = Math.min(3.5, Math.max(2, 0.008 * T.s * g.k));
   const shirt = `#${id("shirt")}`;
   const clip = `url(#${id("cs")})`;
   const seamA = T.at(0, -0.08);
@@ -129,14 +139,15 @@ export const JerseyOverlay: React.FC<OverlayProps> = ({ g, paint, id, number, nu
       ) : null}
       <g clipPath={clip}>
         <use href={shirt} fill="none" stroke={`url(#${id("je")})`} strokeWidth={hairline * 2.2} />
+        {edge ? <use href={shirt} fill="none" stroke={`url(#${id("jge")})`} strokeWidth={2 * edgeW} /> : null}
       </g>
       {/* The collar rib, lit along its inner edge. */}
       <path d={g.collar.band} fill={mix(collar, paint.heroEdge, 0.22)} />
       <path d={g.collar.band} fill={`url(#${id("js")})`} style={MULTIPLY} />
       <path d={g.collar.edge} fill="none" stroke={paint.light.contour} strokeOpacity={0.5} strokeWidth={hairline} strokeLinecap="round" />
       {starR > 0.7
-        ? // A short row across the chest, just behind its front edge.
-          Array.from({ length: stars }, (_, i) => <path key={i} d={starPath(T.at(0.094 - i * 0.021, 0.4 + 0.004 * i), starR)} fill={paint.gold} />)
+        ? // A short row on the left chest just behind its front edge, where a profile sees it, and clear of the near sleeve in the frozen pose.
+          Array.from({ length: stars }, (_, i) => <path key={i} d={starPath(T.at(0.1 - i * (edge ? 0.0225 : 0.018), 0.372 + 0.002 * i), starR)} fill={paint.gold} />)
         : null}
       {focus ? <use href={shirt} fill={focus} style={MULTIPLY} /> : null}
     </g>

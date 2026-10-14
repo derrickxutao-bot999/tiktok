@@ -8,7 +8,7 @@
 import React from "react";
 import { ERA_SWITCH_FRAMES } from "../../lib/clock";
 import { RUN, pelvisXCanonical, scene1FrameToT, stepAt, timeOfStep } from "../../lib/gait";
-import { clamp, hash } from "../../lib/math";
+import { clamp, hash, smoothstep } from "../../lib/math";
 import { FONTS, PALETTE } from "../../lib/palette";
 import { HEIGHT, WIDTH } from "../../lib/timeline";
 import { Camera, D0, LINE_WIDTH, LINE_Z, project } from "../../lib/world";
@@ -53,8 +53,8 @@ const FLOODS = [
  */
 const BAND = 2.75;
 const BAND_PHASE = BAND / 4;
-/** Light running down a seam towards the lens after a footfall: world speed m/s, length m, life s. */
-const SEAM_PULSE = { v: 7.5, len: 1.5, life: 0.7 } as const;
+/** Light running down a seam towards the lens after a footfall: world speed m/s and life s. */
+const SEAM_PULSE = { v: 30, life: 0.45 } as const;
 /** Steps on which the era changes (each is a footfall): their pulses run brighter. */
 const STRONG_STEPS = new Set(ERA_SWITCH_FRAMES.map((f) => Math.round(stepAt(scene1FrameToT(f)))));
 /** Accent pulses along the board band. They run against the sprint: the band shows time going backwards. */
@@ -499,11 +499,15 @@ const blades = (cam: Camera) => {
 type SeamPulse = { x: number; zHead: number; zTail: number; o: number; major: boolean };
 
 /**
- * After each footfall the strike runs down the two nearest seams towards the
- * lens: a short bar of light leaving the touchline a beat after the foot
- * lands (later on the farther seam), accelerating on screen as it nears the
- * camera. A pure function of t: footfall times and places come from the gait
- * (the canonical runner; a smaller body lands within a few centimetres).
+ * After each footfall the strike runs down the two nearest seams ahead of the
+ * foot towards the lens: the seam lights up from the touchline a beat after
+ * the foot lands (later on the farther seam), its bright front accelerating
+ * on screen as it nears the camera, the lit trail behind it dimmer, and then
+ * the whole charge fades. Seams ahead, because the tracking camera carries
+ * the frame forward: the seams behind the foot have swung out of frame before
+ * the light could run down them. A pure function of t: footfall times and
+ * places come from the gait (the canonical runner; a smaller body lands
+ * within a few centimetres).
  */
 const seamPulsesAt = (t: number): SeamPulse[] => {
   const out: SeamPulse[] = [];
@@ -515,16 +519,15 @@ const seamPulsesAt = (t: number): SeamPulse[] => {
     const xf = pelvisXCanonical(tn) + RUN.landAhead;
     const strong = STRONG_STEPS.has(n) ? 1 : 0;
     const m0 = Math.floor((xf - BAND_PHASE) / half);
-    for (const m of [m0, m0 + 1]) {
+    for (const m of [m0 + 1, m0 + 2]) {
       const x = m * half + BAND_PHASE;
-      const d = Math.abs(x - xf);
-      const age = t - tn - 0.04 - 0.14 * d;
+      const d = x - xf;
+      const age = t - tn - 0.03 - 0.12 * d;
       if (age <= 0 || age >= SEAM_PULSE.life) continue;
       const major = ((m % 2) + 2) % 2 === 0;
-      const u = age / SEAM_PULSE.life;
-      const o = (major ? 1 : 0.75) * (0.55 + 0.45 * strong) * Math.exp(-d / 1.6) * Math.min(1, age / 0.05) * Math.pow(1 - u, 1.3);
-      const zHead = LINE_Z - SEAM_PULSE.v * age;
-      out.push({ x, zHead, zTail: Math.min(LINE_Z, zHead + SEAM_PULSE.len * (0.6 + 0.4 * u)), o, major });
+      const env = smoothstep(0, 0.04, age) * (1 - smoothstep(0.4 * SEAM_PULSE.life, SEAM_PULSE.life, age));
+      const o = (major ? 1 : 0.85) * (0.75 + 0.25 * strong) * Math.exp(-d / 2.5) * env;
+      out.push({ x, zHead: LINE_Z - SEAM_PULSE.v * age, zTail: LINE_Z, o, major });
     }
   }
   return out;
@@ -576,7 +579,7 @@ export const NightGround: React.FC<NightGroundProps> = ({ cam, t, id, accent, se
       line(x0 + (q + (hash3(n, q, 21) - 0.5) * 0.5) * (BAND / 8), naps);
     }
   }
-  const pulses = seamPulses && k < 1200 ? seamPulsesAt(t).filter((p) => p.zTail > zNear) : [];
+  const pulses = seamPulses && k < 1200 ? seamPulsesAt(t).filter((p) => p.zTail > zNear && inView(P(p.x, p.zTail), P(p.x, Math.max(p.zHead, zNear)))) : [];
 
   // The ruler on the outer side of the line: a tick every metre and a label
   // every five; half metres, then decimetres, fade in as the frame tightens.
@@ -614,7 +617,7 @@ export const NightGround: React.FC<NightGroundProps> = ({ cam, t, id, accent, se
   // Seams catch the floodlight: dim and fine where they converge far off,
   // brightest towards the lens where they swing past fastest.
   const seamTone = mix(N.grassSeam, N.ruler, 0.22);
-  const seamHi = mix(N.grassSeam, N.ruler, 0.55);
+  const seamHi = mix(N.grassSeam, N.ruler, 0.6);
   const pulseCore = mix(N.line, accent, 0.2);
   const pulseTone = mix(L.glow, accent, 0.3);
   const gStop = (y: number) => clamp((y - top) / Math.max(1, HEIGHT - top));
@@ -636,7 +639,7 @@ export const NightGround: React.FC<NightGroundProps> = ({ cam, t, id, accent, se
         <linearGradient id={`${id}-seam`} gradientUnits="userSpaceOnUse" x1={0} y1={top} x2={0} y2={HEIGHT}>
           <stop offset={0} stopColor={seamTone} stopOpacity={0.16} />
           <stop offset={gStop(yLineFar)} stopColor={mix(seamTone, seamHi, 0.4)} stopOpacity={0.36} />
-          <stop offset={1} stopColor={seamHi} stopOpacity={0.82} />
+          <stop offset={1} stopColor={seamHi} stopOpacity={0.85} />
         </linearGradient>
         <linearGradient id={`${id}-nap`} gradientUnits="userSpaceOnUse" x1={0} y1={top} x2={0} y2={HEIGHT}>
           <stop offset={0} stopColor={seamTone} stopOpacity={0.1} />
@@ -647,8 +650,9 @@ export const NightGround: React.FC<NightGroundProps> = ({ cam, t, id, accent, se
           const b = P(p.x, Math.max(p.zHead, zNear * 0.9));
           return (
             <linearGradient key={i} id={`${id}-sp${i}`} gradientUnits="userSpaceOnUse" x1={n2(a.x)} y1={n2(a.y)} x2={n2(b.x)} y2={n2(b.y)}>
-              <stop offset={0} stopColor={pulseTone} stopOpacity={0} />
-              <stop offset={0.8} stopColor={pulseTone} stopOpacity={0.7} />
+              <stop offset={0} stopColor={pulseTone} stopOpacity={0.15} />
+              <stop offset={0.7} stopColor={pulseTone} stopOpacity={0.45} />
+              <stop offset={0.94} stopColor={pulseCore} stopOpacity={0.9} />
               <stop offset={1} stopColor={pulseCore} stopOpacity={1} />
             </linearGradient>
           );
@@ -677,7 +681,7 @@ export const NightGround: React.FC<NightGroundProps> = ({ cam, t, id, accent, se
       <path d={naps.join("")} stroke={`url(#${id}-nap)`} strokeWidth={0.9} fill="none" />
       {/* Seams: a faint halo of floodlight and a hairline core; pass lines at half strength. */}
       <g fill="none" stroke={`url(#${id}-seam)`}>
-        <path d={seams.join("")} strokeWidth={seamW * 3.5} opacity={0.13} />
+        <path d={seams.join("")} strokeWidth={seamW * 3.5} opacity={0.16} />
         <path d={passes.join("")} strokeWidth={seamW * 0.85} opacity={0.62} />
         <path d={seams.join("")} strokeWidth={seamW} />
       </g>

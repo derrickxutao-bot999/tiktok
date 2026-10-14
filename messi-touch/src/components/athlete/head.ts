@@ -13,7 +13,7 @@ import { Pose } from "../../lib/rig";
 import { Frame, Pt, inFrame } from "./geom";
 
 /** The eye's own unit (head units per eye unit) and its centre on the face, head units: a child's eye sits a little lower. */
-const EYE_SCALE = 1.15;
+const EYE_SCALE = 1.3;
 const eyeAt = (look: Look) => {
   const c = smoothstep(1.02, 1.2, look.head);
   return { x: lerp(0.63, 0.6, c), y: lerp(-0.03, -0.13, c) };
@@ -95,37 +95,45 @@ const HAIR: Record<Hair, HairSpec> = {
     sweep: 0,
     coversEar: false,
   },
-  // 2006: to the collar, over the ears, layered at the ends; tails are
-  // authored as if the head were upright (they hang, see `swept`).
+  // 2006, age 19: swept back off an open forehead, close over the crown, and
+  // streaming out behind in long locks past the collar. Tails are authored as
+  // if the head were upright (they hang and stream, see `swept`). Read at a
+  // glance by its silhouette: a comet tail behind the head.
   long: {
-    arc: [[18, 0.04], [36, 0.12], [75, 0.13], [120, 0.14], [160, 0.15], [192, 0.15]],
-    tail: [[-1.1, -0.5, 0], [-1.06, -1.0, 0], [-0.98, -1.5, 1], [-0.86, -1.32, 0], [-0.72, -1.4, 1], [-0.6, -1.18, 0]],
-    inner: [[-0.4, -1.0, 0], [-0.18, -0.86, 0], [0.0, -0.92, 1], [0.06, -0.55, 0], [0.12, -0.1, 0], [0.18, 0.2, 0], [0.44, 0.33, 0], [0.7, 0.27, 0], [0.81, 0.3, 1]],
-    sweep: 0.04,
+    arc: [[26, 0.03], [36, 0.1], [60, 0.11], [100, 0.1], [140, 0.11], [175, 0.14], [196, 0.17]],
+    tail: [
+      [-1.2, -0.42, 0], [-1.3, -0.86, 0], [-1.44, -1.3, 0], [-1.58, -1.64, 1], [-1.36, -1.42, 0], [-1.3, -1.72, 1], [-1.14, -1.46, 0],
+      [-1.0, -1.66, 1], [-0.88, -1.34, 0],
+    ],
+    inner: [[-0.64, -1.0, 0], [-0.36, -0.74, 0], [-0.1, -0.6, 1], [0.04, -0.34, 0], [0.1, -0.02, 0], [0.22, 0.26, 0], [0.44, 0.42, 0], [0.62, 0.5, 1]],
+    sweep: 0.12,
     coversEar: true,
     flow: [
-      [[0.3, 0.98], [-0.42, 0.88], [-0.92, 0.36], [-1.04, -0.5], [-0.98, -1.4]],
-      [[0.46, 0.84], [-0.24, 0.74], [-0.74, 0.34], [-0.9, -0.46], [-0.84, -1.28]],
-      [[0.56, 0.66], [0.0, 0.58], [-0.5, 0.26], [-0.7, -0.5], [-0.7, -1.3]],
-      [[0.6, 0.52], [0.12, 0.42], [-0.28, 0.12], [-0.46, -0.5], [-0.46, -1.08]],
-      [[0.66, 0.44], [0.32, 0.34], [0.12, 0.04], [0.04, -0.44], [0.0, -0.86]],
-      [[0.72, 0.42], [0.5, 0.36], [0.28, 0.22]],
+      [[0.52, 0.66], [-0.2, 0.92], [-0.86, 0.52], [-1.16, -0.3], [-1.5, -1.5]],
+      [[0.56, 0.58], [-0.1, 0.78], [-0.7, 0.44], [-1.04, -0.36], [-1.28, -1.56]],
+      [[0.5, 0.5], [0.0, 0.62], [-0.52, 0.34], [-0.86, -0.4], [-1.04, -1.5]],
+      [[0.4, 0.44], [0.04, 0.46], [-0.34, 0.22], [-0.62, -0.44], [-0.9, -1.28]],
+      [[0.26, 0.3], [0.08, 0.16], [-0.06, -0.14], [-0.3, -0.6], [-0.62, -1.0]],
     ],
   },
-  // 2004: a fuller mop to the middle of the neck, a long fringe down to the brow.
+  // 2004, age 17: a rounder, fuller mop that hides the forehead under a heavy
+  // blunt fringe down to the brow and ends square at the middle of the neck.
   mop: {
-    arc: [[10, 0.04], [30, 0.16], [70, 0.17], [115, 0.17], [155, 0.17], [192, 0.15]],
-    tail: [[-1.08, -0.42, 0], [-1.02, -0.72, 0], [-0.96, -0.94, 1], [-0.84, -0.84, 0], [-0.7, -0.9, 1], [-0.58, -0.78, 0]],
-    inner: [[-0.36, -0.7, 0], [-0.16, -0.58, 0], [-0.02, -0.62, 1], [0.06, -0.3, 0], [0.12, -0.02, 0], [0.2, 0.16, 0], [0.46, 0.2, 0], [0.68, 0.11, 0], [0.86, 0.05, 1], [0.88, 0.2, 0]],
+    arc: [[4, 0.15], [18, 0.2], [45, 0.24], [90, 0.25], [135, 0.25], [175, 0.24], [205, 0.17]],
+    tail: [[-1.1, -0.56, 0], [-1.06, -0.8, 0], [-0.98, -0.9, 1], [-0.84, -0.86, 0], [-0.72, -0.92, 1], [-0.6, -0.8, 0]],
+    inner: [
+      [-0.42, -0.74, 0], [-0.2, -0.68, 0], [-0.04, -0.62, 1], [0.06, -0.32, 0], [0.12, -0.02, 0], [0.22, 0.12, 0], [0.4, 0.17, 0], [0.62, 0.15, 0],
+      [0.8, 0.13, 0], [0.93, 0.12, 1],
+    ],
     sweep: 0.03,
     coversEar: true,
     flow: [
-      [[0.4, 0.98], [-0.32, 0.9], [-0.86, 0.34], [-1.0, -0.4], [-0.94, -0.86]],
-      [[0.6, 0.72], [0.0, 0.72], [-0.55, 0.3], [-0.78, -0.4], [-0.72, -0.84]],
-      [[0.5, 0.6], [-0.1, 0.5], [-0.42, 0.14], [-0.5, -0.36], [-0.44, -0.66]],
-      [[0.42, 0.66], [0.66, 0.46], [0.84, 0.12]],
-      [[0.22, 0.6], [0.5, 0.4], [0.68, 0.14]],
-      [[0.1, 0.5], [0.3, 0.3], [0.44, 0.22]],
+      [[0.86, 0.5], [0.3, 1.1], [-0.5, 1.0], [-1.06, 0.3], [-1.04, -0.7]],
+      [[0.8, 0.36], [0.2, 0.92], [-0.48, 0.82], [-0.92, 0.2], [-0.9, -0.74]],
+      [[0.66, 0.3], [0.08, 0.66], [-0.46, 0.5], [-0.72, -0.1], [-0.68, -0.76]],
+      [[0.36, 0.86], [0.7, 0.62], [0.88, 0.18]],
+      [[0.12, 0.8], [0.5, 0.52], [0.7, 0.16]],
+      [[-0.04, 0.6], [0.26, 0.36], [0.44, 0.18]],
     ],
   },
   // The boy's cut, short with a soft fringe.
@@ -152,6 +160,31 @@ const BEARD: Record<Exclude<Beard, "none">, readonly K[]> = {
   ],
 };
 
+/** Is (x, y) inside a polygon of key points (even-odd)? */
+const insidePoly = (poly: readonly K[], x: number, y: number) => {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i];
+    const [xj, yj] = poly[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+};
+
+/** The point at fraction t of a polyline's length. */
+const alongPoly = (pts: readonly (readonly [number, number])[], t: number): [number, number] => {
+  const lens = pts.slice(1).map((p, i) => Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]));
+  let d = clamp(t) * lens.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < lens.length; i++) {
+    if (d <= lens[i] || i === lens.length - 1) {
+      const u = lens[i] ? clamp(d / lens[i]) : 0;
+      return [lerp(pts[i][0], pts[i + 1][0], u), lerp(pts[i][1], pts[i + 1][1], u)];
+    }
+    d -= lens[i];
+  }
+  return [pts[0][0], pts[0][1]];
+};
+
 export type HeadGeo = {
   outline: Pt[];
   hair: Pt[];
@@ -169,6 +202,10 @@ export type HeadGeo = {
   beardGrain: Pt[][];
   /** Grey flecks in the beard (age 35 and over). */
   beardSilver: Pt[][];
+  /** Close-up grain (drawn only when the head is huge on screen): the beard's fine hair, its grey share, the brow's hairs. */
+  beardFine: Pt[][];
+  beardFineSilver: Pt[][];
+  brow: Pt[][];
   eye: {
     upper: Pt[];
     lower: Pt[];
@@ -177,13 +214,28 @@ export type HeadGeo = {
     opening: Pt[];
     /** The cornea's bulge in profile, where the light sits. */
     cornea: Pt[];
-    /** Iris seen edge-on: a narrow ellipse (centre, vertical axis end, horizontal axis end). */
+    /** Iris seen nearly edge-on: a narrow ellipse (centre, vertical axis end, horizontal axis end). */
     iris: { c: Pt; top: Pt; side: Pt };
     /** The point of light, and the floodlights caught along the cornea (main one first). */
     light: Pt;
     catches: Pt[];
-    /** The touchline, reflected as a sliver across the lower cornea. */
+    /** The touchline, reflected as a curve across the lower iris and cornea. */
     reflection: Pt[];
+    // Macro detail, for the extreme close-up.
+    /** The upper lid's thickness: its margin, just above the lid line. */
+    margin: Pt[];
+    /** Upper lashes (base, bend, tip) and a few short lower ones. */
+    lashes: Pt[][];
+    lowerLashes: Pt[][];
+    /** The wet rim of the lower lid, catching light. */
+    waterline: Pt[];
+    /** The pupil within the iris, and the iris's fibres (pupil to rim). */
+    pupil: { c: Pt; top: Pt; side: Pt };
+    fibres: Pt[][];
+    /** The clear dome of the cornea, between its arc and the iris. */
+    dome: Pt[];
+    /** His career reflected in his eye: one pinpoint per era (ERAS order, back to front) on the reflected touchline. */
+    jewels: Pt[];
   };
 };
 
@@ -248,7 +300,11 @@ export const headGeometry = (look: Look, frame: Frame, phase: number): HeadGeo =
   // The line of the lips (a beard keeps it, a little shorter).
   lines.push({ pts: [L([0.845, -0.615, 0], [0.765, -0.61, 0]), L([beard ? 0.79 : 0.76, -0.6, 0], [0.7, -0.6, 0])], weight: beard ? 0.5 : 0.6 });
   if (!beard) {
-    lines.push({ pts: [L([-0.04, -0.66, 0], [-0.02, -0.62, 0]), L([-0.08, -0.46, 0], [-0.07, -0.44, 0])], weight: 0.35 });
+    // A clean-shaven jaw: one line from under the chin to the angle of the jaw and up the ramus, so the jaw reads without a beard.
+    lines.push({
+      pts: [L([0.6, -0.995, 0], [0.52, -0.91, 0]), L([0.3, -0.9, 0], [0.26, -0.83, 0]), L([-0.04, -0.66, 0], [-0.02, -0.62, 0]), L([-0.08, -0.46, 0], [-0.07, -0.44, 0])],
+      weight: 0.8,
+    });
   }
 
   const grey = look.hair === "crop-grey";
@@ -325,10 +381,91 @@ export const headGeometry = (look: Look, frame: Frame, phase: number): HeadGeo =
   const beardSilver: Pt[][] =
     bk && look.age >= 35 ? [0, 1, 2, 3, 4].map((i) => stroke(0.42 + 0.1 * i + 0.03 * jit(i, 23), -0.9 - 0.025 * i + 0.04 * jit(i, 29), -1.3 + 0.3 * jit(i, 31), 0.07)) : [];
 
+  // Close-up grain: many short strokes inside the beard (clipped to it), combed
+  // down and slightly back, a share of them silver on the 39-year-old; and the
+  // brow as fine hairs combed back towards the temple.
+  const beardFine: Pt[][] = [];
+  const beardFineSilver: Pt[][] = [];
+  if (bk) {
+    for (let i = 0; i < 150; i++) {
+      const x = lerp(-0.1, 0.94, hash2(i, 41));
+      const y = lerp(-1.08, -0.2, hash2(i, 43));
+      if (!insidePoly(bk, x, y)) continue;
+      const st = stroke(x, y, -1.45 + 0.35 * jit(i, 47) + 0.25 * clamp(-y - 0.7), 0.035 + 0.035 * hash2(i, 53));
+      (look.age >= 35 && hash2(i, 59) < (grey ? 0.42 : 0.12) ? beardFineSilver : beardFine).push(st);
+    }
+  }
+  const browPts: [number, number][] = [[ex - 0.15, ey + 0.15], [ex + 0.02, ey + 0.205], [ex + 0.19, ey + 0.19]];
+  const brow: Pt[][] = Array.from({ length: 22 }, (_, i) => {
+    const t = (i + 0.5 * hash2(i, 61)) / 22;
+    const [a, b] = t < 0.5 ? [browPts[0], browPts[1]] : [browPts[1], browPts[2]];
+    const u = t < 0.5 ? t / 0.5 : (t - 0.5) / 0.5;
+    const x = lerp(a[0], b[0], u);
+    const y = lerp(a[1], b[1], u) + 0.022 * jit(i, 67) - 0.012;
+    // Combed back towards the temple, lifting at the inner end.
+    return stroke(x, y, Math.PI - 0.12 - 0.5 * (1 - t) * (1 - t) + 0.2 * jit(i, 71), 0.045 + 0.03 * hash2(i, 73));
+  });
+
   // Long hair carries flow lines from the crown to its tips.
   const strands = (hs.flow ?? []).map((l, i) => ({ pts: l.map(([x, y]) => swept(x, y)), weight: 0.48 - 0.04 * i }));
 
   const E = (x: number, y: number) => P(ex + x * EYE_SCALE, ey + y * EYE_SCALE);
+  const Ev = (q: readonly [number, number]) => E(q[0], q[1]);
+
+  // The eye in eye units (x forward, y up). The cornea is a quadratic arc
+  // from the upper lid over its front to the lower lid; reflections sit on
+  // arcs just inside it.
+  const UPPER: [number, number][] = [[-0.1, 0.0], [-0.02, 0.05], [0.07, 0.04], [0.098, 0.01]];
+  const LOWER: [number, number][] = [[-0.09, -0.008], [0.0, -0.032], [0.078, -0.02]];
+  const CA = [0.072, 0.034] as const;
+  const CB = [0.1, 0.004] as const;
+  const CC = [0.076, -0.024] as const;
+  const CQ = [2 * CB[0] - (CA[0] + CC[0]) / 2, 2 * CB[1] - (CA[1] + CC[1]) / 2] as const;
+  /** A point on the cornea arc (t: 0 top, 1 bottom), `inset` eye units inside it. */
+  const onCornea = (t: number, inset: number): [number, number] => {
+    const u = 1 - t;
+    const x = u * u * CA[0] + 2 * t * u * CQ[0] + t * t * CC[0];
+    const y = u * u * CA[1] + 2 * t * u * CQ[1] + t * t * CC[1];
+    const tx = 2 * u * (CQ[0] - CA[0]) + 2 * t * (CC[0] - CQ[0]);
+    const ty = 2 * u * (CQ[1] - CA[1]) + 2 * t * (CC[1] - CQ[1]);
+    const l = Math.hypot(tx, ty) || 1;
+    return [x - (-ty / l) * inset, y - (tx / l) * inset];
+  };
+  /** Lashes grow from a lid: base at t along it, leaving at `a0` and curling to `a1`. */
+  const lash = (lid: [number, number][], t: number, a0: number, a1: number, len: number): Pt[] => {
+    const [bx, by] = alongPoly(lid, t);
+    return [E(bx, by), E(bx + 0.5 * len * Math.cos(a0), by + 0.5 * len * Math.sin(a0)), E(bx + len * (0.5 * Math.cos(a0) + 0.5 * Math.cos(a1)), by + len * (0.5 * Math.sin(a0) + 0.5 * Math.sin(a1)))];
+  };
+  const lashes = Array.from({ length: 8 }, (_, i) => {
+    const u = i / 7;
+    const a = lerp(1.45, 0.42, u);
+    const len = 0.017 + 0.012 * Math.sin(Math.PI * (0.2 + 0.7 * u)) + 0.008 * jit(i, 79);
+    return lash(UPPER, lerp(0.46, 0.95, u) + 0.025 * jit(i, 83), a - 0.3 + 0.2 * jit(i, 87), a + 0.18 + 0.2 * jit(i, 91), len);
+  });
+  const lowerLashes = Array.from({ length: 5 }, (_, i) => {
+    const u = i / 4;
+    const a = lerp(-1.95, -1.05, u);
+    return lash(LOWER, lerp(0.42, 0.9, u), a + 0.12, a - 0.1, 0.01 + 0.005 * Math.sin(Math.PI * u));
+  });
+
+  // The iris, a little turned towards us so it has room for the light; its
+  // fibres radiate from the pupil like the guilloche of a dial.
+  const IC = [0.064, 0.006] as const;
+  const IR = [0.021, 0.04] as const;
+  const fibres = Array.from({ length: 24 }, (_, i) => {
+    const th = (2 * Math.PI * (i + 0.35 * jit(i, 89))) / 24;
+    const r0 = 0.42 + 0.04 * hash2(i, 97);
+    const r1 = 0.8 + 0.14 * hash2(i, 101);
+    return [E(IC[0] + IR[0] * r0 * Math.cos(th), IC[1] + IR[1] * r0 * Math.sin(th)), E(IC[0] + IR[0] * r1 * Math.cos(th), IC[1] + IR[1] * r1 * Math.sin(th))];
+  });
+  // The touchline he is chasing, reflected as a curve across the lower iris
+  // and cornea; his seven eras sit on it as seven pinpoints, 2026 at the back
+  // to 1994 at the front, the way he runs.
+  const RJ = [[0.046, -0.008], [0.072, -0.017], [0.098, -0.001]] as const;
+  const onLine = (t: number) => {
+    const u = 1 - t;
+    return E(u * u * RJ[0][0] + 2 * t * u * RJ[1][0] + t * t * RJ[2][0], u * u * RJ[0][1] + 2 * t * u * RJ[1][1] + t * t * RJ[2][1]);
+  };
 
   return {
     outline,
@@ -341,16 +478,28 @@ export const headGeometry = (look: Look, frame: Frame, phase: number): HeadGeo =
     beardEdge,
     beardGrain,
     beardSilver,
+    beardFine,
+    beardFineSilver,
+    brow,
     eye: {
       upper: [E(-0.1, 0.0), E(-0.02, 0.05), E(0.07, 0.04), E(0.098, 0.01)],
       lower: [E(-0.09, -0.008), E(0.0, -0.032), E(0.078, -0.02)],
       crease: [E(-0.08, 0.064), E(0.0, 0.092), E(0.068, 0.076)],
       opening: [E(-0.1, 0.0), E(-0.02, 0.05), E(0.07, 0.04), E(0.098, 0.01), E(0.1, -0.004), E(0.078, -0.02), E(0.0, -0.032), E(-0.09, -0.008)],
       cornea: [E(0.072, 0.034), E(0.1, 0.004), E(0.076, -0.024)],
-      iris: { c: E(0.062, 0.003), top: E(0.062, 0.044), side: E(0.075, 0.003) },
-      light: E(0.083, 0.024),
-      catches: [E(0.083, 0.024), E(0.0915, 0.015), E(0.097, 0.0055), E(0.0995, -0.0035)],
-      reflection: [E(0.07, -0.013), E(0.088, -0.0105), E(0.097, -0.005)],
+      iris: { c: E(IC[0], IC[1]), top: E(IC[0], IC[1] + IR[1]), side: E(IC[0] + IR[0], IC[1]) },
+      light: Ev(onCornea(0.2, 0.005)),
+      // The four floodlights, high in the cornea, the main one first.
+      catches: [Ev(onCornea(0.2, 0.005)), Ev(onCornea(0.1, 0.0035)), Ev(onCornea(0.3, 0.0032)), Ev(onCornea(0.39, 0.003))],
+      reflection: [0, 0.25, 0.5, 0.75, 1].map(onLine),
+      margin: [E(-0.094, 0.008), E(-0.02, 0.059), E(0.068, 0.05), E(0.094, 0.019)],
+      lashes,
+      lowerLashes,
+      waterline: [E(0.072, -0.0165), E(0.03, -0.0255), E(-0.03, -0.0235), E(-0.07, -0.011)],
+      pupil: { c: E(IC[0], IC[1]), top: E(IC[0], IC[1] + 0.38 * IR[1]), side: E(IC[0] + 0.38 * IR[0], IC[1]) },
+      fibres,
+      dome: [Ev(CA), Ev(CB), Ev(CC), E(0.079, -0.014), E(0.085, 0.006), E(0.079, 0.026)],
+      jewels: Array.from({ length: 7 }, (_, i) => onLine(lerp(0.05, 0.95, i / 6))),
     },
   };
 };

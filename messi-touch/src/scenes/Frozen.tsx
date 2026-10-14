@@ -45,3 +45,5 @@ export const SHUFFLE_BANDS = [
   1920,
 ];
 export const SHUFFLE_PLATE = [ERAS.length - 1, ...ERAS.map((_, i) => i), ERAS.length - 1];
+/** The plate is annotated with each band's year, like the plates of a chronophotograph. */
+export const SHUFFLE_LABELS = [null, ...ERAS.map((e) => e.year), null];

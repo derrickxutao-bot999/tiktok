@@ -3,7 +3,7 @@
 // engine's markers (magenta = toe tip, cyan = ball outline), plus the real
 // frames either side of the cut, and assembles comparison sheets in out/matchcut/.
 //
-//   node tools/matchcut.mjs [--frame 300] [--crop 760x760+160+700]
+//   node tools/matchcut.mjs [--frame 300] [--crop 900x800+120+720]
 import { bundle } from "@remotion/bundler";
 import { openBrowser, renderStill, selectComposition } from "@remotion/renderer";
 import { execFileSync } from "node:child_process";
@@ -18,7 +18,7 @@ const opt = (name, def) => {
   return i >= 0 ? args[i + 1] : def;
 };
 const cut = Number(opt("frame", "300"));
-const crop = opt("crop", "760x760+160+700");
+const crop = opt("crop", "900x800+120+720");
 const out = path.join(root, "out/matchcut");
 fs.mkdirSync(out, { recursive: true });
 

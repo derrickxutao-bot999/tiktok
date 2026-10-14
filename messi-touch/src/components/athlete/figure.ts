@@ -10,12 +10,13 @@
 // of and the joint they share: EtchedAthlete draws the figure along that tree,
 // from the touching toe up through the body.
 
+import { TOUCH_DIR } from "../../lib/ball";
 import { Look } from "../../lib/eras";
 import { Vec2, add, clamp, lerp, lerpV, mul, norm, smoothstep, sub } from "../../lib/math";
 import { Pose } from "../../lib/rig";
 import { HEIGHT, WIDTH } from "../../lib/timeline";
 import { Camera, project } from "../../lib/world";
-import { bootGeometry } from "./boots";
+import { TOE_CONE, bootGeometry } from "./boots";
 import {
   Frame,
   LimbOpts,
@@ -101,6 +102,14 @@ export type FigureGeo = {
   /** Screen y of the ground (y = 0) under the figure. */
   groundY: number;
   feet: { L: FootPts; R: FootPts };
+  /**
+   * While the touch is on (and the contact normal lies in the toe's cone, so
+   * no fill reaches past the toe): the clip for the near leg's strokes, seams
+   * and halos. `toe` is the projected engine toe, `n` the contact direction on
+   * screen (y down); `d` (even-odd) keeps everything except a strip beyond the
+   * toe, n.(p - toe) > 0, so the drawn boot ends exactly at the toe.
+   */
+  toeClip: { toe: Vec2; n: Vec2; d: string } | null;
 };
 
 // Half-widths [u, anterior, posterior] along each bone, canonical metres.
@@ -344,13 +353,15 @@ export const buildFigure = (pose: Pose, camera: Camera): FigureGeo => {
   for (const df of [-0.04, 0, 0.04]) for (const du of [-0.045, 0, 0.045]) if (!covered(tw(-0.062 + df, 0.29 + du))) clear += 1;
   const numberVis = smoothstep(0.55, 0.8, clear / 9);
 
-  // Bounding box, padded for the glow and clamped to the frame so close-ups
-  // do not allocate masks and filters for limbs far off screen.
+  // Bounding box, padded for the glow and clamped to the frame (plus the
+  // glow's reach) so close-ups do not allocate masks and filters for limbs far
+  // off screen.
   const pad = 0.12 * k + 24;
-  const x0 = Math.max(-pad, Math.min(...all.map((p) => p.x)) - pad);
-  const y0 = Math.max(-pad, Math.min(...all.map((p) => p.y)) - pad);
-  const x1 = Math.min(WIDTH + pad, Math.max(...all.map((p) => p.x)) + pad);
-  const y1 = Math.min(HEIGHT + pad, Math.max(...all.map((p) => p.y)) + pad);
+  const edge = Math.min(pad, 48);
+  const x0 = Math.max(-edge, Math.min(...all.map((p) => p.x)) - pad);
+  const y0 = Math.max(-edge, Math.min(...all.map((p) => p.y)) - pad);
+  const x1 = Math.min(WIDTH + edge, Math.max(...all.map((p) => p.x)) + pad);
+  const y1 = Math.min(HEIGHT + edge, Math.max(...all.map((p) => p.y)) + pad);
   const box = { x: x0, y: y0, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) };
 
   const footPts = (side: "L" | "R"): FootPts => {
@@ -358,6 +369,30 @@ export const buildFigure = (pose: Pose, camera: Camera): FigureGeo => {
     const sole = inFrame({ o: lg.ankle, a: lg.pitch, s: pose.dims.foot }, 0.13, -0.08);
     return { toe: S(lg.toe), heel: S(lg.heel), heightM: Math.max(0, Math.min(lg.toe.y, lg.heel.y, sole.y)) };
   };
+
+  // The toe clip: a strip beyond the toe along the contact normal, wide and
+  // deep enough to take every stroke, halo and bloom off the boot's tip but
+  // far from the rest of the leg.
+  const lgL = pose.legs.L;
+  const coneAngle = TOUCH_DIR - lgL.pitch;
+  let toeClip: FigureGeo["toeClip"] = null;
+  if (pose.touch > 0 && coneAngle >= 0 && coneAngle <= TOE_CONE) {
+    const toe = S(lgL.toe);
+    const n = { x: Math.cos(TOUCH_DIR), y: -Math.sin(TOUCH_DIR) };
+    const m = { x: -n.y, y: n.x };
+    const W = 0.08 * k + 24;
+    const D = 0.06 * k + 40;
+    const at = (a: number, b: number) => `${(toe.x + m.x * a + n.x * b).toFixed(3)} ${(toe.y + m.y * a + n.y * b).toFixed(3)}`;
+    const ox = Math.min(box.x, toe.x - W - D);
+    const oy = Math.min(box.y, toe.y - W - D);
+    const ow = Math.max(box.x + box.w, toe.x + W + D) - ox;
+    const oh = Math.max(box.y + box.h, toe.y + W + D) - oy;
+    toeClip = {
+      toe: { x: toe.x, y: toe.y },
+      n,
+      d: `M${ox.toFixed(1)} ${oy.toFixed(1)}h${ow.toFixed(1)}v${oh.toFixed(1)}h${(-ow).toFixed(1)}Z` + `M${at(-W, 0)}L${at(W, 0)}L${at(W, D)}L${at(-W, D)}Z`,
+    };
+  }
 
   return {
     k,
@@ -373,6 +408,7 @@ export const buildFigure = (pose: Pose, camera: Camera): FigureGeo => {
     box,
     groundY: project(camera, pose.pelvis.x, 0).y,
     feet: { L: footPts("L"), R: footPts("R") },
+    toeClip,
   };
 };
 

@@ -10,8 +10,9 @@
 import { ballAt } from "./ball";
 import { ERAS, VARIANT_LOOK } from "./eras";
 import { pelvisXCanonical, RUN } from "./gait";
-import { easeInOutSine, invLerp, clamp, smootherstep, rot, add, v, Vec2 } from "./math";
-import { Pose, solvePose } from "./rig";
+import { eyePoint } from "../components/athlete/head";
+import { easeInOutSine, invLerp, clamp, smootherstep } from "./math";
+import { solvePose } from "./rig";
 import { S1, S4 } from "./timeline";
 import { CONTACT_POINT, T_FREEZE } from "./touch";
 import { Shot, cameraFromShot, mixShots, project } from "./world";
@@ -39,10 +40,6 @@ const keyed = (frame: number, keys: readonly Key[]): Shot => {
   return keys[keys.length - 1].shot(frame);
 };
 
-/** Centre of the visible eye of a pose (world metres): a little forward of and above the head centre. */
-export const eyeOf = (pose: Pose): Vec2 =>
-  add(pose.head.center, rot(v(0.46 * pose.head.radius, 0.12 * pose.head.radius), pose.head.pitch));
-
 /** The frozen frame: the whole figure, the ball, and the 1 cm between them. */
 export const FREEZE_SHOT: Shot = {
   lookX: CONTACT_POINT.x - 0.5,
@@ -54,7 +51,8 @@ export const FREEZE_SHOT: Shot = {
 };
 
 const VETERAN_FROZEN = solvePose(T_FREEZE, VARIANT_LOOK["veteran-39"]);
-const EYE = eyeOf(VETERAN_FROZEN);
+// Where the drawn eye is (the head's geometry owns it).
+const EYE = eyePoint(VETERAN_FROZEN);
 
 /** Extreme close-up on his eye while time is frozen. */
 export const EYES_SHOT: Shot = {
@@ -116,16 +114,26 @@ const actionMoved = (frame: number) => {
   return (ballAt(t).x - ballAt(0).x + pelvisXCanonical(t) - pelvisXCanonical(0)) / 2;
 };
 
-/** The close-up eases into following the action after contact (identical for both variants). */
-const closeupFollow = (zoom: number) => (frame: number): Shot => ({
-  ...CLOSEUP_SHOT,
-  lookX: CLOSEUP_SHOT.lookX + actionMoved(frame) * smootherstep(S4.touch, S4.touch + 60, frame),
-  pxPerM: CLOSEUP_SHOT.pxPerM * zoom,
-});
+/** Midway between the boy and the ball. */
+const pairX = (frame: number) => (kidX(frame) + ballAt(scene4T(frame)).x) / 2;
+
+/**
+ * The close-up eases into following the action after contact (identical for
+ * both variants), then hands its aim over to the boy-and-ball pair that the
+ * pull-back frames, so neither ever leaves the picture.
+ */
+const closeupFollow = (zoom: number) => (frame: number): Shot => {
+  const follow = CLOSEUP_SHOT.lookX + actionMoved(frame) * smootherstep(S4.touch, S4.touch + 60, frame);
+  return {
+    ...CLOSEUP_SHOT,
+    lookX: follow + (pairX(frame) - follow) * smootherstep(S4.holdShoe[0] + 30, S4.pullBack[0] + 120, frame),
+    pxPerM: CLOSEUP_SHOT.pxPerM * zoom,
+  };
+};
 
 /** The last frame: the boy and the ball together in the middle, the sunset above. */
 const sunsetWide = (frame: number): Shot => ({
-  lookX: (kidX(frame) + ballAt(scene4T(frame)).x) / 2,
+  lookX: pairX(frame),
   lookY: 1.6,
   screenX: 540,
   screenY: 930,

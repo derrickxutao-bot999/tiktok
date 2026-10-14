@@ -15,10 +15,19 @@
 //
 // Draw order: far arm, far leg, torso/shorts/shirt/neck/head, midLayer (the
 // ball at contact), near leg, near arm.
+//
+// Eras read at a 34 px head from graphic markers, not hairlines: the grey
+// crop and the silver-rimmed beard of 2026 (a tint that hands over to silver
+// grain as the head grows), Qatar's gold edge light and larger stars, the
+// long swept-back locks of 2006 against the round fringed mop of 2004.
+//
+// While the touch is on, the near leg (strokes, seams, halos and its glow) is
+// clipped to the half-plane behind the toe along the contact direction, so
+// the drawn boot ends exactly at the engine's toe (FigureGeo.toeClip).
 
 import React from "react";
 import { WorldStyle } from "../lib/eras";
-import { Vec2, smoothstep } from "../lib/math";
+import { Vec2, lerp, smoothstep } from "../lib/math";
 import { Pose } from "../lib/rig";
 import { Camera } from "../lib/world";
 import { mix } from "./athlete/color";
@@ -87,6 +96,12 @@ export const Athlete: React.FC<AthleteProps> = ({ pose, camera, world, idPrefix,
   // In the eye close-up the bright kit falls away from the eye, so the eye wins the frame.
   const headR = g.head.radiusPx;
   const focus = smoothstep(130, 220, headR);
+  // The push-in to the eye tightens the falloff, so the kit at the frame's edge stays deep while the eye holds the light.
+  const focusR = lerp(2.5, 1.3, smoothstep(250, 600, headR)) * headR;
+  // Hair and beard: their small-size tone (grey reads as a tint) gives way to the close-up tone.
+  const close = smoothstep(70, 220, headR);
+  const hairTone = mix(paint.solid.hair, paint.hairClose, close);
+  const hd = g.head.at(-0.1, 0.12);
   const eye = g.head.screen(g.head.geo.eye.light);
   const focusFill = focus > 0 ? url("jf") : null;
 
@@ -108,6 +123,9 @@ export const Athlete: React.FC<AthleteProps> = ({ pose, camera, world, idPrefix,
     if (p.fill === "body") return url("bg");
     if (p.fill === "far") return url("fg");
     if (p.fill === "shirt") return url("jp");
+    if (p.fill === "hair") return url("hl");
+    // Grey shows as a tint while the head is small; up close it is carried by silver grain instead.
+    if (p.fill === "beard") return mix(paint.solid.beard, paint.beardClose, close);
     return paint.solid[p.fill as Exclude<Fill, "body" | "far" | "shirt">];
   };
 
@@ -115,7 +133,15 @@ export const Athlete: React.FC<AthleteProps> = ({ pose, camera, world, idPrefix,
     <React.Fragment key={p.id}>
       {/* A soft occlusion line where the near sleeve lies on the bright shirt. */}
       {p.fill === "sleeve" ? <use href={ref(p.id)} fill="none" stroke={L.bodyFar} strokeOpacity={0.4} strokeWidth={3 * hw} /> : null}
-      {p.seam ? <use href={ref(p.id)} fill="none" stroke={L.contour} strokeOpacity={0.26} strokeWidth={2 * hw} /> : null}
+      {p.fill === "hair" ? (
+        // Hair is a graphic shape with its own contour (silver on the grey crop), wide enough to read at a 34 px head.
+        <use href={ref(p.id)} fill="none" stroke={paint.hairLine} strokeOpacity={paint.hairLineOpacity} strokeWidth={Math.max(2.4, 2 * hw)} />
+      ) : p.fill === "beard" && paint.beardRim ? (
+        // The grey full beard: a silver rim round its whole edge.
+        <use href={ref(p.id)} fill="none" stroke={paint.beardRim} strokeOpacity={0.7} strokeWidth={Math.max(2.4, 2.2 * hw)} />
+      ) : p.seam ? (
+        <use href={ref(p.id)} fill="none" stroke={L.contour} strokeOpacity={0.26} strokeWidth={2 * hw} />
+      ) : null}
       <use href={ref(p.id)} fill={fillOf(p)} fillOpacity={p.fill === "beard" ? 0.9 : 1} />
       {OVERLAY.has(p.fill) && p.xs ? <use href={ref(p.id)} fill={url(`x-${p.id}`)} /> : null}
       {SOLE_SHADED.has(p.fill) ? <use href={ref(p.id)} fill={url("ks")} /> : null}
@@ -128,6 +154,7 @@ export const Athlete: React.FC<AthleteProps> = ({ pose, camera, world, idPrefix,
           numberColor={look.kit.numberColor}
           collar={look.kit.collar}
           stars={look.kit.stars}
+          edge={paint.edge}
           hairline={hw}
           focus={focusFill}
         />
@@ -225,6 +252,7 @@ export const Athlete: React.FC<AthleteProps> = ({ pose, camera, world, idPrefix,
   );
 
   const sleeve = paint.solid.sleeve;
+  const toeClip = g.toeClip ? url("tc") : undefined;
   return (
     <g>
       <defs>
@@ -286,10 +314,21 @@ export const Athlete: React.FC<AthleteProps> = ({ pose, camera, world, idPrefix,
         {shaded.map(crossGradient)}
         {/* Multiplied over the kit: white (no change) near the eye, the jersey's own deep tone further out, so it dims without going grey. */}
         {focus > 0 ? (
-          <radialGradient id={id("jf")} gradientUnits="userSpaceOnUse" cx={eye.x} cy={eye.y} r={2.5 * headR}>
-            {stopsOf([{ o: 0.24, c: "#FFFFFF" }, { o: 1, c: mix("#FFFFFF", mix(paint.hero, paint.heroDeep, 0.55), focus) }])}
+          <radialGradient id={id("jf")} gradientUnits="userSpaceOnUse" cx={eye.x} cy={eye.y} r={focusR}>
+            {stopsOf([{ o: 0.24, c: "#FFFFFF" }, { o: 1, c: mix("#FFFFFF", mix(mix(paint.hero, paint.heroDeep, 0.55), L.bodyFar, 0.55 * smoothstep(250, 600, headR)), focus) }])}
           </radialGradient>
         ) : null}
+        {/* Hair is lit like a form: deeper on the shadow side, lifted towards the key light. */}
+        <linearGradient
+          id={id("hl")}
+          gradientUnits="userSpaceOnUse"
+          x1={hd.x - rim.x * headR}
+          y1={hd.y - rim.y * headR}
+          x2={hd.x + rim.x * headR}
+          y2={hd.y + rim.y * headR}
+        >
+          {stopsOf([{ o: 0.1, c: mix(hairTone, L.bodyFar, 0.45) }, { o: 0.55, c: hairTone }, { o: 1, c: mix(hairTone, paint.hairLine, 0.18) }])}
+        </linearGradient>
         <JerseyDefs g={g} paint={paint} id={id} rim={rim} />
         <EyeDefs paint={paint} id={id} hasBeard={look.beard !== "none"} />
         {knockout("mb", ["gf", "gm"])}
@@ -305,6 +344,12 @@ export const Athlete: React.FC<AthleteProps> = ({ pose, camera, world, idPrefix,
         <clipPath id={id("cn")}>
           <path d={`M${box.x} ${box.y}h${box.w}v${box.h}h${-box.w}Z${g.shirt}`} clipRule="evenodd" />
         </clipPath>
+        {/* While the touch is on, the near leg's strokes, seams and halos end exactly at the toe: nothing is drawn past it along the contact normal. */}
+        {g.toeClip ? (
+          <clipPath id={id("tc")}>
+            <path d={g.toeClip.d} clipRule="evenodd" />
+          </clipPath>
+        ) : null}
         <filter id={id("glow")} filterUnits="userSpaceOnUse" {...boxAttrs} colorInterpolationFilters="sRGB">
           <feGaussianBlur stdDeviation={bySize(g.k, 3, 10)} />
         </filter>
@@ -316,9 +361,11 @@ export const Athlete: React.FC<AthleteProps> = ({ pose, camera, world, idPrefix,
             {stroke("gf", "cb", 3 * cw, 0.4)}
             {stroke("gm", "cb", 3 * cw)}
           </g>
-          {stroke("gl", "cb", 3 * cw, 1, "ll")}
+          <g clipPath={toeClip}>{stroke("gl", "cb", 3 * cw, 1, "ll")}</g>
           {stroke("ga", "cb", 3 * cw, 1, "la")}
           <use href={ref("shirt")} fill={paint.hero} fillOpacity={0.35 * (1 - 0.6 * focus)} />
+          {/* Qatar's gold: the jersey's lit edge glows in the era's edge colour. */}
+          {paint.edge ? <use href={ref("shirt")} fill="none" stroke={url("jge")} strokeWidth={4 * cw} strokeOpacity={0.9 * (1 - 0.6 * focus)} /> : null}
         </g>
       ) : null}
 
@@ -337,7 +384,9 @@ export const Athlete: React.FC<AthleteProps> = ({ pose, camera, world, idPrefix,
 
       {midLayer}
 
-      <g clipPath={url("cn")}>{front(g.leg, "gl", "mb", "ll", "lol")}</g>
+      <g clipPath={url("cn")}>
+        <g clipPath={toeClip}>{front(g.leg, "gl", "mb", "ll", "lol")}</g>
+      </g>
       {front(g.arm, "ga", "mbl", "la", "loa")}
     </g>
   );

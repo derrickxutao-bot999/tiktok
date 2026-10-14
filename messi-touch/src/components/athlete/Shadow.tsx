@@ -11,6 +11,7 @@ import { WorldStyle } from "../../lib/eras";
 import { clamp } from "../../lib/math";
 import { lightOf } from "../../lib/palette";
 import { Pose } from "../../lib/rig";
+import { HEIGHT, WIDTH } from "../../lib/timeline";
 import { Camera, D0 } from "../../lib/world";
 import { buildFigure, bySize } from "./figure";
 
@@ -26,7 +27,22 @@ export const AthleteShadow: React.FC<AthleteShadowProps> = ({ pose, camera, worl
   const reach = Math.max(...L.shadows.map((s) => Math.abs(s.dx))) * H;
   const drop = Math.max(...L.shadows.map((s) => s.dy)) * H;
   const blur = bySize(g.k, 3, 12);
-  const region = { x: g.box.x - reach, y: gy - 3 * blur - 0.1 * H, width: g.box.w + 2 * reach, height: drop + 6 * blur + 0.1 * H };
+  // Where the shadows can fall: the figure's span widened by the longest
+  // shadow, from just above the ground line to the end of the longest drop.
+  // Nothing there on screen (the eye close-up, with the ground far below the
+  // frame) and nothing is drawn. Otherwise the blur's region is clamped to
+  // the frame plus the blur's reach, so it never allocates thousands of
+  // pixels off screen.
+  const feetX = [g.feet.L.toe.x, g.feet.L.heel.x, g.feet.R.toe.x, g.feet.R.heel.x];
+  const spanX0 = Math.min(g.box.x, ...feetX) - reach - 0.1 * H;
+  const spanX1 = Math.max(g.box.x + g.box.w, ...feetX) + reach + 0.1 * H;
+  const spanY0 = gy - 3 * blur - 0.1 * H;
+  const spanY1 = gy + drop + 3 * blur + 0.1 * H;
+  if (spanY0 > HEIGHT || spanY1 < 0 || spanX0 > WIDTH || spanX1 < 0) return null;
+  const edge = 3 * blur + 8;
+  const rx0 = Math.max(spanX0, -edge);
+  const ry0 = Math.max(spanY0, -edge);
+  const region = { x: rx0, y: ry0, width: Math.max(1, Math.min(spanX1, WIDTH + edge) - rx0), height: Math.max(1, Math.min(spanY1, HEIGHT + edge) - ry0) };
   // Ground ellipses look as flat as the camera is low.
   const flat = clamp((camera.h / D0) * 1.6, 0.05, 0.3);
 

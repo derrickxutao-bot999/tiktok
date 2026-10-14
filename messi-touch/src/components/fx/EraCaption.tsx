@@ -29,9 +29,17 @@ export type EraCaptionProps = {
   total?: number;
   /** The caption this one rolls on from; defaults to the previous era in ERAS (none for the first). */
   from?: Look | null;
+  /**
+   * 0..1 (default 1): a soft dark knockout behind the type block and a hairline dark casing on the
+   * glyphs, so roof lines, streaks or a scan flash never cut through the figures. On the plain night
+   * sky it is the sky's own darkness and does not show.
+   */
+  knockout?: number;
 };
 
 const LEFT = 84;
+/** The night's darkest tone: the knockout and the casing are made of it. */
+const SHADE = "#030409";
 const MONO_TOP = 252;
 const MONO_SIZE = 22;
 const YEAR_TOP = 276;
@@ -43,6 +51,8 @@ const RULE_Y = 494;
 const RULE_LEN = 394;
 const CLUB_TOP = 512;
 const CLUB_SIZE = 40;
+/** The knockout's box: centred on the type block (x 84-540, y 252-564), whose corners sit at two thirds of its radius. */
+const KO = { x: -168, y: 78, w: 960, h: 660 } as const;
 
 /** Advance and left side bearing (em) of Barlow Condensed Light's figures, read from the font file. */
 const FIGURE: readonly (readonly [number, number])[] = [
@@ -75,7 +85,7 @@ const clubLine = (look: Look) => ({ club: look.club, tail: look.kit.number ?? "R
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
 /** One counter wheel at position `pos`: figures roll downward (back in time); its width follows the figure in the window. */
-const Wheel: React.FC<{ pos: number; speed: number; glow: string; fade: number }> = ({ pos, speed, glow, fade }) => {
+const Wheel: React.FC<{ pos: number; speed: number; glow: string; fade: number; casing: string }> = ({ pos, speed, glow, fade, casing }) => {
   const adv = figureAt(pos, 0) * YEAR_SIZE;
   const base = Math.floor(pos);
   const digits: React.ReactNode[] = [];
@@ -108,7 +118,7 @@ const Wheel: React.FC<{ pos: number; speed: number; glow: string; fade: number }
         overflow: "hidden",
         WebkitMaskImage: "linear-gradient(180deg, transparent 2%, #000 15%, #000 91%, transparent 100%)",
         maskImage: "linear-gradient(180deg, transparent 2%, #000 15%, #000 91%, transparent 100%)",
-        textShadow: `0 0 ${(18 + 26 * Math.min(1, speed)).toFixed(1)}px ${glow}, 0 0 3px ${glow}`,
+        textShadow: `${casing}0 0 ${(18 + 26 * Math.min(1, speed)).toFixed(1)}px ${glow}, 0 0 3px ${glow}`,
       }}
     >
       {digits}
@@ -151,7 +161,10 @@ const Roll: React.FC<{ from: string | null; to: string; frame: number; height: n
   );
 };
 
-export const EraCaption: React.FC<EraCaptionProps> = ({ look, age, accent, index, total = ERAS.length, from }) => {
+export const EraCaption: React.FC<EraCaptionProps> = ({ look, age, accent, index, total = ERAS.length, from, knockout = 1 }) => {
+  const ko = clamp(knockout);
+  // A hairline of the night under every glyph (listed first, so it sits between the glyph and its glow).
+  const casing = ko > 0 ? `0 0 1.2px ${rgba(SHADE, 0.85 * ko)}, 0 0 2.5px ${rgba(SHADE, 0.45 * ko)}, ` : "";
   const idx = index ?? Math.max(0, ERAS.findIndex((e) => e.id === look.id));
   const prev = from === undefined ? (idx > 0 ? ERAS[idx - 1] : null) : from;
   const entering = prev === null;
@@ -192,17 +205,32 @@ export const EraCaption: React.FC<EraCaptionProps> = ({ look, age, accent, index
   const before = prev ? clubLine(prev) : null;
   const clubDelay = entering ? 14 : 6;
 
-  const mono: React.CSSProperties = { fontFamily: FONTS.mono, fontSize: MONO_SIZE, letterSpacing: "0.3em", color: rgba(ink, 0.66) };
+  const cased = casing ? casing.slice(0, -2) : undefined;
+  const mono: React.CSSProperties = { fontFamily: FONTS.mono, fontSize: MONO_SIZE, letterSpacing: "0.3em", color: rgba(ink, 0.66), textShadow: cased };
   const condensed: React.CSSProperties = {
     fontFamily: FONTS.condensed,
     fontWeight: 500,
     fontSize: CLUB_SIZE,
     letterSpacing: "0.2em",
     color: rgba(ink, 0.9),
+    textShadow: cased,
   };
 
   return (
     <div style={{ position: "absolute", inset: 0, pointerEvents: "none", opacity: enter }}>
+      {/* The knockout: a soft pool of the night's darkness behind the type block. */}
+      {ko > 0 ? (
+        <div
+          style={{
+            position: "absolute",
+            left: KO.x,
+            top: KO.y,
+            width: KO.w,
+            height: KO.h,
+            background: `radial-gradient(closest-side, ${rgba(SHADE, 0.72 * ko)}, ${rgba(SHADE, 0.6 * ko)} 45%, ${rgba(SHADE, 0.28 * ko)} 72%, ${rgba(SHADE, 0)})`,
+          }}
+        />
+      ) : null}
       {/* ERA 03 / 07 · AGE 35 */}
       <div style={{ position: "absolute", left: LEFT, top: MONO_TOP, whiteSpace: "pre", display: "flex", ...mono }}>
         <Roll from={entering ? null : "ERA "} to="ERA " frame={age} height={30} />
@@ -227,13 +255,14 @@ export const EraCaption: React.FC<EraCaptionProps> = ({ look, age, accent, index
         }}
       >
         {turns.map((w, i) => (
-          <Wheel key={i} pos={w.pos} speed={w.speed} glow={glow} fade={entering ? clamp((age - wheels[i].delay) / 6) : 1} />
+          <Wheel key={i} pos={w.pos} speed={w.speed} glow={glow} fade={entering ? clamp((age - wheels[i].delay) / 6) : 1} casing={casing} />
         ))}
       </div>
 
       {/* The scale of eras */}
       <svg style={{ position: "absolute", left: LEFT - 4, top: RULE_Y - 16, overflow: "visible" }} width={RULE_LEN + 8} height={32}>
         <g transform="translate(4 16)">
+          {ko > 0 ? <line x1={-2} y1={0} x2={RULE_LEN * draw + 2} y2={0} stroke={SHADE} strokeOpacity={0.7 * ko} strokeWidth={5} /> : null}
           <line x1={0} y1={0} x2={RULE_LEN * draw} y2={0} stroke={ink} strokeOpacity={0.28} strokeWidth={1} />
           <line x1={0} y1={0} x2={Math.min(RULE_LEN * draw, mx)} y2={0} stroke={ink} strokeOpacity={0.85} strokeWidth={1.4} />
           {Array.from({ length: total }, (_, i) => {

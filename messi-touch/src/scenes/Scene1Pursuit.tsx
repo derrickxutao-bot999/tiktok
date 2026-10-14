@@ -36,8 +36,8 @@ import { footfallsBetween, solvePose } from "../lib/rig";
 import { FREEZE_SHOT, scene1Shot } from "../lib/shots";
 import { S1 } from "../lib/timeline";
 import { T_FREEZE, contactPointAt } from "../lib/touch";
-import { Camera, D0, project } from "../lib/world";
-import { FROZEN_ACCENT, FrozenEra, SHUFFLE_BANDS, SHUFFLE_PLATE, frozenFilter } from "./Frozen";
+import { Camera, D0, cameraFromShot, project } from "../lib/world";
+import { FROZEN_ACCENT, FrozenEra, SHUFFLE_BANDS, SHUFFLE_LABELS, SHUFFLE_PLATE, frozenFilter } from "./Frozen";
 
 const NIGHT = PALETTE["stadium-night"];
 
@@ -165,6 +165,7 @@ export const Scene1Pursuit: React.FC = () => {
       seed={7}
       bands={SHUFFLE_BANDS}
       plate={SHUFFLE_PLATE}
+      labels={SHUFFLE_LABELS}
       subject={ERAS.length - 1}
       layers={ERAS.map((e, i) => (i === ERAS.length - 1 ? main : <FrozenEra key={e.id} look={e} id={`s1sh${i}`} />))}
     />
@@ -177,13 +178,17 @@ export const Scene1Pursuit: React.FC = () => {
   const captionAge = frame - eraStartFrame(eraIndex);
   const captionOpacity = fade(S1.freeze, S1.freeze + 10);
   const fadeIn = fade(0, 24);
-  // A camera-flash beat on the freeze itself: light added, darks never crushed.
-  const flash = frozen ? fade(S1.freeze, S1.freeze + 9, 0.32, 0) : 0;
+  // A camera-flash beat on the freeze itself: the picture over-exposes for a
+  // moment (darks stay dark) and light blooms from the 1 cm gap.
+  const flash = frozen ? fade(S1.freeze, S1.freeze + 10, 1, 0) : 0;
+  const gapAt = project(cameraFromShot(FREEZE_SHOT), contactPointAt(T_FREEZE).x, contactPointAt(T_FREEZE).y);
   const whiteness = shuffling ? shuffleWhiteness(shuffleProgress, "out") : 0;
 
   return (
     <AbsoluteFill style={{ backgroundColor: NIGHT.skyTop }}>
-      <AbsoluteFill style={{ filter: frozenFilter(frozen ? 1 : 0) }}>{picture}</AbsoluteFill>
+      <AbsoluteFill style={{ filter: [frozenFilter(frozen ? 1 : 0), flash > 0 ? `brightness(${(1 + 0.9 * flash).toFixed(3)})` : ""].join(" ").trim() || undefined }}>
+        {picture}
+      </AbsoluteFill>
       {frozen && !shuffling ? (
         <DetailInset
           t={T_FREEZE}
@@ -200,12 +205,20 @@ export const Scene1Pursuit: React.FC = () => {
       ) : null}
       {captionAge >= 0 && captionOpacity > 0 ? (
         <AbsoluteFill style={{ opacity: captionOpacity }}>
-          <EraCaption look={look} age={captionAge} accent={look.accent} index={eraIndex + 1} total={ERAS.length} />
+          <EraCaption look={look} age={captionAge} accent={look.accent} />
         </AbsoluteFill>
       ) : null}
       <Vignette strength={0.55 * (1 - whiteness)} />
       <Grain frame={frame} opacity={0.07 * (1 - whiteness)} />
-      {flash > 0 ? <AbsoluteFill style={{ backgroundColor: "#fff", opacity: flash, mixBlendMode: "screen" }} /> : null}
+      {flash > 0 ? (
+        <AbsoluteFill
+          style={{
+            mixBlendMode: "screen",
+            opacity: flash,
+            background: `radial-gradient(circle at ${gapAt.x}px ${gapAt.y}px, rgba(235,246,255,0.95) 0px, rgba(150,205,255,0.35) 90px, rgba(0,0,0,0) 420px)`,
+          }}
+        />
+      ) : null}
       {fadeIn > 0 ? <AbsoluteFill style={{ backgroundColor: "#000", opacity: fadeIn }} /> : null}
     </AbsoluteFill>
   );

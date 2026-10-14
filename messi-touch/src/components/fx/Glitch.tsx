@@ -6,9 +6,12 @@
 //
 // The picture is rendered once. One SVG filter does the work: flood
 // primitives build a displacement map of the slits (all synchronous, no
-// image loads), the slits are displaced and lifted a touch, their red and
-// blue channels are offset and summed back additively, and the result is
-// clipped to the slits again and laid back over the picture.
+// image loads), the slits are displaced, lifted a touch and laid over the
+// picture, so a slit that reads past the frame's edge shows the picture, not
+// a hole. Only then, and only from amount 0.15, are the red and blue
+// channels of that opaque image offset and summed back additively, clipped
+// to the slits and kept clear of the frame's sides: the fringe can never
+// sum a missing channel into a bar of pure blue, cyan or yellow.
 
 import React from "react";
 import { AbsoluteFill } from "remotion";
@@ -25,6 +28,11 @@ export type GlitchProps = {
   /** Colour of the scan flash and seams. */
   flash?: string;
 };
+
+/** Below this amount the slits slip without the colour fringe. */
+const SPLIT_FROM = 0.15;
+/** The fringe stops this far short of the frame's left and right edges, px. */
+const SIDE = 24;
 
 /** Largest slit displacement the map can encode, px (scale = 2 * MAX_SHIFT). */
 const MAX_SHIFT = 127;
@@ -58,6 +66,8 @@ export const Glitch: React.FC<GlitchProps> = ({ amount, seed, children, idPrefix
   const fid = `${idPrefix ?? "glitch"}-${seed}-${Math.round(a * 1000)}`;
   const bands = bandsFor(a, seed);
   const fringe = Math.max(1, Math.round(5 * a));
+  // A small slip's fringe would be about a pixel: not worth the channel split.
+  const split = a >= SPLIT_FROM;
   const scanY = Math.round(hash2(seed, 97) * HEIGHT);
   const lift = 1 + 0.18 * a;
 
@@ -97,19 +107,28 @@ export const Glitch: React.FC<GlitchProps> = ({ amount, seed, children, idPrefix
             <feFuncG type="linear" slope={lift} />
             <feFuncB type="linear" slope={lift} />
           </feComponentTransfer>
-          {/* The fringe lives only in the slipped slits: red and blue part, recombined additively. */}
-          <feColorMatrix in="lit" type="matrix" values={CHANNEL.r} result="cr" />
-          <feOffset in="cr" dx={fringe} result="cr2" />
-          <feColorMatrix in="lit" type="matrix" values={CHANNEL.g} result="cg" />
-          <feColorMatrix in="lit" type="matrix" values={CHANNEL.b} result="cb" />
-          <feOffset in="cb" dx={-fringe} result="cb2" />
-          <feComposite in="cr2" in2="cg" operator="arithmetic" k2={1} k3={1} result="crg" />
-          <feComposite in="crg" in2="cb2" operator="arithmetic" k2={1} k3={1} result="split" />
-          <feComposite in="split" in2="map" operator="in" result="fringed" />
-          <feMerge>
+          {/* The slipped slits over the opaque picture: where a slit reads past the frame's edge, the picture shows instead of a hole. */}
+          <feMerge result="slipped">
             <feMergeNode in="SourceGraphic" />
-            <feMergeNode in="fringed" />
+            <feMergeNode in="lit" />
           </feMerge>
+          {split ? (
+            <>
+              {/* The fringe, only inside the slits and clear of the frame's sides: red and blue part, recombined additively. */}
+              <feColorMatrix in="slipped" type="matrix" values={CHANNEL.r} result="cr" />
+              <feOffset in="cr" dx={fringe} result="cr2" />
+              <feColorMatrix in="slipped" type="matrix" values={CHANNEL.g} result="cg" />
+              <feColorMatrix in="slipped" type="matrix" values={CHANNEL.b} result="cb" />
+              <feOffset in="cb" dx={-fringe} result="cb2" />
+              <feComposite in="cr2" in2="cg" operator="arithmetic" k2={1} k3={1} result="crg" />
+              <feComposite in="crg" in2="cb2" operator="arithmetic" k2={1} k3={1} result="split" />
+              <feComposite in="split" in2="map" operator="in" x={SIDE} y={0} width={WIDTH - 2 * SIDE} height={HEIGHT} result="fringed" />
+              <feMerge>
+                <feMergeNode in="slipped" />
+                <feMergeNode in="fringed" />
+              </feMerge>
+            </>
+          ) : null}
         </filter>
       </svg>
       <AbsoluteFill style={{ filter: `url(#${fid})` }}>{children}</AbsoluteFill>

@@ -19,7 +19,8 @@
 // Backdrop's clear circle (head) and safe box (era caption) outlined in
 // magenta (see SHOTS below). Frames 40-47 sweep the night lens across the
 // ruler's half-metre and decimetre fades; 48-55 are eight consecutive frames
-// of the dusk close-up opening out (motes must drift, never vanish).
+// of the dusk close-up opening out (motes must drift, never vanish); 56/57
+// the old opening framing without and with the caption's safe box.
 
 import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
@@ -88,10 +89,10 @@ type Staged = {
 };
 
 /** Scene 1's new framing: about 300 px/m, camera 1.0-1.2 m high, the runner a little left of centre. */
-const s1 = (frame: number, pxPerM = 300, height = 1.1): Staged => {
+const s1 = (frame: number, pxPerM = 300, height = 1.05, lead = 0.7, lookY = 0.85, screenY = 1150): Staged => {
   const t = scene1T(frame);
   return {
-    shot: { lookX: pelvisXCanonical(t) + 1.15, lookY: 0.85, screenX: 540, screenY: 1160, pxPerM, height },
+    shot: { lookX: pelvisXCanonical(t) + lead, lookY, screenX: 540, screenY, pxPerM, height },
     t,
     world: "stadium-night",
     look: ERAS[eraIndexAt(frame)],
@@ -125,11 +126,11 @@ const duskEnd = (frame: number): Staged => {
 };
 
 const STAGED: Record<number, Staged> = {
-  // Scene 1 at 300 px/m: two frames 6 apart show the seams swinging; 326/332 follow the era change on 320 (a strong footfall).
+  // Scene 1 at 300 px/m: two frames 6 apart show the seams swinging; 324/328 follow the era change on 320 (a strong footfall).
   26: s1(300),
   27: s1(306),
-  28: s1(326),
-  29: s1(332),
+  28: s1(324),
+  29: s1(328),
   // The opening (250 px/m, 1.5 m) and the late run (330 px/m, 0.9 m).
   30: s1(60, 250, 1.5),
   31: s1(560, 330, 0.9),
@@ -148,6 +149,9 @@ const STAGED: Record<number, Staged> = {
 for (let i = 0; i < 8; i++) STAGED[40 + i] = { shot: { ...FREEZE_SHOT, pxPerM: 400 + 20 * i }, t: T_FREEZE, world: "stadium-night", look: ERAS[0] };
 // Eight consecutive frames of the dusk close-up opening out, where the motes are big and sway fastest on screen.
 for (let i = 0; i < 8; i++) STAGED[48 + i] = { shot: scene4Shot(340 + i), t: scene4T(340 + i), world: "rosario-dusk", look: KID };
+// The old opening framing (250 px/m, 1.5 m), where the floodlights fall inside the caption box: without and with the safe box.
+STAGED[56] = { ...s1(60, 250, 1.5, 1.25, 0.95, 1160), safe: undefined };
+STAGED[57] = s1(60, 250, 1.5, 1.25, 0.95, 1160);
 
 const StagedWorld: React.FC<Staged> = ({ shot, t, world, look, scaleAt, clear, safe }) => {
   const camera = cameraFromShot(shot);
@@ -204,7 +208,7 @@ const BallSheet: React.FC = () => {
   );
 };
 
-export const LAB_ENV_FRAMES = 56;
+export const LAB_ENV_FRAMES = 58;
 
 export const Lab: React.FC = () => {
   const frame = useCurrentFrame();

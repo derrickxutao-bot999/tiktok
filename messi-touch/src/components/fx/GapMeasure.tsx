@@ -11,7 +11,7 @@
 // boot and the touchline alike.
 
 import React from "react";
-import { DEG, Vec2, add, clamp, len, mul, norm, sub, v } from "../../lib/math";
+import { DEG, Vec2, add, clamp, len, lerp, mul, norm, smoothstep, sub, v } from "../../lib/math";
 import { FONTS } from "../../lib/palette";
 import { mixHex } from "./util";
 
@@ -28,6 +28,10 @@ export type GapMeasureProps = {
   pxPerM?: number;
   /** Distance of the dimension line from the measured points, px (overrides the scaled default). */
   offset?: number;
+  /** Size of the figure, px (overrides 22, or 28 in close-ups); the arrowheads, leader and casing follow it. */
+  fontSize?: number;
+  /** Width of the dimension and extension hairlines, px (default 1; the dimension line is 1.25x this). */
+  lineWidth?: number;
   idPrefix?: string;
 };
 
@@ -55,19 +59,35 @@ const arrowHead = (tip: Vec2, dir: Vec2, n: Vec2, sc: number) => {
   return `M${f(tip.x)} ${f(tip.y)}L${f(l.x)} ${f(l.y)}L${f(r.x)} ${f(r.y)}Z`;
 };
 
-export const GapMeasure: React.FC<GapMeasureProps> = ({ a, b, label = "1 cm", progress, color, pxPerM, offset, idPrefix = "gap" }) => {
+export const GapMeasure: React.FC<GapMeasureProps> = ({
+  a,
+  b,
+  label = "1 cm",
+  progress,
+  color,
+  pxPerM,
+  offset,
+  fontSize,
+  lineWidth = 1,
+  idPrefix = "gap",
+}) => {
   const p = clamp(progress);
   if (p <= 0) return null;
-  const off = offset ?? (pxPerM ? clamp(0.16 * pxPerM, 60, 160) : 86);
-  const close = (pxPerM ?? 0) > CLOSE;
-  const font = close ? 28 : 22;
-  const sc = close ? 1.35 : 1;
-  const charW = font * 0.6 + font * 0.08;
-  const leader = 50 + 0.6 * off;
-
   const A = v(a.x, a.y);
   const B = v(b.x, b.y);
   const d = sub(B, A);
+  const gapPx = len(d);
+  // A gap magnified until it is wide (a detail lens) carries its callout close by, so the whole callout stays in the lens.
+  const scaled = pxPerM ? clamp(0.16 * pxPerM, 60, 160) : 86;
+  const off = offset ?? lerp(scaled, clamp(1.5 * gapPx, 60, 160), smoothstep(28, 48, gapPx));
+  const close = (pxPerM ?? 0) > CLOSE;
+  const font = fontSize ?? (close ? 28 : 22);
+  const lw = Math.max(0.25, lineWidth);
+  // Arrowheads grow with the figure and the line, so a large callout keeps its proportions.
+  const sc = (close ? 1.35 : 1) * Math.max(1, font / (close ? 28 : 22)) ** 0.5 * lw ** 0.5;
+  const charW = font * 0.6 + font * 0.08;
+  // The leader rises far enough for the figure to stand clear of the dimension line.
+  const leader = Math.max(50 + 0.6 * off, 1.3 * font + 30);
   // Below a pixel the direction is meaningless: fall back to the touch direction (20 deg, rising right).
   const u = len(d) > 1 ? norm(d) : v(Math.cos(20 * DEG), -Math.sin(20 * DEG));
   let n = v(u.y, -u.x);
@@ -87,25 +107,25 @@ export const GapMeasure: React.FC<GapMeasureProps> = ({ a, b, label = "1 cm", pr
   const kShoulder = seg(p, 0.46, 0.6);
   const chars = Math.ceil(seg(p, 0.52, 0.74) * label.length);
   const textW = label.length * charW;
-  const shoulder = (textW + 18) * kShoulder;
+  const shoulder = (textW + 0.6 * font) * kShoulder;
   const ink = mixHex(color, "#FFFFFF", 0.5);
   const glowId = `${idPrefix}-gm-glow`;
 
   const strokes: Stroke[] = [
-    { from: add(A, mul(n, GAP0)), to: add(A, mul(n, off + OVERSHOOT)), k: kExt, w: 1 },
-    { from: add(B, mul(n, GAP0)), to: add(B, mul(n, off + OVERSHOOT)), k: kExt, w: 1 },
+    { from: add(A, mul(n, GAP0)), to: add(A, mul(n, off + OVERSHOOT)), k: kExt, w: lw },
+    { from: add(B, mul(n, GAP0)), to: add(B, mul(n, off + OVERSHOOT)), k: kExt, w: lw },
     ...(inside
       ? [
-          { from: M, to: DA, k: kDim, w: 1.25 },
-          { from: M, to: DB, k: kDim, w: 1.25 },
+          { from: M, to: DA, k: kDim, w: 1.25 * lw },
+          { from: M, to: DB, k: kDim, w: 1.25 * lw },
         ]
       : [
           // Outside arrows: the toe side keeps a short tail; the ball side is the arrowhead alone, off the ball.
-          { from: sub(DA, mul(u, (TAIL + HEAD_L) * sc)), to: DA, k: kDim, w: 1.25 },
-          { from: DA, to: DB, k: kDim >= 1 ? 1 : 0, w: 1 },
+          { from: sub(DA, mul(u, (TAIL + HEAD_L) * sc)), to: DA, k: kDim, w: 1.25 * lw },
+          { from: DA, to: DB, k: kDim >= 1 ? 1 : 0, w: lw },
         ]),
-    { from: add(M, mul(lead, 4)), to: Q, k: kLead, w: 1 },
-    { from: v(Q.x - shoulder / 2, Q.y), to: v(Q.x + shoulder / 2, Q.y), k: shoulder > 0 ? 1 : 0, w: 1 },
+    { from: add(M, mul(lead, 4)), to: Q, k: kLead, w: lw },
+    { from: v(Q.x - shoulder / 2, Q.y), to: v(Q.x + shoulder / 2, Q.y), k: shoulder > 0 ? 1 : 0, w: lw },
   ];
   const heads =
     kDim > 0.6
@@ -145,20 +165,20 @@ export const GapMeasure: React.FC<GapMeasureProps> = ({ a, b, label = "1 cm", pr
     <g strokeLinecap="round">
       <defs>
         <filter id={glowId} filterUnits="userSpaceOnUse" x={box.x} y={box.y} width={box.x1 - box.x} height={box.y1 - box.y}>
-          <feGaussianBlur stdDeviation={2.6} />
+          <feGaussianBlur stdDeviation={2.6 * Math.max(1, lw)} />
         </filter>
       </defs>
       <g stroke={CASE} fill={CASE}>
-        {draw(CASE_W)}
+        {draw(CASE_W * Math.max(1, lw))}
       </g>
       <g filter={`url(#${glowId})`} stroke={color} fill={color} opacity={0.75} style={{ mixBlendMode: "screen" }}>
-        {draw(1)}
+        {draw(lw)}
       </g>
       <g stroke={ink} fill={ink}>
         {draw(0)}
         {/* The two measured points. */}
-        <circle cx={f(A.x)} cy={f(A.y)} r={1.5} stroke="none" opacity={seg(p, 0, 0.1)} />
-        <circle cx={f(B.x)} cy={f(B.y)} r={1.5} stroke="none" opacity={seg(p, 0, 0.1)} />
+        <circle cx={f(A.x)} cy={f(A.y)} r={1.5 * lw} stroke="none" opacity={seg(p, 0, 0.1)} />
+        <circle cx={f(B.x)} cy={f(B.y)} r={1.5 * lw} stroke="none" opacity={seg(p, 0, 0.1)} />
       </g>
       {chars > 0 ? (
         <text
@@ -169,7 +189,7 @@ export const GapMeasure: React.FC<GapMeasureProps> = ({ a, b, label = "1 cm", pr
           letterSpacing={`${font * 0.08}px`}
           fill={ink}
           stroke="rgba(3,4,9,0.75)"
-          strokeWidth={5}
+          strokeWidth={Math.max(5, 0.17 * font)}
           strokeLinejoin="round"
           paintOrder="stroke"
           style={{ whiteSpace: "pre" }}
