@@ -11,7 +11,19 @@
 import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
 import { EtchedAthlete } from "../components/Athlete";
-import { BallPath, EraCaption, FootfallPulses, FrameShuffle, GapMeasure, Glitch, Grain, Vignette, WhiteOut } from "../components/fx";
+import {
+  BallPath,
+  EraCaption,
+  FootfallPulses,
+  FrameShuffle,
+  GapMeasure,
+  Glitch,
+  Grain,
+  PULSE_LIFE,
+  Vignette,
+  WhiteOut,
+  shuffleWhiteness,
+} from "../components/fx";
 import { TheTouch } from "../components/TheTouch";
 import { ballAt } from "../lib/ball";
 import { ERA_SWITCH_FRAMES, eraIndexAt, eraScaleAtT, scene1T } from "../lib/clock";
@@ -23,7 +35,7 @@ import { footfallsBetween, solvePose } from "../lib/rig";
 import { FREEZE_SHOT, scene1Shot } from "../lib/shots";
 import { S1 } from "../lib/timeline";
 import { T_FREEZE, contactPointAt } from "../lib/touch";
-import { Camera, project } from "../lib/world";
+import { Camera, D0, project } from "../lib/world";
 
 /** Steps on which the era changes (each is a footfall). */
 const ERA_STEPS = new Set(ERA_SWITCH_FRAMES.map((f) => Math.round(stepAt(scene1FrameToT(f)))));
@@ -104,7 +116,7 @@ export const Scene1Pursuit: React.FC = () => {
   const shuffling = frame >= S1.shuffle[0];
 
   const measure = interpolate(frame, [...S1.measure], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const measureFade = interpolate(frame, [S1.shuffle[0] - 4, S1.shuffle[0]], [1, 0], {
+  const measureFade = interpolate(frame, [S1.shuffle[0], S1.shuffle[0] + 6], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -123,7 +135,7 @@ export const Scene1Pursuit: React.FC = () => {
           <FootfallPulses
             camera={camera}
             t={t}
-            footfalls={footfallsBetween(t - 0.6, t, look, { scaleAt: eraScaleAtT })}
+            footfalls={footfallsBetween(t - PULSE_LIFE, t, look, { scaleAt: eraScaleAtT })}
             color={look.accent}
             strength={stepStrength}
             idPrefix="s1fp"
@@ -140,7 +152,7 @@ export const Scene1Pursuit: React.FC = () => {
         const on = project(camera, cp.x, cp.y, b.z);
         return (
           <g opacity={measureFade}>
-            <GapMeasure a={toe} b={on} label="1 cm" progress={measure} color={night.light.glow} />
+            <GapMeasure a={toe} b={on} label="1 cm" progress={measure} color={night.light.glow} pxPerM={camera.f / D0} />
           </g>
         );
       }}
@@ -149,10 +161,11 @@ export const Scene1Pursuit: React.FC = () => {
 
   // Before the freeze, every footfall flicks the picture; era changes jolt it.
   const glitch = glitchAt(t, look, frame);
+  const shuffleProgress = clamp((frame - S1.shuffle[0]) / (S1.shuffle[1] - S1.shuffle[0]));
   const picture = shuffling ? (
     <FrameShuffle
       direction="out"
-      progress={clamp((frame - S1.shuffle[0]) / (S1.shuffle[1] - S1.shuffle[0]))}
+      progress={shuffleProgress}
       seed={7}
       layers={[main, ...ERAS.slice(0, ERAS.length - 1).map((e, i) => <FrozenEra key={e.id} look={e} id={`s1sh${i}`} />)]}
     />
@@ -179,7 +192,7 @@ export const Scene1Pursuit: React.FC = () => {
           <EraCaption look={look} age={captionAge} accent={look.accent} />
         </AbsoluteFill>
       ) : null}
-      <Vignette strength={0.55} />
+      <Vignette strength={0.55 * (1 - (shuffling ? shuffleWhiteness(shuffleProgress, "out") : 0))} />
       <Grain frame={frame} opacity={0.07} />
       {freezeFlash > 0 ? <WhiteOut amount={freezeFlash} /> : null}
       {fadeIn > 0 ? <AbsoluteFill style={{ backgroundColor: "#000", opacity: fadeIn }} /> : null}

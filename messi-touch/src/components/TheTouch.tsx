@@ -61,7 +61,7 @@ export const TheTouch: React.FC<TheTouchProps> = ({
   // it sits between his far and near legs.
   const ballInFront = ball.z < D0 - 0.05;
   const ballEl = <Ball ball={ball} camera={camera} world={wd} idPrefix={idPrefix} />;
-  const env = { camera, world: wd, t, idPrefix };
+  const env = { camera, world: wd, t, idPrefix, accent: lk.accent };
   return (
     <AbsoluteFill>
       <svg width={WIDTH} height={HEIGHT} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} style={{ display: "block" }}>

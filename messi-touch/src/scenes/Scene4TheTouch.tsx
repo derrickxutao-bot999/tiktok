@@ -13,7 +13,7 @@
 import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
 import { EtchedAthlete } from "../components/Athlete";
-import { ContactPulse, FrameShuffle, GapMeasure, Grain, Subtitle, Vignette } from "../components/fx";
+import { ContactPulse, FrameShuffle, GapMeasure, Grain, Subtitle, Vignette, shuffleWhiteness } from "../components/fx";
 import { TheTouch } from "../components/TheTouch";
 import { BALL, ballAt } from "../lib/ball";
 import { scene4Speed, scene4T } from "../lib/clock";
@@ -24,24 +24,25 @@ import { solvePose } from "../lib/rig";
 import { FREEZE_SHOT, scene4Shot } from "../lib/shots";
 import { HEIGHT, MATCH_CUT_DISSOLVE, S4, WIDTH } from "../lib/timeline";
 import { T_FREEZE, contactPointAt, gapAt } from "../lib/touch";
-import { cameraFromShot, project, Shot } from "../lib/world";
+import { D0, cameraFromShot, project, Shot } from "../lib/world";
 
 export const SUBTITLE = "His story is told. The boy is still playing.";
 
 /** The legend's touch, etched in the sky: the 39-year-old at the instant of contact, drawn huge and faint. */
 const LEGEND_POSE = solvePose(0, VARIANT_LOOK["veteran-39"]);
 const LEGEND_SHOT: Shot = {
-  lookX: LEGEND_POSE.pelvis.x + 0.25,
+  lookX: LEGEND_POSE.pelvis.x + 0.3,
   lookY: LEGEND_POSE.pelvis.y,
-  screenX: 560,
-  screenY: 560,
-  pxPerM: 330,
+  screenX: 540,
+  screenY: 520,
+  pxPerM: 640,
   height: LEGEND_POSE.pelvis.y,
 };
 
 export const Shot4: React.FC<{ frame: number; variant: Variant; id: string; overlays: boolean }> = ({ frame, variant, id, overlays }) => {
   const t = scene4T(frame);
-  const glow = PALETTE[variant === "veteran-39" ? "stadium-night" : "rosario-dusk"].light.glow;
+  const light = PALETTE[variant === "veteran-39" ? "stadium-night" : "rosario-dusk"].light;
+  const glow = light.glow;
   // The dimension line returns when the camera reaches the boot and counts the gap down.
   const measure = overlays ? smoothstep(S4.toFoot[1] - 40, S4.toFoot[1] - 10, frame) * (1 - smoothstep(S4.touch - 22, S4.touch - 6, frame)) : 0;
   const pulseAge = (frame - S4.touch) / 60;
@@ -62,11 +63,26 @@ export const Shot4: React.FC<{ frame: number; variant: Variant; id: string; over
           <>
             {measure > 0 ? (
               <g opacity={measure}>
-                <GapMeasure a={toe} b={on} label={`${(gap * 100).toFixed(1)} cm`} progress={clamp(measure * 1.4)} color={glow} />
+                <GapMeasure
+                  a={toe}
+                  b={on}
+                  label={`${(gap * 100).toFixed(1)} cm`}
+                  progress={clamp(measure * 1.4)}
+                  color={glow}
+                  pxPerM={camera.f / D0}
+                  idPrefix={`${id}gm`}
+                />
               </g>
             ) : null}
             {pulseAge >= 0 && pulseAge < 1.5 ? (
-              <ContactPulse at={on} age={pulseAge} color={glow} size={BALL.r * project(camera, b.x, b.y, b.z).k} />
+              <ContactPulse
+                at={on}
+                age={pulseAge}
+                color={glow}
+                size={BALL.r * project(camera, b.x, b.y, b.z).k}
+                lightDir={light.rimDir}
+                idPrefix={`${id}cp`}
+              />
             ) : null}
           </>
         );
@@ -109,6 +125,9 @@ const TimeReadout: React.FC<{ frame: number; color: string }> = ({ frame, color 
   );
 };
 
+/** A hard cut straight into the shuffled frozen frame (not from white), settling on the 39-year-old. */
+const unshuffleProgress = (frame: number) => 0.24 + 0.76 * clamp(frame / S4.unshuffle[1]);
+
 export const Scene4TheTouch: React.FC = () => {
   const frame = useCurrentFrame();
   const night = PALETTE["stadium-night"];
@@ -129,7 +148,7 @@ export const Scene4TheTouch: React.FC = () => {
         idPrefix={`s4sh${i}`}
       />
     ));
-    picture = <FrameShuffle direction="in" progress={clamp(frame / S4.unshuffle[1])} seed={7} layers={layers} />;
+    picture = <FrameShuffle direction="in" progress={unshuffleProgress(frame)} seed={7} layers={layers} />;
   } else if (MATCH_CUT_DISSOLVE > 0 && Math.abs(frame - S4.matchCut) < MATCH_CUT_DISSOLVE / 2) {
     // Optional dissolve: both variants on the same camera and clock, so only the bodies and worlds differ.
     const u = (frame - (S4.matchCut - MATCH_CUT_DISSOLVE / 2)) / MATCH_CUT_DISSOLVE;
@@ -168,7 +187,7 @@ export const Scene4TheTouch: React.FC = () => {
       ) : null}
       <TimeReadout frame={frame} color={kid ? dusk.light.glow : night.light.glow} />
       {frame >= S4.subtitle[0] ? <Subtitle text={SUBTITLE} frame={frame - S4.subtitle[0]} y={1560} /> : null}
-      <Vignette strength={kid ? 0.4 : 0.55} />
+      <Vignette strength={(kid ? 0.4 : 0.55) * (1 - (frame < S4.unshuffle[1] ? shuffleWhiteness(unshuffleProgress(frame), "in") : 0))} />
       <Grain frame={frame} opacity={0.07} />
     </AbsoluteFill>
   );

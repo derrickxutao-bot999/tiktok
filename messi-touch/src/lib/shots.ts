@@ -52,7 +52,7 @@ export const EYES_SHOT: Shot = {
 
 /** Ground-level close-up of the toe and the ball; the match cut happens inside it. */
 export const CLOSEUP_SHOT: Shot = {
-  lookX: CONTACT_POINT.x + 0.05,
+  lookX: CONTACT_POINT.x,
   lookY: 0.1,
   screenX: 540,
   screenY: 1120,

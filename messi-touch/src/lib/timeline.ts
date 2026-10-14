@@ -24,7 +24,7 @@ export const S1 = {
   /** The toe is exactly 1 cm from the ball on this frame, and the picture freezes. */
   freeze: 660,
   /** On the held frame a dimension line measures the last centimetre... */
-  measure: [662, 684] as const,
+  measure: [661, 674] as const,
   /** ...then the frozen picture is sliced and shuffled through the eras... */
   shuffle: [684, 712] as const,
   /** ...and is fully white from here to the end of the scene. */

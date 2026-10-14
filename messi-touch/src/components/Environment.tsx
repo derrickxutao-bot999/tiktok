@@ -1,34 +1,46 @@
-// PLACEHOLDER environment; replaced by the real one.
+// The two worlds of The Touch. Everything is placed in world metres and seen
+// through the shot's camera, so parallax, the swing of the ground lines and
+// the size of every detail come from the projection, never from screen-space
+// scrolling.
+//
+//   Backdrop  everything behind the ground: sky, distance, boards or wall,
+//             and the strip of ground beyond them up to the horizon.
+//   Ground    the ground plane from the bottom of the frame to the foot of
+//             the boards (night, z = 11) or the wall (dusk, z = 12), with the
+//             touchline (and its ruler at night); at dusk also the dust
+//             hanging in front of the wall.
+//
+// So Ground is not a complete layer on its own: drawn without its Backdrop it
+// leaves a gap between the boards or wall and the horizon. Always draw
+// Backdrop first, then Ground, with the same props.
+
 import React from "react";
-import { Camera, project, D0, LINE_WIDTH, LINE_Z } from "../lib/world";
 import { WorldStyle } from "../lib/eras";
-import { WIDTH, HEIGHT } from "../lib/timeline";
+import { PALETTE } from "../lib/palette";
+import { Camera } from "../lib/world";
+import { DuskBackdrop, DuskGround } from "./env/RosarioDusk";
+import { NightBackdrop, NightGround } from "./env/StadiumNight";
 
-export type EnvironmentProps = { camera: Camera; world: WorldStyle; t: number; idPrefix: string };
-
-export const Backdrop: React.FC<EnvironmentProps> = ({ camera, world }) => (
-  <rect x={0} y={0} width={WIDTH} height={Math.max(0, Math.min(HEIGHT, camera.cy))} fill={world === "stadium-night" ? "#0b1020" : "#e9a24a"} />
-);
-
-export const Ground: React.FC<EnvironmentProps> = ({ camera, world }) => {
-  const top = Math.max(0, camera.cy);
-  const stripes: React.ReactNode[] = [];
-  const zNear = Math.max(0.5, (camera.h * camera.f) / (HEIGHT - camera.cy + 1));
-  const zFar = 200;
-  const x0 = Math.floor((camera.x - 60) / 5) * 5;
-  for (let x = x0; x < camera.x + 60; x += 5) {
-    if ((x / 5) % 2 === 0) continue;
-    const a = project(camera, x, 0, zNear), b = project(camera, x + 5, 0, zNear);
-    const c = project(camera, x + 5, 0, zFar), d = project(camera, x, 0, zFar);
-    stripes.push(<polygon key={x} points={`${a.x},${a.y} ${b.x},${b.y} ${c.x},${c.y} ${d.x},${d.y}`} fill={world === "stadium-night" ? "#16301f" : "#8a3b1c"} />);
-  }
-  const l1 = project(camera, 0, 0, LINE_Z - LINE_WIDTH / 2), l2 = project(camera, 0, 0, LINE_Z + LINE_WIDTH / 2);
-  void D0;
-  return (
-    <g>
-      <rect x={0} y={top} width={WIDTH} height={HEIGHT - top} fill={world === "stadium-night" ? "#11281a" : "#7a321a"} />
-      {stripes}
-      <rect x={0} y={l2.y} width={WIDTH} height={Math.max(1, l1.y - l2.y)} fill="#f2f2f2" />
-    </g>
-  );
+export type EnvironmentProps = {
+  camera: Camera;
+  world: WorldStyle;
+  /** World clock, seconds from contact: drives twinkle, pulses and drifting dust. */
+  t: number;
+  idPrefix: string;
+  /** Colour of the pulses travelling along the board band (night); defaults to the world's glow. */
+  accent?: string;
 };
+
+export const Backdrop: React.FC<EnvironmentProps> = ({ camera, world, t, idPrefix, accent }) =>
+  world === "stadium-night" ? (
+    <NightBackdrop cam={camera} t={t} id={`${idPrefix}-bd`} accent={accent ?? PALETTE[world].light.glow} />
+  ) : (
+    <DuskBackdrop cam={camera} t={t} id={`${idPrefix}-bd`} />
+  );
+
+export const Ground: React.FC<EnvironmentProps> = ({ camera, world, t, idPrefix }) =>
+  world === "stadium-night" ? (
+    <NightGround cam={camera} t={t} id={`${idPrefix}-gr`} />
+  ) : (
+    <DuskGround cam={camera} t={t} id={`${idPrefix}-gr`} />
+  );
