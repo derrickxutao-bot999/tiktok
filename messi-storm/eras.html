@@ -1,23 +1,26 @@
 <!doctype html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;background:#000"><canvas id="c" width="1080" height="1920"></canvas>
-<script src="silhouette.js"></script>
+<script src="silhouette.js"></script><script src="atmos.js"></script>
 <script>
+// three eras: young (left), the shush with the ball (front), captain arms crossed (right)
 const g=document.getElementById("c").getContext("2d");
-window.draw=()=>{const W=1080,H=1920;
- const bg=g.createRadialGradient(540,900,100,540,900,1300);bg.addColorStop(0,"#a3a39f");bg.addColorStop(1,"#55555a");
- g.fillStyle=bg;g.fillRect(0,0,W,H);
- let s=5;const rnd=()=>(s=(s*16807)%2147483647)/2147483647;
- for(let i=0;i<50000;i++){g.fillStyle=rnd()<.5?"rgba(0,0,0,0.05)":"rgba(255,255,255,0.04)";g.fillRect(rnd()*W,rnd()*H,2,2);}
- const shadow=(x,y,w)=>{g.save();g.fillStyle="rgba(0,0,0,0.25)";g.filter="blur(12px)";g.beginPath();g.ellipse(x,y,w,w*0.18,0,0,7);g.fill();g.restore();};
- // back row — further away, lighter ink (atmosphere)
- shadow(230,1460,120);shadow(850,1460,120);
- drawFig(g,230,1460,820,POSES.relaxed,{young:true,ink:"#2f2f2f",armInk:"#3a3a3a"});
- drawFig(g,850,1460,840,POSES.crossed,{ink:"#2f2f2f",armInk:"#3d3d3d"});
- // front — closest, darkest
- shadow(500,1580,150);
- drawFig(g,500,1580,1000,POSES.shush,{ink:"#121212",armInk:"#2a2a2a"});
- g.strokeStyle="rgba(30,30,30,0.2)";g.lineWidth=2;
- for(let i=0;i<300;i++){const x=rnd()*W,y=rnd()*H,l=30+rnd()*60;g.beginPath();g.moveTo(x,y);g.lineTo(x-l*0.15,y+l);g.stroke();}
+window.draw=(t=0)=>{const W=1080,H=1920;
+ atmosBack(g,W,H,{ground:1330,lightX:540,lightY:120});
+ rain(g,W,H,t,{lightX:540,lightY:120,layers:[{n:900,len:[18,34],w:1,a:0.16,speed:1.6},{n:380,len:[40,70],w:1.6,a:0.22,speed:2.4}]});
+ const rim={color:"rgba(240,240,232,0.45)",dx:0,dy:3,blur:1};
+ const L=c=>drawFig(c,250,1440,600,POSES.relaxed,{young:true,ink:"#2e3130",rim});
+ const R=c=>drawFig(c,836,1440,610,POSES.crossed,{ink:"#2e3130",sep:"rgba(255,255,255,0.08)",rim});
+ const F=c=>drawFig(c,520,1680,860,POSES.shush,{ink:"#101010",sep:"rgba(255,255,255,0.1)",rim:{...rim,color:"rgba(240,240,232,0.55)",dy:4}});
+ contactShadow(g,250,1440,130);contactShadow(g,836,1440,130);
+ reflect(g,1440,c=>{L(c);R(c);},0.22,4);L(g);R(g);
+ // a veil of fog between the back row and the front figure
+ const fg=g.createLinearGradient(0,900,0,1500);fg.addColorStop(0,"rgba(190,194,190,0)");fg.addColorStop(1,"rgba(190,194,190,0.22)");
+ g.fillStyle=fg;g.fillRect(0,900,W,600);
+ contactShadow(g,520,1680,200);
+ reflect(g,1680,F,0.3,4);F(g);
+ splashes(g,540,1680,1000,t);
+ rain(g,W,H,t,{lightX:540,lightY:120,layers:[{n:60,len:[110,180],w:3,a:0.2,speed:3.6,blur:2}],seed:41});
+ finishGrade(g,W,H);
 };
 window.ready=Promise.resolve();
 </script></body></html>

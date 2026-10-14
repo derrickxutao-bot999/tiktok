@@ -25,4 +25,17 @@ All by Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attr
 
 ## Character
 
-`character.js` draws our own Messi (no photos or traced footage): beard, dark hair, Argentina stripes, black shorts, the captain's armband and the 10. `character-sheet-v1.png` is the first pass.
+Messi is an ink silhouette, like the lone figure in the Su Shi video: one dark tone, and the posture
+carries the likeness. Reference photos are used only for poses; nothing is traced.
+
+- `silhouette.js` builds the figure from a joint skeleton with continuous anatomical contours
+  (thigh-knee-calf-ankle, deltoid-elbow-forearm-wrist), sleeve and shorts hems, hands (open, fist,
+  pointing, holding the ball), beard/no-beard heads, the shirt number and name, captain's armband
+  and a rim light. Poses: `skyBack` (fingers to the sky, from behind), `backWalk`, `relaxed`,
+  `shush`, `crossed`, `hips`, `sky`, `sideWalk`, `dribble`.
+- `atmos.js` is the rain-night stadium: floodlight bloom, fog, layered rain, wet pitch with
+  reflections and splashes, vignette and grain.
+- `key.html` -> `key-frame.png`: the closing image. `eras.html` -> `eras-frame.png`: three eras
+  (young, the shush with the ball, the captain). `poses.html` -> `poses-sheet.png`: all poses.
+
+Render a frame: `node tools/shot.mjs key.html key-frame.png 1080 1920`.
