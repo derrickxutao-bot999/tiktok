@@ -3,8 +3,10 @@
 //
 //   0-40     FootfallPulses, FREEZE_SHOT camera, fake footfalls at different ages (even steps are strong)
 //   50-70    Glitch at 0.2 (50-56), 0.6 (57-63), 1.0 (64-70)
-//   80-114   FrameShuffle 'out' over 34 frames (Scene 1's end): intact boy, shuffle, plate (94-104), burn, white (113)
-//   125-151  FrameShuffle 'in' over 26 frames (Scene 4's start): plate, shuffle, the 39-year-old intact (148-151)
+//   80-114   FrameShuffle 'out' over 34 frames (Scene 1's end): intact boy (80-81), turning (82-90), plate whole
+//            from 91, labelled 92-107, burn (107-112), white (113)
+//   125-151  FrameShuffle 'in' over 26 frames (Scene 4's start): plate (125-133), turning (134-146), the
+//            39-year-old (147), cuts healed (150-151)
 //   161-169  WhiteOut 0.1 ... 0.9 (165 = 0.5)
 //   170-173  EraCaption ERAS[0] at ages 0 / 6 / 20 / 60
 //   174      EraCaption ERAS[1] mid-roll (age 6)
@@ -16,7 +18,7 @@
 //   243-244  CLOSEUP_SHOT: ContactPulse age 0.03 / 0.1 (257: 0.35)
 //   245-255  BallPath: scene1Shot(600..608) at 245-249, scene1Shot(650..658) at 250-254, FREEZE_SHOT at 255
 //   256      BallPath with the camera on the OUT spot (ghost ball, plumb line, cross, label)
-//   258      FrameShuffle 'out' at 0.75 under a Vignette dimmed by shuffleWhiteness
+//   258      FrameShuffle 'out' at 0.86 (mid-burn) under a Vignette dimmed by shuffleWhiteness
 //   259      WhiteOut 0.35 (the freeze flash)
 //   260-267  Glitch over the frozen frame crossed by full-width white hairlines, amounts 0.1 / 0.14 / 0.3 / 0.5 / 0.7 / 0.9 / 1 / 1 (new filter)
 //   268-275  the same eight again
@@ -27,7 +29,8 @@
 //   286-287  Grain alone over mid grey (two frames: tile and offset change)
 //
 // FrameShuffle (80-114 'out', 125-151 'in') runs on the scenes' deck: a sky band, seven bands over the
-// figure, a ground band, the plate built from the seven stand-in eras (each with its colour bar at the left).
+// figure, a ground band, the plate built from the seven stand-in eras (each with its colour bar at the
+// right edge), labelled with each band's year in its era's accent.
 
 import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
@@ -75,8 +78,8 @@ const Night: React.FC<{
   year?: string;
   /** Pose the stand-in figure for this look (its scale) instead of ERAS[0]. */
   look?: Look;
-  /** A full-height bar of the jersey colour at the left, so composites read at a glance. */
-  bar?: boolean;
+  /** A full-height bar of the jersey colour (at the left, or at this x), so composites read at a glance. */
+  bar?: boolean | number;
   ground?: React.ReactNode;
   children?: React.ReactNode;
 }> = ({ camera, t, id, jersey = ERAS[0].accent, year, look, bar, ground, children }) => {
@@ -89,6 +92,8 @@ const Night: React.FC<{
   const P = (q: { x: number; y: number }) => project(camera, q.x, q.y);
   const leg = POSE.legs.L;
   const [hip, knee, ankle, heel, toe] = [leg.hip, leg.knee, leg.ankle, leg.heel, leg.toe].map(P);
+  // The far (rear) leg, drawn only for a posed look (the shuffle's stand-ins), behind the rest.
+  const rear = look ? [POSE.legs.R.hip, POSE.legs.R.knee, POSE.legs.R.ankle, POSE.legs.R.heel, POSE.legs.R.toe].map(P) : null;
   const neck = P(POSE.neck);
   const pelvis = P(POSE.pelvis);
   const head = P(POSE.head.center);
@@ -122,7 +127,7 @@ const Night: React.FC<{
         ))}
         <rect x={0} y={lineFar} width={WIDTH} height={Math.max(1.5, lineNear - lineFar)} fill={NIGHT.line} opacity={0.9} />
         {ground}
-        {bar ? <rect x={60} y={0} width={8} height={HEIGHT} fill={jersey} opacity={0.85} /> : null}
+        {bar !== undefined && bar !== false ? <rect x={bar === true ? 60 : bar} y={0} width={8} height={HEIGHT} fill={jersey} opacity={0.85} /> : null}
         {year ? (
           <text x={WIDTH - 70} y={340} textAnchor="end" fontFamily={FONTS.condensed} fontWeight={700} fontSize={150} fill={jersey} opacity={0.5}>
             {year}
@@ -130,6 +135,13 @@ const Night: React.FC<{
         ) : null}
         {/* Figure of light (a stand-in): torso, head, the rig's near leg and boot. */}
         <g stroke={NIGHT.light.contour} strokeWidth={2} strokeLinejoin="round" fill={NIGHT.light.body}>
+          {rear ? (
+            <g stroke={NIGHT.light.contourDim}>
+              <path d={`M${rear[0].x} ${rear[0].y} L${rear[1].x} ${rear[1].y} L${rear[2].x} ${rear[2].y}`} fill="none" strokeWidth={0.1 * k} />
+              <path d={`M${rear[0].x} ${rear[0].y} L${rear[1].x} ${rear[1].y} L${rear[2].x} ${rear[2].y}`} fill="none" strokeWidth={0.1 * k - 3} stroke={NIGHT.light.body} />
+              <path d={`M${rear[3].x} ${rear[3].y} L${rear[2].x} ${rear[2].y} L${rear[4].x} ${rear[4].y} Z`} />
+            </g>
+          ) : null}
           <circle cx={head.x} cy={head.y} r={POSE.head.radius * k} />
           <path d={`M${neck.x - 0.1 * k} ${neck.y} L${neck.x + 0.14 * k} ${neck.y} L${pelvis.x + 0.12 * k} ${pelvis.y} L${pelvis.x - 0.12 * k} ${pelvis.y} Z`} fill={`url(#${id}-shirt)`} />
           <path d={`M${hip.x} ${hip.y} L${knee.x} ${knee.y} L${ankle.x} ${ankle.y}`} fill="none" strokeWidth={0.1 * k} stroke={NIGHT.light.contourDim} />
@@ -164,9 +176,12 @@ const FOOTFALLS: Footfall[] = [
   { n: 4, t: 0.33, side: "R", x: CONTACT_POINT.x + 0.5 },
 ];
 
-/** Seven stand-in eras of the frozen instant: each posed at its own scale, with its colour and year. */
+/**
+ * Seven stand-in eras of the frozen instant, each posed at its own scale (1 ... 0.65, the boy's head at an
+ * adult's chest), with its colour, its year, a colour bar at the right edge and the far leg the labels must clear.
+ */
 const shuffleLayers = (prefix: string) =>
-  ERAS.map((e, i) => <Night key={i} camera={FREEZE_CAM} t={T0} id={`${prefix}${i}`} jersey={e.accent} year={e.year} look={e} bar />);
+  ERAS.map((e, i) => <Night key={i} camera={FREEZE_CAM} t={T0} id={`${prefix}${i}`} jersey={e.accent} year={e.year} look={e} bar={WIDTH - 14} />);
 
 /** The deck as the scenes cut it: a sky band, seven bands over the figure's height, a ground band. */
 const GROUND_Y = FREEZE_SHOT.screenY + FREEZE_SHOT.lookY * FREEZE_SHOT.pxPerM;
@@ -174,6 +189,8 @@ const HEAD_Y = GROUND_Y - 1.7 * FREEZE_SHOT.pxPerM;
 const BANDS = [0, ...ERAS.map((_, i) => Math.round(HEAD_Y + ((GROUND_Y - HEAD_Y) * i) / ERAS.length)), Math.round(GROUND_Y), HEIGHT];
 const PLATE = [ERAS.length - 1, ...ERAS.map((_, i) => i), ERAS.length - 1];
 const LABELS = [null, ...ERAS.map((e) => e.year), null];
+/** Each labelled band's era accent (what the scenes pass as labelColors). */
+const LABEL_COLORS = PLATE.map((layer, b) => (LABELS[b] ? ERAS[layer].accent : null));
 
 const CAPTION_CASES: Record<number, { era: number; age: number }> = {
   170: { era: 0, age: 0 },
@@ -273,6 +290,7 @@ export const Lab: React.FC = () => {
         plate={PLATE}
         subject={ERAS.length - 1}
         labels={LABELS}
+        labelColors={LABEL_COLORS}
         layers={shuffleLayers("sho")}
       />
     );
@@ -289,6 +307,7 @@ export const Lab: React.FC = () => {
         plate={PLATE}
         subject={0}
         labels={LABELS}
+        labelColors={LABEL_COLORS}
         layers={shuffleLayers("shi")}
       />
     );
@@ -360,8 +379,8 @@ export const Lab: React.FC = () => {
   if (frame === 258) {
     return (
       <AbsoluteFill>
-        <FrameShuffle direction="out" progress={0.75} seed={7} bands={BANDS} plate={PLATE} subject={ERAS.length - 1} layers={shuffleLayers("shv")} />
-        <Vignette strength={0.55 * (1 - shuffleWhiteness(0.75, "out"))} />
+        <FrameShuffle direction="out" progress={0.86} seed={7} bands={BANDS} plate={PLATE} subject={ERAS.length - 1} layers={shuffleLayers("shv")} />
+        <Vignette strength={0.55 * (1 - shuffleWhiteness(0.86, "out"))} />
         <Grain frame={frame} opacity={0.07} />
       </AbsoluteFill>
     );

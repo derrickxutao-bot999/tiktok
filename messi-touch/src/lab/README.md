@@ -6,6 +6,6 @@ film:
 
     node tools/stills.mjs LabAthlete 0,30,60 --entry src/lab/athlete/entry.ts --sheet out/lab-athlete.png
 
-- `athlete/`: the vector athlete in every era, standing in for the pose solver output.
+- `athlete/`: the vector athlete in every era, the eye close-ups (the seven eras lighting up in the cornea), the boots at contact and the legend line art.
 - `env/`: the two worlds (stadium night, Rosario dusk), the ground and the ball.
 - `fx/`: pulses, glitch, shuffle, captions, subtitle, grain.

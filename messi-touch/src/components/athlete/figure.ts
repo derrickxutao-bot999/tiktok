@@ -303,7 +303,7 @@ export const buildFigure = (pose: Pose, camera: Camera): FigureGeo => {
 
   // ---------------------------------------------------------------- body
   const headFrame: Frame = { o: pose.head.center, a: pose.head.pitch, s: pose.head.radius };
-  const geo = headGeometry(look, headFrame, pose.step);
+  const geo = headGeometry(look, headFrame, pose.step, pose.head.radius * k);
   // Neck: from the collar up to the nape behind and the throat under the jaw.
   const H = (x: number, y: number) => inFrame(headFrame, x, y);
   const neck = [tw(-0.085, 0.42), tw(-0.072, 0.5), H(-0.6, -0.46), H(-0.2, -0.1), H(0.32, -0.86), tw(0.064, 0.465), tw(0.07, 0.42)];

@@ -37,7 +37,7 @@ import { FREEZE_SHOT, scene1Shot } from "../lib/shots";
 import { S1 } from "../lib/timeline";
 import { T_FREEZE, contactPointAt } from "../lib/touch";
 import { Camera, D0, cameraFromShot, project } from "../lib/world";
-import { FROZEN_ACCENT, FrozenEra, SHUFFLE_BANDS, SHUFFLE_LABELS, SHUFFLE_PLATE, frozenFilter } from "./Frozen";
+import { FROZEN_ACCENT, FrozenEra, SHUFFLE_BANDS, SHUFFLE_LABEL_COLORS, SHUFFLE_LABELS, SHUFFLE_PLATE, frozenFilter } from "./Frozen";
 
 const NIGHT = PALETTE["stadium-night"];
 
@@ -117,7 +117,7 @@ export const Scene1Pursuit: React.FC = () => {
   // The DETAIL lens opens quickly and stays until the deck has started turning;
   // the main callout hands its "1 cm" over to the lens as the lens label writes.
   const lens = fade(S1.measure[0] + 2, S1.measure[1] + 2, 0, 1);
-  const lensOut = fade(S1.shuffle[0] + 4, S1.shuffle[0] + 12);
+  const lensOut = fade(S1.shuffle[0] - 2, S1.shuffle[0] + 4);
   const mainCallout = fade(S1.measure[1] + 2, S1.measure[1] + 10) * lensOut;
 
   const main = (
@@ -170,6 +170,7 @@ export const Scene1Pursuit: React.FC = () => {
       bands={SHUFFLE_BANDS}
       plate={SHUFFLE_PLATE}
       labels={SHUFFLE_LABELS}
+      labelColors={SHUFFLE_LABEL_COLORS}
       subject={ERAS.length - 1}
       layers={ERAS.map((e, i) => (i === ERAS.length - 1 ? main : <FrozenEra key={e.id} look={e} id={`s1sh${i}`} />))}
     />

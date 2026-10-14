@@ -16,6 +16,9 @@
 //   36-37 the legend at 430 px/m over the dusk sky with glow: progress 1 and 0.55
 //   38    the same legend without glow at 300 px/m (the cheap echo path: no details)
 //   39-40 the toe at 12000 px/m on the contact normal: veteran at scene4T(285, 292), the boy at scene4T(300, 305)
+//   41-44 the story in his eye at 6500 px/m (eyePoint at (540, 900)): eyeStory 0, 0.3, 0.6, 1
+//   45-48 the same at 9000 px/m
+//   49    eyeStory 0.5 at 6500 px/m: 2009's light at the peak of its flare
 
 import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
@@ -222,17 +225,19 @@ const eraLineup = () => {
 };
 
 /** The eye shot: the camera aimed at eyePoint, as Scene 4 holds it. */
-const eyeShot = (pxPerM: number, look: Look = ERAS[0]) => {
+const eyeShot = (pxPerM: number, look: Look = ERAS[0], eyeStory?: number) => {
   const pose = solvePose(T_FREEZE, look);
   const e = eyePoint(pose);
   const camera = cameraFromShot({ lookX: e.x, lookY: e.y, screenX: 540, screenY: 900, pxPerM, height: e.y });
   return (
     <Stage world="stadium-night" camera={camera}>
       <AthleteShadow pose={pose} camera={camera} world="stadium-night" idPrefix="sh" />
-      <Athlete pose={pose} camera={camera} world="stadium-night" idPrefix="a" />
+      <Athlete pose={pose} camera={camera} world="stadium-night" idPrefix="a" eyeStory={eyeStory} />
     </Stage>
   );
 };
+
+const STORY = [0, 0.3, 0.6, 1];
 
 const chestShot = () => {
   const pose = solvePose(T_FREEZE, ERAS[0]);
@@ -339,5 +344,8 @@ export const Lab: React.FC = () => {
   if (frame === 38) return legendSky(1, 300, false);
   if (frame === 39) return toeStudy("veteran-39", [285, 292]);
   if (frame === 40) return toeStudy("rosario-kid", [300, 305]);
+  if (frame >= 41 && frame <= 44) return eyeShot(6500, ERAS[0], STORY[frame - 41]);
+  if (frame >= 45 && frame <= 48) return eyeShot(9000, ERAS[0], STORY[frame - 45]);
+  if (frame === 49) return eyeShot(6500, ERAS[0], 0.5);
   return <AbsoluteFill style={{ background: NIGHT.skyTop }} />;
 };

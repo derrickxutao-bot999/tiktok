@@ -8,20 +8,38 @@
 //
 // In the extreme close-up ("stories in his eyes", ~6500 px/m) it becomes the
 // jewel of the film: lids and lashes as hairlines, the lid's wet rim, the
-// pupil, the clear dome of the cornea, and inside it seven pinpoints of light
-// in the seven era accents, top to bottom from 2026 to 1994: his whole career
-// reflected in his eye. Everything is sized in head units (metres x k), so it
-// scales with the zoom and never drops below a hairline.
+// pupil, the clear dome of the cornea, and along its bright arc seven lights in
+// the seven era accents, top to bottom from 2026 to 1994: his whole career
+// reflected in his eye. `story` (0..1) lights them one by one, each with a
+// small flare; the floodlights step back into the iris, smaller and dimmer, so
+// the story wins. Everything is sized in head units (metres x k), so it scales
+// with the zoom and never drops below a hairline.
+//
+// Hair and beard up close: the coarse grain that reads at figure scale gives
+// way to dense short strokes along the growth, and a short cut's hairline
+// breaks into strands and fades into the skin (Athlete feathers the fill).
 
 import React from "react";
 import { ERAS } from "../../lib/eras";
-import { clamp, dist, lerp, smoothstep } from "../../lib/math";
+import { clamp, dist, lerp, lerpV, smoothstep } from "../../lib/math";
 import { Pt, polyPath, smoothPath } from "./geom";
 import { FigureGeo } from "./figure";
 import { mix } from "./color";
 import { Paint } from "./paint";
 
-type Props = { g: FigureGeo; paint: Paint; id: (s: string) => string; hairline: number };
+type Props = {
+  g: FigureGeo;
+  paint: Paint;
+  id: (s: string) => string;
+  hairline: number;
+  /** How much of the story in his eye is told, 0..1 (default 1: all seven era lights). */
+  story?: number;
+  /** The hairline's feather mask (close-up), applied to the hair's grain. */
+  hairMask?: string;
+};
+
+/** Light adds to what is under it. */
+const ADD: React.CSSProperties = { mixBlendMode: "plus-lighter" };
 
 const url = (id: (s: string) => string, s: string) => `url(#${id(s)})`;
 
@@ -52,12 +70,6 @@ export const EyeDefs: React.FC<{ paint: Paint; id: (s: string) => string; hasBea
         <stop offset={0.5} stopColor={paint.eye} stopOpacity={0.75} />
         <stop offset={1} stopColor={paint.eye} stopOpacity={0} />
       </linearGradient>
-      {/* A pinpoint's own small bloom (tinted by the circle's fill-opacity group). */}
-      <radialGradient id={id("ej")}>
-        <stop offset={0} stopColor="#FFFFFF" stopOpacity={0.55} />
-        <stop offset={0.35} stopColor="#FFFFFF" stopOpacity={0.16} />
-        <stop offset={1} stopColor="#FFFFFF" stopOpacity={0} />
-      </radialGradient>
       <clipPath id={id("hc")}>
         <use href={`#${id("hair")}`} />
       </clipPath>
@@ -70,7 +82,7 @@ export const EyeDefs: React.FC<{ paint: Paint; id: (s: string) => string; hasBea
   );
 };
 
-export const Face: React.FC<Props> = ({ g, paint, id, hairline }) => {
+export const Face: React.FC<Props> = ({ g, paint, id, hairline, story = 1, hairMask }) => {
   const { geo, screen: S, radiusPx: R, pitch } = g.head;
   const L = paint.light;
   const contour = L.contour;
@@ -83,7 +95,6 @@ export const Face: React.FC<Props> = ({ g, paint, id, hairline }) => {
     <path d={path(pts)} fill="none" stroke={color} strokeOpacity={op} strokeWidth={w} strokeLinecap="round" />
   );
   const e = geo.eye;
-  const light = S(e.light);
   const ic = S(e.iris.c);
   const deg = (-pitch * 180) / Math.PI;
   const rotAt = (c: Pt) => `rotate(${deg.toFixed(2)} ${c.x.toFixed(1)} ${c.y.toFixed(1)})`;
@@ -95,13 +106,27 @@ export const Face: React.FC<Props> = ({ g, paint, id, hairline }) => {
   const glint = at(90);
   const hero = smoothstep(120, 200, R);
   const grain = at(70);
-  /** The extreme close-up: lashes, pupil, the dome, the seven eras. */
+  /** The extreme close-up: lashes, pupil, the dome, the seven eras, close-up hair. */
   const macro = smoothstep(300, 520, R);
-  // The bloom shrinks back to the cornea in the macro shot so it never washes over the pinpoints.
-  const halo = lerp(lerp(Math.max(2.4, 0.13 * R), 0.2 * R, hero), 0.05 * R, macro);
-  // Four floodlights in the cornea, the first the brightest.
-  const catches = e.catches.map(S);
-  const catchR = [lerp(0.009, 0.0052, macro), lerp(0.0062, 0.0034, macro), lerp(0.005, 0.0028, macro), lerp(0.0038, 0.0023, macro)].map((f) => Math.max(0.5, f * R));
+  // The bloom shrinks back in the macro shot so it never washes over the era lights.
+  const halo = lerp(lerp(Math.max(2.4, 0.13 * R), 0.2 * R, hero), 0.02 * R, macro);
+  // Four floodlights in the cornea, the first the brightest (the point of light). Up close they step back
+  // into the upper iris, smaller, and leave the cornea's arc to the era lights.
+  const catches = e.catches.map((c, i) => lerpV(S(c), S(e.catchesClose[i]), macro));
+  const light = catches[0];
+  const catchR = [lerp(0.009, 0.0036, macro), lerp(0.0062, 0.0022, macro), lerp(0.005, 0.0019, macro), lerp(0.0038, 0.0016, macro)].map((f) => Math.max(0.5, f * R));
+  // The era lights: each comes on over its seventh of the story, flaring as it appears.
+  const eraR = 0.005 * R;
+  const eras =
+    macro > 0
+      ? e.jewels.flatMap((p, i) => {
+          const u = clamp(story * e.jewels.length - i);
+          if (u <= 0) return [];
+          return [{ i, c: S(p), on: smoothstep(0, 0.55, u), flare: u < 1 ? Math.pow(Math.sin(Math.PI * u), 2) : 0, accent: ERAS[i].accent }];
+        })
+      : [];
+  // Close-up hair and beard: silver and grey grain.
+  const grey = mix(paint.silver, L.body, 0.42);
   // Hairline weights that grow a little with the close-up but stay hairlines.
   const lid = hairline * lerp(lerp(1.3, 1.6, hero), 1.5, macro);
   const lashW = Math.max(0.6, Math.min(1.1, 0.0013 * R));
@@ -113,12 +138,21 @@ export const Face: React.FC<Props> = ({ g, paint, id, hairline }) => {
 
       {/* Engraved grain inside the hair, brighter where the light falls; silver at the temple. */}
       {fine > 0 ? (
-        <g clipPath={`url(#${id("hc")})`} fill="none" strokeLinecap="round">
+        <g clipPath={`url(#${id("hc")})`} mask={hairMask} fill="none" strokeLinecap="round">
           {geo.strands.map((s, i) => (
             <path key={i} d={path(s.pts)} stroke={`url(#${id("cb")})`} strokeOpacity={0.55 * s.weight * fine} strokeWidth={hairline * 0.75} />
           ))}
-          {geo.grain.length ? <path d={strokes(geo.grain)} stroke={`url(#${id("cb")})`} strokeOpacity={0.3 * grain} strokeWidth={hairline * 0.6} /> : null}
-          {geo.silver.length ? <path d={strokes(geo.silver)} stroke={paint.silver} strokeOpacity={0.7 * fine} strokeWidth={hairline * 0.8} /> : null}
+          {geo.grain.length ? <path d={strokes(geo.grain)} stroke={`url(#${id("cb")})`} strokeOpacity={0.3 * grain * (1 - macro)} strokeWidth={hairline * 0.6} /> : null}
+          {geo.silver.length ? <path d={strokes(geo.silver)} stroke={paint.silver} strokeOpacity={0.7 * fine * (1 - macro)} strokeWidth={hairline * 0.8} /> : null}
+          {macro > 0 && geo.hairFine.length ? <path d={strokes(geo.hairFine)} stroke={grey} strokeOpacity={0.32 * macro} strokeWidth={hairline * 0.6} /> : null}
+          {macro > 0 && geo.hairFineSilver.length ? <path d={strokes(geo.hairFineSilver)} stroke={paint.silver} strokeOpacity={0.42 * macro} strokeWidth={hairline * 0.6} /> : null}
+        </g>
+      ) : null}
+      {/* The broken hairline: short strands across the front hairline and temple, and out of the silhouette at the front. */}
+      {macro > 0 && geo.fringe.length + geo.fringeSilver.length > 0 ? (
+        <g fill="none" strokeLinecap="round" strokeWidth={hairline * 0.6}>
+          <path d={strokes(geo.fringe)} stroke={grey} strokeOpacity={0.42 * macro} />
+          <path d={strokes(geo.fringeSilver)} stroke={paint.silver} strokeOpacity={0.5 * macro} />
         </g>
       ) : null}
 
@@ -126,11 +160,11 @@ export const Face: React.FC<Props> = ({ g, paint, id, hairline }) => {
       {geo.beardEdge && features > 0 ? line(geo.beardEdge, 0.45 * features, hairline, paint.beardRim ?? contour) : null}
       {geo.beard && grain > 0 ? (
         <g clipPath={`url(#${id("bc")})`} fill="none" strokeLinecap="round">
-          <path d={strokes(geo.beardGrain)} stroke={contour} strokeOpacity={0.3 * grain * (1 - 0.5 * macro)} strokeWidth={hairline * 0.7} />
-          {geo.beardSilver.length ? <path d={strokes(geo.beardSilver)} stroke={paint.silver} strokeOpacity={0.6 * grain} strokeWidth={hairline * 0.8} /> : null}
-          {macro > 0 ? <path d={strokes(geo.beardFine)} stroke={contour} strokeOpacity={0.2 * macro} strokeWidth={hairline * 0.55} /> : null}
+          <path d={strokes(geo.beardGrain)} stroke={contour} strokeOpacity={0.3 * grain * (1 - macro)} strokeWidth={hairline * 0.7} />
+          {geo.beardSilver.length ? <path d={strokes(geo.beardSilver)} stroke={paint.silver} strokeOpacity={0.6 * grain * (1 - macro)} strokeWidth={hairline * 0.8} /> : null}
+          {macro > 0 ? <path d={curves(geo.beardFine)} stroke={grey} strokeOpacity={0.36 * macro} strokeWidth={hairline * 0.6} /> : null}
           {macro > 0 && geo.beardFineSilver.length ? (
-            <path d={strokes(geo.beardFineSilver)} stroke={paint.silver} strokeOpacity={0.5 * macro} strokeWidth={hairline * 0.6} />
+            <path d={curves(geo.beardFineSilver)} stroke={paint.silver} strokeOpacity={0.45 * macro} strokeWidth={hairline * 0.6} />
           ) : null}
         </g>
       ) : null}
@@ -215,39 +249,56 @@ export const Face: React.FC<Props> = ({ g, paint, id, hairline }) => {
 
       {/* The light in his eyes: a wide soft bloom, then the point itself. */}
       {hero > 0 ? <circle cx={light.x} cy={light.y} r={0.55 * R} fill={url(id, "eg")} opacity={0.16 * hero * (1 - 0.5 * macro)} /> : null}
-      <circle cx={light.x} cy={light.y} r={halo} fill={url(id, "eg")} opacity={lerp(lerp(1, 0.4, hero), 0.55, macro)} />
-      {/* A short anamorphic glint, kept well inside the face. */}
+      <circle cx={light.x} cy={light.y} r={halo} fill={url(id, "eg")} opacity={lerp(lerp(1, 0.4, hero), 0.42, macro)} />
+      {/* A short anamorphic glint, kept well inside the face (and short and dim in the macro shot, below the era lights). */}
       {glint > 0 ? (
-        <g transform={`translate(${light.x.toFixed(1)} ${light.y.toFixed(1)})`} opacity={glint * lerp(1, 0.5, hero)}>
-          <ellipse rx={clamp(0.07 * R, 2, 0.12 * R)} ry={Math.max(0.4, 0.0035 * R)} fill={url(id, "es")} />
-          {macro > 0 ? <ellipse rx={Math.max(0.4, 0.0025 * R)} ry={0.03 * R} fill={url(id, "es")} transform={rotAt({ x: 0, y: 0 })} opacity={0.6 * macro} /> : null}
+        <g transform={`translate(${light.x.toFixed(1)} ${light.y.toFixed(1)})`} opacity={glint * lerp(1, 0.5, hero) * (1 - 0.55 * macro)}>
+          <ellipse rx={lerp(clamp(0.07 * R, 2, 0.12 * R), 0.035 * R, macro)} ry={Math.max(0.4, 0.0035 * R * (1 - 0.4 * macro))} fill={url(id, "es")} />
+          {macro > 0 ? <ellipse rx={Math.max(0.4, 0.0018 * R)} ry={0.018 * R} fill={url(id, "es")} transform={rotAt({ x: 0, y: 0 })} opacity={0.6 * macro} /> : null}
         </g>
       ) : null}
       {hero > 0
         ? catches.slice(1).map((c, i) => (
-            <g key={i} opacity={hero}>
-              <circle cx={c.x} cy={c.y} r={0.03 * R * (1 - 0.6 * macro)} fill={url(id, "eg")} opacity={0.4} />
+            <g key={i} opacity={hero * (1 - 0.25 * macro)}>
+              <circle cx={c.x} cy={c.y} r={0.03 * R * (1 - 0.75 * macro)} fill={url(id, "eg")} opacity={0.4} />
               <circle cx={c.x} cy={c.y} r={catchR[i + 1]} fill={paint.eye} />
             </g>
           ))
         : null}
-      {/* Seven pinpoints, one per era: his career reflected in his eye. */}
-      {macro > 0
-        ? e.jewels.map((p, i) => {
-            const c = S(p);
-            const r = Math.max(0.6, 0.0027 * R);
-            const accent = ERAS[i].accent;
-            return (
-              <g key={i} opacity={macro}>
-                {/* Each sits in a dark seat so it reads even over an iris of its own colour. */}
-                <circle cx={c.x} cy={c.y} r={1.9 * r} fill={L.bodyFar} fillOpacity={0.55} />
-                <circle cx={c.x} cy={c.y} r={2.6 * r} fill={accent} fillOpacity={0.16} />
-                <circle cx={c.x} cy={c.y} r={1.5 * r} fill={url(id, "ej")} />
-                <circle cx={c.x} cy={c.y} r={r} fill={mix(accent, "#FFFFFF", 0.3)} />
+      {/* His career in his eye: seven lights along the cornea's arc in the era accents, a soft additive bloom round a crisp core. */}
+      {eras.length ? (
+        <>
+          <defs>
+            {eras.map(({ i, accent }) => (
+              <radialGradient key={i} id={id(`ej${i}`)}>
+                <stop offset={0} stopColor={accent} stopOpacity={0.85} />
+                <stop offset={0.2} stopColor={accent} stopOpacity={0.45} />
+                <stop offset={0.5} stopColor={accent} stopOpacity={0.14} />
+                <stop offset={1} stopColor={accent} stopOpacity={0} />
+              </radialGradient>
+            ))}
+          </defs>
+          <g style={ADD}>
+            {eras.map(({ i, c, on, flare }) => (
+              <g key={i} opacity={macro * on}>
+                <circle cx={c.x} cy={c.y} r={eraR * (6.5 + 4 * flare)} fill={url(id, `ej${i}`)} opacity={Math.min(1, 0.8 + 0.4 * flare)} />
+                {flare > 0 ? (
+                  <g transform={`translate(${c.x.toFixed(1)} ${c.y.toFixed(1)})`} opacity={flare}>
+                    <ellipse rx={eraR * (2 + 8 * flare)} ry={Math.max(0.5, 0.2 * eraR)} fill={url(id, "es")} />
+                    <ellipse rx={Math.max(0.5, 0.2 * eraR)} ry={eraR * (1.5 + 4 * flare)} fill={url(id, "es")} transform={rotAt({ x: 0, y: 0 })} />
+                  </g>
+                ) : null}
               </g>
-            );
-          })
-        : null}
+            ))}
+          </g>
+          {eras.map(({ i, c, on, flare, accent }) => (
+            <g key={i} opacity={macro * on}>
+              <circle cx={c.x} cy={c.y} r={eraR} fill={accent} />
+              <circle cx={c.x} cy={c.y} r={eraR * (0.5 + 0.2 * flare)} fill={mix(accent, "#FFFFFF", 0.65 + 0.3 * flare)} />
+            </g>
+          ))}
+        </>
+      ) : null}
       <circle cx={light.x} cy={light.y} r={lerp(Math.max(0.75, 0.014 * R), catchR[0], hero)} fill={paint.eye} />
     </g>
   );

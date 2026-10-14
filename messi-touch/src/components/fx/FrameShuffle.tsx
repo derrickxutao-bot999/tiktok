@@ -2,18 +2,25 @@
 //
 // 'out' (the end of Scene 1): hairline cuts are drawn across the intact
 // frame. Band by band the deck turns over to the same instant in other eras,
-// each look held long enough to read (three frames at least), the rhythm
-// quickening a little. Every turn is a slip: the new strip lands a few
-// pixels off and registers. Then the deck locks, top to bottom, into the
-// PLATE (band i shows layer plate[i]): one figure built from every era, from
-// the oldest head to the youngest feet. It holds, still and fully legible,
-// for about a quarter of the transition. Then the cuts open: each seam widens
-// into a band of light that eats the strips from both sides, its halation
-// bleeding over what is left, until the frame is pure white.
+// each look held three frames: a short, quick turning. Every turn is a slip:
+// the new strip lands a few pixels off and registers. Then the deck locks, top
+// to bottom, into the PLATE (band i shows layer plate[i]): one figure built
+// from every era, from the oldest head to the youngest feet, each band's year
+// set in the left margin in its era's colour. The plate is the payoff: it
+// holds, still and fully legible, for about half the transition. Then the cuts
+// open: each seam widens into a band of light that eats the strips from both
+// sides, its halation bleeding over what is left, until the frame is pure white.
 //
-// 'in' (the start of Scene 4) opens on the plate itself, holds, shuffles
-// with the rhythm slowing, locks band by band onto the subject, and the cuts
-// heal: the frame is the subject, intact, by the end.
+// 'in' (the start of Scene 4) opens on the plate itself, holds it, turns with
+// the rhythm slowing, locks band by band onto the subject, and the cuts heal:
+// the frame is the subject, intact, by the end.
+//
+// The figure stays one figure while it turns. The head bands turn as one strip,
+// so a single era draws the whole head (never an adult cranium over a second
+// head), and neither they nor the torso bands ever turn to the small layer
+// (the boy, whose head sits at an adult's chest). The head and torso turn
+// together; only the legs flicker on their own, where a mismatch reads as a
+// slipped plate.
 //
 // Swaps are scheduled on whole frames of the transition (`duration`), so a
 // look is never shorter than MIN_HOLD frames whatever the progress curve.
@@ -45,8 +52,16 @@ export type FrameShuffleProps = {
   subject?: number;
   /** Length of the transition in frames; swaps land on whole frames. Default 34 for 'out', 26 for 'in'. */
   duration?: number;
-  /** Per band, a small mono annotation set in the right margin while the plate holds (null for none). */
+  /** Per band, a mono annotation set in the left margin while the plate holds (null for none). */
   labels?: (string | null | undefined)[];
+  /** Per band, the hex colour of its label and tick (its era's accent). Default `light`. */
+  labelColors?: (string | null | undefined)[];
+  /** Bands that hold the head: they turn as one strip, one era at a time. Default [1, 2]. */
+  headBands?: number[];
+  /** Bands that hold the chest and waist: they turn with the head and never to `smallLayer`. Default [3, 4]. */
+  torsoBands?: number[];
+  /** The layer whose body is much smaller (its head would sit in the torso bands). Default the last layer. */
+  smallLayer?: number;
   seed: number;
   /** The light behind the deck, seams and burn. */
   light?: string;
@@ -57,35 +72,40 @@ export type FrameShuffleProps = {
 };
 
 // Each direction runs on its own clock, as fractions of the transition.
+// Over 34 frames 'out': turning 2-11, the plate whole from 11 and labelled 12-27, burn 27-32, white 33.
+// Over 26 frames 'in': the plate 0-8, turning 9-22, the cuts healed by 25.
 const OUT = {
   /** The hairline cuts are drawn across the intact frame. */
   cut: [0, 0.07] as const,
-  /** First turns (each band staggered by up to STAGGER - 1 frames). */
+  /** First turns: the head and torso together, the other bands staggered by up to STAGGER - 1 frames. */
   shuffle: 0.06,
   /** Locked into the plate; bands lock top to bottom over the STAGGER frames up to here. */
-  lock: 0.41,
-  /** Seams start to open somewhere in this window... */
-  burn: [0.7, 0.78] as const,
+  lock: 0.33,
+  /** Seams start to open somewhere in this window (the plate holds until it opens)... */
+  burn: [0.78, 0.84] as const,
   /** ...have eaten every band here... */
   eaten: 0.95,
   /** ...and the frame is pure white from here (the last frame of a 34-frame 'out' is 33/34 = 0.97). */
   white: 0.96,
 };
 const IN = {
-  /** The plate holds until here; then the bands start to turn (staggered). */
-  shuffle: 0.19,
+  /** The plate holds until here; then the bands start to turn. */
+  shuffle: 0.35,
   /** Every band is back on the subject; they lock top to bottom over the STAGGER frames up to here. */
-  lock: 0.81,
-  /** The cuts withdraw. */
-  heal: [0.8, 0.92] as const,
+  lock: 0.85,
+  /** The cuts withdraw (done by the last frame of a 26-frame 'in', 25/26 = 0.96). */
+  heal: [0.84, 0.95] as const,
 };
 const DEFAULT_DURATION = { out: 34, in: 26 } as const;
 /** No look is held for fewer frames than this. */
 const MIN_HOLD = 3;
 const STAGGER = 3;
-/** Holds per turn, frames: 'out' quickens a little, 'in' slows a little. */
-const holdOut = (k: number) => (k < 2 ? 4 : 3);
+/** Holds per turn, frames: 'out' is short and even, 'in' slows a little. */
+const holdOut = () => 3;
 const holdIn = (k: number) => (k < 3 ? 3 : 4);
+/** The plate's labels: left margin x, size, px. */
+const LABEL_X = 48;
+const LABEL_SIZE = 25;
 /** A turn's slip, as a fraction of the width, and the frames it takes to register. */
 const SLIP = [0.018, 0.045] as const;
 const SETTLE = 2.2;
@@ -93,35 +113,36 @@ const HAIR = 1.25;
 
 type Turn = { f: number; layer: number; k: number; lock: boolean };
 
-/** Every look band b shows through the transition, on whole frames. */
-const scheduleFor = (b: number, n: number, dir: "out" | "in", D: number, nLayers: number, subject: number, target: number, seed: number): Turn[] => {
-  const first = dir === "out" ? subject : target;
-  const last = dir === "out" ? target : subject;
-  const turns: Turn[] = [{ f: -Infinity, layer: first, k: 0, lock: false }];
-  const cascade = n > 1 ? Math.round(((STAGGER - 1) * b) / (n - 1)) : 0;
-  const lockF = Math.round((dir === "out" ? OUT.lock : IN.lock) * D) - (STAGGER - 1) + cascade;
-  const hold = dir === "out" ? holdOut : holdIn;
-  let f = Math.round((dir === "out" ? OUT.shuffle : IN.shuffle) * D) + Math.floor(hash2(seed, b * 5 + 1) * STAGGER);
-  let cur = first;
-  let k = 0;
-  while (nLayers > 1 && f + MIN_HOLD <= lockF) {
+/**
+ * Every look each band of a unit shows through the transition, on whole frames.
+ * A unit is one band, or bands that turn as one strip (the head): they share
+ * every turn and lock on the same frame. `firsts` and `lasts` are each band's
+ * look at the calm ends; `avoid` is a layer the unit never turns to (-1: none).
+ */
+const scheduleFor = (u: number, firsts: number[], lasts: number[], start: number, lockF: number, avoid: number, hold: (k: number) => number, nLayers: number, seed: number): Turn[][] => {
+  const shared: { f: number; layer: number }[] = [];
+  let showing = firsts;
+  for (let f = start, k = 0; nLayers > 1 && f + MIN_HOLD <= lockF; f += hold(k), k++) {
     const final = f + hold(k) + MIN_HOLD > lockF;
-    // Any layer but the one showing, and the last look before the lock is never the lock's own layer.
-    const options = Array.from({ length: nLayers }, (_, i) => i).filter((i) => i !== cur && !(final && i === last && nLayers > 2));
-    const pick = options[Math.floor(hash2(seed + (k + 1) * 31, b * 3 + 7) * options.length)];
-    k++;
-    turns.push({ f, layer: pick, k, lock: false });
-    cur = pick;
-    f += hold(k - 1);
+    const fresh = Array.from({ length: nLayers }, (_, i) => i).filter((i) => !showing.includes(i));
+    // Never the layer to avoid, and the last look before the lock is none of the lock's own layers (when there is a choice).
+    const options = [fresh.filter((i) => i !== avoid && !(final && lasts.includes(i))), fresh.filter((i) => i !== avoid), fresh].find((o) => o.length > 0);
+    if (!options) break;
+    const pick = options[Math.floor(hash2(seed + (k + 1) * 31, u * 3 + 7) * options.length)];
+    shared.push({ f, layer: pick });
+    showing = [pick];
   }
-  if (cur !== last) turns.push({ f: lockF, layer: last, k: k + 1, lock: true });
-  return turns;
+  return firsts.map((first, j) => {
+    const turns: Turn[] = [{ f: -Infinity, layer: first, k: 0, lock: false }, ...shared.map((t, i) => ({ ...t, k: i + 1, lock: false }))];
+    if (turns[turns.length - 1].layer !== lasts[j]) turns.push({ f: lockF, layer: lasts[j], k: turns.length, lock: true });
+    return turns;
+  });
 };
 
 type BandState = { layer: number; dx: number; flash: number; lock: number; turned: number; locked: number };
 
-/** What band b shows at frame position fp (continuous). */
-const bandAt = (turns: Turn[], b: number, h: number, fp: number, seed: number): BandState => {
+/** What a band of unit u (height h, px) shows at frame position fp (continuous). */
+const bandAt = (turns: Turn[], u: number, h: number, fp: number, seed: number): BandState => {
   let i = 0;
   while (i + 1 < turns.length && turns[i + 1].f <= fp + 1e-6) i++;
   const t = turns[i];
@@ -129,10 +150,10 @@ const bandAt = (turns: Turn[], b: number, h: number, fp: number, seed: number): 
   const firstTurn = turns.length > 1 ? turns[1].f : Infinity;
   if (!Number.isFinite(t.f)) return { layer: t.layer, dx: 0, flash: 0, lock: 0, turned: fp - firstTurn, locked: fp - lockTurn };
   const df = fp - t.f;
-  // The slip: neighbours land opposite ways, alternating turn by turn.
-  const side = (b + t.k) % 2 === 0 ? -1 : 1;
-  // Tall bands (sky, ground) are heavier and slip less.
-  const mag = WIDTH * (SLIP[0] + (SLIP[1] - SLIP[0]) * hash2(seed + t.k * 17, b + 40)) * (t.lock ? 1.2 : 1) * Math.min(1, Math.sqrt(150 / Math.max(1, h)));
+  // The slip: neighbouring units land opposite ways, alternating turn by turn; a unit's bands move as one.
+  const side = (u + t.k) % 2 === 0 ? -1 : 1;
+  // Tall strips (sky, ground, the head) are heavier and slip less.
+  const mag = WIDTH * (SLIP[0] + (SLIP[1] - SLIP[0]) * hash2(seed + t.k * 17, u + 40)) * (t.lock ? 1.2 : 1) * Math.min(1, Math.sqrt(150 / Math.max(1, h)));
   return {
     layer: t.layer,
     dx: side * mag * (1 - easeOutCubic(clamp(df / SETTLE))),
@@ -206,6 +227,10 @@ export const FrameShuffle: React.FC<FrameShuffleProps> = ({
   subject = 0,
   duration,
   labels,
+  labelColors,
+  headBands = [1, 2],
+  torsoBands = [3, 4],
+  smallLayer,
   seed,
   light = "#F6FAFF",
   tint = PALETTE["stadium-night"].light.glow,
@@ -225,7 +250,26 @@ export const FrameShuffle: React.FC<FrameShuffleProps> = ({
   const D = Math.max(4, duration ?? DEFAULT_DURATION[direction]);
   const fp = p * D;
 
-  const deck = Array.from({ length: n }, (_, b) => bandAt(scheduleFor(b, n, direction, D, L, sub, target(b), seed), b, edges[b + 1] - edges[b], fp, seed));
+  // The units that turn: the head bands as one strip, every other band on its own. The head and torso
+  // start together (so the figure keeps one head) and never turn to the small layer; the rest are staggered.
+  const head = [...new Set(headBands.filter((b) => b >= 0 && b < n))].sort((a, b) => a - b);
+  const upper = new Set([...head, ...torsoBands]);
+  const small = clamp(Math.round(smallLayer ?? L - 1), 0, L - 1);
+  const units = Array.from({ length: n }, (_, b) => b).flatMap((b) => (!head.includes(b) ? [[b]] : b === head[0] ? [head] : []));
+  const shuffleF = Math.round((out ? OUT.shuffle : IN.shuffle) * D);
+  const lockBase = Math.round((out ? OUT.lock : IN.lock) * D) - (STAGGER - 1);
+  const deck: BandState[] = [];
+  units.forEach((ub, u) => {
+    const top = ub[0];
+    const isUpper = ub.some((b) => upper.has(b));
+    const start = shuffleF + (isUpper ? 0 : Math.floor(hash2(seed, top * 5 + 1) * STAGGER));
+    const lockF = lockBase + (n > 1 ? Math.round(((STAGGER - 1) * top) / (n - 1)) : 0);
+    const plateEnd = ub.map(target);
+    const subEnd = ub.map(() => sub);
+    const turns = scheduleFor(u, out ? subEnd : plateEnd, out ? plateEnd : subEnd, start, lockF, isUpper ? small : -1, out ? holdOut : holdIn, L, seed);
+    const h = ub.reduce((sum, b) => sum + edges[b + 1] - edges[b], 0);
+    ub.forEach((b, j) => (deck[b] = bandAt(turns[j], u, h, fp, seed)));
+  });
 
   // The burn ('out' only): band b is eaten from its top edge by seam b and from its bottom edge by seam b + 1.
   const burn = out ? burnAt(p) : 0;
@@ -260,7 +304,7 @@ export const FrameShuffle: React.FC<FrameShuffleProps> = ({
 
   // How much of the plate is on show (registration marks and labels): after the lock in 'out', before the turns in 'in'.
   const plateK = (st: BandState) =>
-    out ? clamp((st.locked + 0.5) / 4) * (1 - smoothstep(OUT.burn[0] - 0.02, OUT.burn[0] + 0.04, p)) : 1 - clamp((st.turned + 1) / 3);
+    out ? clamp((st.locked + 1) / 1.5) * (1 - smoothstep(OUT.burn[0] + 0.015, OUT.burn[0] + 0.09, p)) : 1 - clamp(st.turned + 1);
   const plateAll = deck.reduce((m, st) => Math.min(m, plateK(st)), 1);
 
   return (
@@ -356,28 +400,33 @@ export const FrameShuffle: React.FC<FrameShuffleProps> = ({
               )),
             );
           }
+          // The year, in its era's colour, with a hairline tick pointing into the band: legs alone still read as an era.
           const label = labels?.[b];
           if (label && k > 0.01) {
+            const color = labelColors?.[b] ?? light;
+            const mid = (edges[b] + edges[b + 1]) / 2;
+            const tickX = LABEL_X + label.length * LABEL_SIZE * 0.68 + 8;
             marks.push(
               <div
                 key={`lb${b}`}
                 style={{
                   position: "absolute",
-                  right: 56,
-                  top: (edges[b] + edges[b + 1]) / 2 - 12,
-                  height: 24,
-                  lineHeight: "24px",
+                  left: LABEL_X,
+                  top: mid - LABEL_SIZE * 0.6,
+                  height: LABEL_SIZE * 1.2,
+                  lineHeight: `${LABEL_SIZE * 1.2}px`,
                   fontFamily: FONTS.mono,
-                  fontSize: 17,
-                  letterSpacing: "0.24em",
-                  color: light,
-                  opacity: 0.72 * k,
+                  fontSize: LABEL_SIZE,
+                  letterSpacing: "0.08em",
+                  color,
+                  opacity: 0.94 * k,
                   whiteSpace: "pre",
-                  textShadow: `0 0 8px ${rgba(tint, 0.6)}`,
+                  textShadow: `0 0 10px ${rgba(color, 0.5)}`,
                 }}
               >
                 {label}
               </div>,
+              <div key={`lt${b}`} style={{ position: "absolute", left: tickX, width: 16, top: mid - 0.75, height: 1.5, background: color, opacity: 0.85 * k }} />,
             );
           }
           return marks;

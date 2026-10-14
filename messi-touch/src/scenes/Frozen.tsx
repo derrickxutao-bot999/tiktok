@@ -47,3 +47,5 @@ export const SHUFFLE_BANDS = [
 export const SHUFFLE_PLATE = [ERAS.length - 1, ...ERAS.map((_, i) => i), ERAS.length - 1];
 /** The plate is annotated with each band's year, like the plates of a chronophotograph. */
 export const SHUFFLE_LABELS = [null, ...ERAS.map((e) => e.year), null];
+/** Each year is written in its era's colour. */
+export const SHUFFLE_LABEL_COLORS = SHUFFLE_PLATE.map((layer, band) => (SHUFFLE_LABELS[band] ? ERAS[layer].accent : null));

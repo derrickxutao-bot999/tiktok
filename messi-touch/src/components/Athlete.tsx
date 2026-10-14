@@ -33,6 +33,7 @@ import { Camera } from "../lib/world";
 import { mix } from "./athlete/color";
 import { EyeDefs, Face } from "./athlete/Face";
 import { Fill, Line, Part, Side, buildFigure, bySize } from "./athlete/figure";
+import { smoothPath } from "./athlete/geom";
 import { JerseyDefs, JerseyOverlay, MULTIPLY, stopsOf } from "./athlete/Jersey";
 import { paintOf } from "./athlete/paint";
 
@@ -49,6 +50,12 @@ export type AthleteProps = {
   midLayer?: React.ReactNode;
   /** Strength of the contour glow, 0..1 (default 1). */
   glow?: number;
+  /**
+   * The story in his eye (extreme close-up only), 0..1 (default 1: all seven
+   * lit): the era lights on the cornea come on one by one, 2026 first and
+   * 1994 last, each over a seventh of the range with a small flare.
+   */
+  eyeStory?: number;
 };
 
 /** Which shading template each fill uses across a limb: a body tone, or a shadow overlay on a kit colour. */
@@ -70,7 +77,7 @@ const SOLE_SHADED: ReadonlySet<Fill> = new Set(["sole", "soleFar"]);
 
 const dot = (a: Vec2, b: Vec2) => a.x * b.x + a.y * b.y;
 
-export const Athlete: React.FC<AthleteProps> = ({ pose, camera, world, idPrefix, midLayer, glow = 1 }) => {
+export const Athlete: React.FC<AthleteProps> = ({ pose, camera, world, idPrefix, midLayer, glow = 1, eyeStory = 1 }) => {
   const g = buildFigure(pose, camera);
   const paint = paintOf(pose.look, world);
   const L = paint.light;
@@ -102,6 +109,10 @@ export const Athlete: React.FC<AthleteProps> = ({ pose, camera, world, idPrefix,
   const close = smoothstep(70, 220, headR);
   const hairTone = mix(paint.solid.hair, paint.hairClose, close);
   const hd = g.head.at(-0.1, 0.12);
+  // In the close-up a short cut's hairline is feathered into the skin (its fill, outline and grain), see Face.
+  const hairline = g.head.geo.hairline;
+  const feather = hairline ? smoothstep(300, 520, headR) : 0;
+  const hairMask = feather > 0 ? url("hf") : undefined;
   const eye = g.head.screen(g.head.geo.eye.light);
   const focusFill = focus > 0 ? url("jf") : null;
 
@@ -135,14 +146,18 @@ export const Athlete: React.FC<AthleteProps> = ({ pose, camera, world, idPrefix,
       {p.fill === "sleeve" ? <use href={ref(p.id)} fill="none" stroke={L.bodyFar} strokeOpacity={0.4} strokeWidth={3 * hw} /> : null}
       {p.fill === "hair" ? (
         // Hair is a graphic shape with its own contour (silver on the grey crop), wide enough to read at a 34 px head.
-        <use href={ref(p.id)} fill="none" stroke={paint.hairLine} strokeOpacity={paint.hairLineOpacity} strokeWidth={Math.max(2.4, 2 * hw)} />
+        <g mask={hairMask}>
+          {/* Up close the hairline is strands, not a drawn edge: the outline gives way (the silhouette keeps the figure's contour). */}
+          <use href={ref(p.id)} fill="none" stroke={paint.hairLine} strokeOpacity={paint.hairLineOpacity * (1 - 0.8 * feather)} strokeWidth={Math.max(2.4, 2 * hw)} />
+          <use href={ref(p.id)} fill={fillOf(p)} />
+        </g>
       ) : p.fill === "beard" && paint.beardRim ? (
         // The grey full beard: a silver rim round its whole edge.
         <use href={ref(p.id)} fill="none" stroke={paint.beardRim} strokeOpacity={0.7} strokeWidth={Math.max(2.4, 2.2 * hw)} />
       ) : p.seam ? (
         <use href={ref(p.id)} fill="none" stroke={L.contour} strokeOpacity={0.26} strokeWidth={2 * hw} />
       ) : null}
-      <use href={ref(p.id)} fill={fillOf(p)} fillOpacity={p.fill === "beard" ? 0.9 : 1} />
+      {p.fill === "hair" ? null : <use href={ref(p.id)} fill={fillOf(p)} fillOpacity={p.fill === "beard" ? 0.9 : 1} />}
       {OVERLAY.has(p.fill) && p.xs ? <use href={ref(p.id)} fill={url(`x-${p.id}`)} /> : null}
       {SOLE_SHADED.has(p.fill) ? <use href={ref(p.id)} fill={url("ks")} /> : null}
       {p.id === "shirt" ? (
@@ -331,6 +346,22 @@ export const Athlete: React.FC<AthleteProps> = ({ pose, camera, world, idPrefix,
         </linearGradient>
         <JerseyDefs g={g} paint={paint} id={id} rim={rim} />
         <EyeDefs paint={paint} id={id} hasBeard={look.beard !== "none"} />
+        {/* The hairline, feathered: the hair fades into the skin over a few millimetres instead of ending in a ledge. */}
+        {feather > 0 && hairline ? (
+          <mask id={id("hf")} maskUnits="userSpaceOnUse" {...boxAttrs}>
+            <rect {...boxAttrs} fill="#FFFFFF" />
+            {/* Faded along the hairline, but kept whole over the head's own outline (which runs under the hair). */}
+            <g filter={url("hfb")}>
+              <path d={smoothPath(hairline.map(g.head.screen), false)} fill="none" stroke="#000000" strokeOpacity={feather} strokeWidth={0.05 * headR} strokeLinecap="round" />
+              <use href={ref("head")} fill="none" stroke="#FFFFFF" strokeWidth={0.018 * headR} />
+            </g>
+          </mask>
+        ) : null}
+        {feather > 0 ? (
+          <filter id={id("hfb")} filterUnits="userSpaceOnUse" {...boxAttrs}>
+            <feGaussianBlur stdDeviation={0.014 * headR} />
+          </filter>
+        ) : null}
         {knockout("mb", ["gf", "gm"])}
         {knockout("mbl", ["gf", "gm", "gl"])}
         {litEdges("lb", ["gf", "gm"], [])}
@@ -380,7 +411,7 @@ export const Athlete: React.FC<AthleteProps> = ({ pose, camera, world, idPrefix,
       {g.body.parts.map(paintPart)}
       {paintLines(g.body.lines, false)}
       <use href={ref("gm")} fill={L.contour} fillOpacity={0.2} mask={url("rgm")} />
-      <Face g={g} paint={paint} id={id} hairline={hw} />
+      <Face g={g} paint={paint} id={id} hairline={hw} story={eyeStory} hairMask={hairMask} />
 
       {midLayer}
 

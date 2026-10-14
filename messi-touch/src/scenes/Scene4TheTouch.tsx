@@ -27,7 +27,7 @@ import { scene4Shot } from "../lib/shots";
 import { HEIGHT, MATCH_CUT_DISSOLVE, S4, WIDTH } from "../lib/timeline";
 import { contactPointAt, gapAt } from "../lib/touch";
 import { Camera, D0, Shot, cameraFromShot, project } from "../lib/world";
-import { FROZEN_ACCENT, FrozenEra, SHUFFLE_BANDS, SHUFFLE_LABELS, SHUFFLE_PLATE, frozenFilter } from "./Frozen";
+import { FROZEN_ACCENT, FrozenEra, SHUFFLE_BANDS, SHUFFLE_LABEL_COLORS, SHUFFLE_LABELS, SHUFFLE_PLATE, frozenFilter } from "./Frozen";
 
 export const SUBTITLE = "His story is told. The boy is still playing.";
 
@@ -181,6 +181,7 @@ export const Scene4TheTouch: React.FC = () => {
         bands={SHUFFLE_BANDS}
         plate={SHUFFLE_PLATE}
         labels={SHUFFLE_LABELS}
+      labelColors={SHUFFLE_LABEL_COLORS}
         subject={0}
         layers={ERAS.map((e, i) => <FrozenEra key={e.id} look={e} id={`s4sh${i}`} />)}
       />

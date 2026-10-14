@@ -202,10 +202,18 @@ export type HeadGeo = {
   beardGrain: Pt[][];
   /** Grey flecks in the beard (age 35 and over). */
   beardSilver: Pt[][];
-  /** Close-up grain (drawn only when the head is huge on screen): the beard's fine hair, its grey share, the brow's hairs. */
+  /** Close-up grain (drawn only when the head is huge on screen): the beard's fine hair (three-point strokes along its flow), its grey share, the brow's hairs. */
   beardFine: Pt[][];
   beardFineSilver: Pt[][];
   brow: Pt[][];
+  /** Close-up hair of a short cut: dense grain combed back over the crown and down the side (clipped to the hair), its silver share. */
+  hairFine: Pt[][];
+  hairFineSilver: Pt[][];
+  /** Short strands breaking the front hairline, the temple and the front of the silhouette (not clipped), and their silver share. */
+  fringe: Pt[][];
+  fringeSilver: Pt[][];
+  /** The front hairline of a short cut, sideburn to forehead: the hair is feathered into the skin along it in the close-up (null: long hair). */
+  hairline: Pt[] | null;
   eye: {
     upper: Pt[];
     lower: Pt[];
@@ -219,6 +227,8 @@ export type HeadGeo = {
     /** The point of light, and the floodlights caught along the cornea (main one first). */
     light: Pt;
     catches: Pt[];
+    /** Where the four floodlights sit in the extreme close-up (main one first): over the upper iris, clear of the era lights on the cornea's arc. */
+    catchesClose: Pt[];
     /** The touchline, reflected as a curve across the lower iris and cornea. */
     reflection: Pt[];
     // Macro detail, for the extreme close-up.
@@ -234,13 +244,17 @@ export type HeadGeo = {
     fibres: Pt[][];
     /** The clear dome of the cornea, between its arc and the iris. */
     dome: Pt[];
-    /** His career reflected in his eye: one pinpoint per era (ERAS order, back to front) on the reflected touchline. */
+    /** His career reflected in his eye: one light per era (ERAS order, 2026 first) along the cornea's highlight, top to bottom. */
     jewels: Pt[];
   };
 };
 
-/** Head geometry in world metres. `phase` (the step phase) moves long hair. */
-export const headGeometry = (look: Look, frame: Frame, phase: number): HeadGeo => {
+/**
+ * Head geometry in world metres. `phase` (the step phase) moves long hair.
+ * `radiusPx` (the head's radius on screen, optional) lets the extreme
+ * close-up taper a short cut's front into the forehead, so it has no ledge.
+ */
+export const headGeometry = (look: Look, frame: Frame, phase: number, radiusPx = 0): HeadGeo => {
   const c = smoothstep(1.02, 1.2, look.head);
   const P = (x: number, y: number, sh = false) => inFrame(frame, x, y, sh);
   const K2 = (a: K) => P(a[0], a[1], a[2] === 1);
@@ -263,7 +277,37 @@ export const headGeometry = (look: Look, frame: Frame, phase: number): HeadGeo =
 
   const outline = [...FACE_A.map((a, i) => L(a, FACE_C[i])), ...SKULL_ARC.map((d) => skull(d))];
 
-  const hs = HAIR[look.hair];
+  const spec = HAIR[look.hair];
+  // In the close-up a short cut thins out towards its front instead of standing
+  // off the forehead in a step, and its hairline (from the front of the
+  // sideburn, the inner edge's second corner, to the forehead) wavers a little
+  // instead of running ruler-straight.
+  const taper = spec.flow ? 0 : smoothstep(300, 520, radiusPx);
+  const c1 = spec.inner.flatMap((q, i) => (q[2] === 1 ? [i] : []))[1] ?? 0;
+  const wavy = (pts: readonly K[]): K[] => {
+    const line = pts.map(([x, y]) => [x, y] as [number, number]);
+    return Array.from({ length: 25 }, (_, i) => {
+      const t = i / 24;
+      const [x, y] = alongPoly(line, t);
+      const [x1, y1] = alongPoly(line, Math.max(0, t - 0.01));
+      const [x2, y2] = alongPoly(line, Math.min(1, t + 0.01));
+      const l = Math.hypot(x2 - x1, y2 - y1) || 1;
+      const w =
+        taper *
+        Math.sqrt(Math.sin(Math.PI * t)) *
+        (0.011 * Math.sin(2 * Math.PI * 3.3 * t + 0.7) + 0.006 * Math.sin(2 * Math.PI * 7.9 * t + 2.1) + 0.006 * (hash2(i, 223) - 0.5));
+      return [x + ((y2 - y1) / l) * w, y - ((x2 - x1) / l) * w, i === 0 ? pts[0][2] : 0];
+    });
+  };
+  const d0 = spec.arc[0][0];
+  const hs: HairSpec =
+    taper > 0
+      ? {
+          ...spec,
+          arc: spec.arc.map(([d, t]) => [d, t * lerp(1, Math.pow(smoothstep(d0, d0 + 48, d), 0.7), taper)] as const),
+          inner: [...spec.inner.slice(0, c1), ...wavy(spec.inner.slice(c1))],
+        }
+      : spec;
   // The run sweeps the lower, trailing hair back.
   // Hair below the ears hangs: it is turned back against the head's pitch
   // about the nape (so it falls with gravity when he looks down), and the
@@ -381,18 +425,108 @@ export const headGeometry = (look: Look, frame: Frame, phase: number): HeadGeo =
   const beardSilver: Pt[][] =
     bk && look.age >= 35 ? [0, 1, 2, 3, 4].map((i) => stroke(0.42 + 0.1 * i + 0.03 * jit(i, 23), -0.9 - 0.025 * i + 0.04 * jit(i, 29), -1.3 + 0.3 * jit(i, 31), 0.07)) : [];
 
-  // Close-up grain: many short strokes inside the beard (clipped to it), combed
-  // down and slightly back, a share of them silver on the 39-year-old; and the
-  // brow as fine hairs combed back towards the temple.
+  // Close-up grain: dense short strokes on a jittered grid inside the beard
+  // (clipped to it), each bending along the beard's flow: down the cheek,
+  // forward along the jaw to the chin, down off the chin and over the lip. A
+  // share of them is silver on the older beards. The brow is fine hairs
+  // combed back towards the temple.
   const beardFine: Pt[][] = [];
   const beardFineSilver: Pt[][] = [];
   if (bk) {
+    const jaw = [bk[13], bk[12], bk[11]];
+    const flow = (x: number, y: number) => {
+      // Nearest point of the jaw line, and its direction (towards the chin).
+      let best = { d: Infinity, tx: 1, ty: 0 };
+      for (let s = 0; s < jaw.length - 1; s++) {
+        const [ax, ay] = jaw[s];
+        const dx = jaw[s + 1][0] - ax;
+        const dy = jaw[s + 1][1] - ay;
+        const l2 = dx * dx + dy * dy;
+        const u = clamp(((x - ax) * dx + (y - ay) * dy) / l2);
+        const d = Math.hypot(x - ax - u * dx, y - ay - u * dy);
+        if (d < best.d) best = { d, tx: dx / Math.sqrt(l2), ty: dy / Math.sqrt(l2) - 0.12 };
+      }
+      const wJaw = 1 - smoothstep(0.04, 0.4, best.d);
+      const wChin = smoothstep(0.66, 0.86, x) * smoothstep(-0.62, -0.78, y);
+      const wLip = smoothstep(0.6, 0.78, x) * smoothstep(-0.7, -0.58, y);
+      const wCheek = (1 - wJaw) * (1 - wChin) * (1 - wLip);
+      const fx = 0.4 * wCheek + best.tx * wJaw * (1 - wChin) - 0.15 * wChin + 0.45 * wLip;
+      const fy = -0.95 * wCheek + best.ty * wJaw * (1 - wChin) - 0.99 * wChin - 0.89 * wLip;
+      return Math.atan2(fy, fx);
+    };
+    const step = 0.027;
+    for (let gy = 0, n = 0; gy < 36; gy++) {
+      for (let gx = 0; gx < 41; gx++, n++) {
+        const x = -0.12 + (gx + 0.5 + 0.9 * jit(n, 41)) * step;
+        const y = -1.12 + (gy + 0.5 + 0.9 * jit(n, 43)) * step;
+        if (!insidePoly(bk, x, y)) continue;
+        // Neighbouring hairs lie together in loose locks, each with its own small turn.
+        const a = flow(x, y) + 0.22 * Math.sin(9 * x + 4 * y) + 0.32 * jit(n, 47);
+        const len = 0.028 + 0.03 * hash2(n, 53);
+        const curl = 0.6 * jit(n, 57);
+        const m = { x: x + 0.5 * len * Math.cos(a), y: y + 0.5 * len * Math.sin(a) };
+        const st = [P(x, y), P(m.x, m.y), P(m.x + 0.5 * len * Math.cos(a + curl), m.y + 0.5 * len * Math.sin(a + curl))];
+        (look.age >= 35 && hash2(n, 59) < (grey ? 0.45 : 0.12) ? beardFineSilver : beardFine).push(st);
+      }
+    }
+  }
+
+  // Close-up hair of a short cut. Dense grain inside it, combed back over the
+  // crown and down and back over the side of the head; a broken hairline:
+  // short strands crossing the front hairline and the temple onto the skin, a
+  // few stray hairs in front of it, and short hairs standing out of the
+  // silhouette at the front, so the crop never reads as a helmet.
+  const hairFine: Pt[][] = [];
+  const hairFineSilver: Pt[][] = [];
+  const fringe: Pt[][] = [];
+  const fringeSilver: Pt[][] = [];
+  let hairline: Pt[] | null = null;
+  if (!hs.flow) {
+    const silverShare = grey ? 0.45 : 0;
+    const poly: K[] = [...hs.arc.map(([d, t]): K => [skullL(d, t).x, skullL(d, t).y, 0]), ...hs.inner];
+    const step = 0.03;
+    for (let gy = 0, n = 0; gy < 40; gy++) {
+      for (let gx = 0; gx < 64; gx++, n++) {
+        const x = -1.1 + (gx + 0.5 + 0.9 * jit(n, 131)) * step;
+        const y = -0.62 + (gy + 0.5 + 0.9 * jit(n, 137)) * step;
+        if (!insidePoly(poly, x, y)) continue;
+        const ex = (x - sk.cx) / sk.rx;
+        const ey = (y - sk.cy) / sk.ry;
+        const rho = Math.hypot(ex, ey);
+        const a = Math.atan2(ey, ex);
+        // Along the skull (back over the crown) near the top; down and back on the side.
+        const w = smoothstep(0.5, 0.88, rho);
+        const fx = w * -Math.sin(a) * sk.rx - (1 - w) * 0.45;
+        const fy = w * Math.cos(a) * sk.ry - (1 - w) * 0.89;
+        const ang = Math.atan2(fy, fx) - 0.1 + 0.3 * jit(n, 139);
+        (hash2(n, 149) < silverShare ? hairFineSilver : hairFine).push(stroke(x, y, ang, 0.02 + 0.022 * hash2(n, 151)));
+      }
+    }
+    const line = hs.inner.slice(c1).map(([x, y]) => [x, y] as [number, number]);
+    hairline = line.map(([x, y]) => P(x, y));
     for (let i = 0; i < 150; i++) {
-      const x = lerp(-0.1, 0.94, hash2(i, 41));
-      const y = lerp(-1.08, -0.2, hash2(i, 43));
-      if (!insidePoly(bk, x, y)) continue;
-      const st = stroke(x, y, -1.45 + 0.35 * jit(i, 47) + 0.25 * clamp(-y - 0.7), 0.035 + 0.035 * hash2(i, 53));
-      (look.age >= 35 && hash2(i, 59) < (grey ? 0.42 : 0.12) ? beardFineSilver : beardFine).push(st);
+      const t = (i + hash2(i, 157)) / 150;
+      const [x, y] = alongPoly(line, t);
+      const [x2, y2] = alongPoly(line, Math.min(1, t + 0.01));
+      const [x1, y1] = alongPoly(line, Math.max(0, t - 0.01));
+      const tl = Math.hypot(x2 - x1, y2 - y1) || 1;
+      // Towards the skin (right of the line's direction) and along it (towards the front).
+      const sx = (y2 - y1) / tl;
+      const sy = -(x2 - x1) / tl;
+      // Most start inside the thinning edge of the hair; a few stray hairs stand on the skin in front of it.
+      const into = 0.035 - 0.055 * hash2(i, 167) ** 2;
+      // Swept forwards, onto the forehead and down the temple.
+      const ang = Math.atan2(sy, sx) + 0.6 + 0.8 * jit(i, 173);
+      const len = into < 0 ? 0.006 + 0.01 * hash2(i, 179) : 0.016 + 0.03 * hash2(i, 179);
+      (hash2(i, 181) < Math.max(0.25, silverShare) ? fringeSilver : fringe).push(stroke(x - sx * into, y - sy * into, ang, len));
+    }
+    // Short hairs standing out of the silhouette at the front, combed back.
+    for (let i = 0; i < 26; i++) {
+      const d = hs.arc[0][0] + 1 + 56 * Math.pow((i + 0.7 * hash2(i, 191)) / 26, 1.5);
+      const q = skullL(d, thick(d) - 0.006 - 0.008 * hash2(i, 193));
+      const a = (d * Math.PI) / 180;
+      const out = Math.atan2(Math.sin(a) * sk.rx, Math.cos(a) * sk.ry);
+      (hash2(i, 197) < Math.max(0.3, silverShare) ? fringeSilver : fringe).push(stroke(q.x, q.y, out + 0.55 + 0.35 * jit(i, 199), 0.014 + 0.02 * hash2(i, 211)));
     }
   }
   const browPts: [number, number][] = [[ex - 0.15, ey + 0.15], [ex + 0.02, ey + 0.205], [ex + 0.19, ey + 0.19]];
@@ -431,6 +565,8 @@ export const headGeometry = (look: Look, frame: Frame, phase: number): HeadGeo =
     const l = Math.hypot(tx, ty) || 1;
     return [x - (-ty / l) * inset, y - (tx / l) * inset];
   };
+  /** The cornea's arc just inside its bright line, for spacing the era lights evenly by length; lower down it keeps clear of the lower lid. */
+  const arcIn = Array.from({ length: 41 }, (_, i) => onCornea(i / 40, 0.0032 + 0.004 * (i / 40) ** 1.5));
   /** Lashes grow from a lid: base at t along it, leaving at `a0` and curling to `a1`. */
   const lash = (lid: [number, number][], t: number, a0: number, a1: number, len: number): Pt[] => {
     const [bx, by] = alongPoly(lid, t);
@@ -459,8 +595,7 @@ export const headGeometry = (look: Look, frame: Frame, phase: number): HeadGeo =
     return [E(IC[0] + IR[0] * r0 * Math.cos(th), IC[1] + IR[1] * r0 * Math.sin(th)), E(IC[0] + IR[0] * r1 * Math.cos(th), IC[1] + IR[1] * r1 * Math.sin(th))];
   });
   // The touchline he is chasing, reflected as a curve across the lower iris
-  // and cornea; his seven eras sit on it as seven pinpoints, 2026 at the back
-  // to 1994 at the front, the way he runs.
+  // and cornea.
   const RJ = [[0.046, -0.008], [0.072, -0.017], [0.098, -0.001]] as const;
   const onLine = (t: number) => {
     const u = 1 - t;
@@ -481,6 +616,11 @@ export const headGeometry = (look: Look, frame: Frame, phase: number): HeadGeo =
     beardFine,
     beardFineSilver,
     brow,
+    hairFine,
+    hairFineSilver,
+    fringe,
+    fringeSilver,
+    hairline,
     eye: {
       upper: [E(-0.1, 0.0), E(-0.02, 0.05), E(0.07, 0.04), E(0.098, 0.01)],
       lower: [E(-0.09, -0.008), E(0.0, -0.032), E(0.078, -0.02)],
@@ -499,7 +639,9 @@ export const headGeometry = (look: Look, frame: Frame, phase: number): HeadGeo =
       pupil: { c: E(IC[0], IC[1]), top: E(IC[0], IC[1] + 0.38 * IR[1]), side: E(IC[0] + 0.38 * IR[0], IC[1]) },
       fibres,
       dome: [Ev(CA), Ev(CB), Ev(CC), E(0.079, -0.014), E(0.085, 0.006), E(0.079, 0.026)],
-      jewels: Array.from({ length: 7 }, (_, i) => onLine(lerp(0.05, 0.95, i / 6))),
+      // A row high over the pupil and the upper iris, well behind the cornea's arc.
+      catchesClose: [E(0.0702, 0.015), E(0.0662, 0.0186), E(0.0621, 0.0204), E(0.058, 0.021)],
+      jewels: Array.from({ length: 7 }, (_, i) => Ev(alongPoly(arcIn, lerp(0.1, 0.88, i / 6)))),
     },
   };
 };
