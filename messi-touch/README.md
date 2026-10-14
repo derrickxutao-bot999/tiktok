@@ -9,6 +9,8 @@ A 60-second vertical film (1080×1920, 60 fps, 3600 frames) built in [Remotion](
 | 3 The great journey | 25–45 s | 1500–2700 | planned (slate) |
 | 4 The fateful touch | 45–60 s | 2700–3600 | **built** |
 
+The look is "Chronograph" (see `STYLE.md`). Light is the only material: figures are dark volumes drawn by a glowing contour, and the jersey is the one saturated colour at night, the sun at dusk. Lines are hairline-fine, and time is made visible in Marey-style echoes, footfall rings, a stopwatch countdown and a measured last centimetre.
+
 ## How the match cut is exact
 
 Everything on screen is a pure function of three things:
@@ -41,7 +43,7 @@ The same idea links the two ends of the film:
 
 - the 1 cm gap;
 - that era changes land on footfalls;
-- that cadence rises;
+- that cadence only ever rises;
 - that both scenes share the frozen camera and clock;
 - that Scene 1's frozen boy and Scene 4's frozen veteran share the toe;
 - that every era's toe position and angle are identical from the freeze through the cut;
@@ -50,7 +52,9 @@ The same idea links the two ends of the film:
 - that feet plant rather than skid;
 - that the camera never jerks outside its two deliberate breaks (the freeze and the eyeline cut);
 - that every pose is finite and in reach;
-- that the drawn boot tip is the engine toe for both variants.
+- that the drawn boot tip is the engine toe for both variants;
+- that the ball has the same outline and squash in both worlds and is cut flat by the ground;
+- that the "OUT" countdown stays left of the band where social-video buttons sit.
 
 `node tools/matchcut.mjs` renders the cut frame both ways with the engine's toe and ball markers, as visual proof.
 
@@ -99,14 +103,14 @@ src/
     eras.ts                 the seven looks (kit, hair, beard, boots, scale), variants
     palette.ts              colours and light for both worlds, font stacks
     fonts.ts                local font loading (OFL fonts in public/fonts)
-    math.ts                 vectors, easing, monotone cubic, hashes
+    math.ts                 vectors, easing, interpolation, smooth min, hashes
   components/
     TheTouch.tsx            the shared shot
     DetailInset.tsx         "DETAIL A · 10:1": the frozen gap magnified ten times
     Athlete.tsx (+athlete/) the vector athlete; AthleteShadow; EtchedAthlete (line art)
     Environment.tsx (+env/) Backdrop, Ground and Foreground for the stadium night and Rosario dusk
     Ball.tsx                match ball / old leather ball, shadow
-    fx/                     FootfallPulses, Glitch, FrameShuffle, WhiteOut, Grain,
+    fx/                     FootfallPulses, BallPath, Glitch, FrameShuffle, WhiteOut, Grain,
                             Vignette, EraCaption, Subtitle, GapMeasure, ContactPulse
   scenes/
     Frozen.tsx              the frozen instant both scenes share (deck, bands, plate, grade)
@@ -116,7 +120,8 @@ src/
     Scene4TheTouch.tsx      built
     Placeholder.tsx         the slate
   lab/                      separate entry points to develop components in isolation
-  tests/engine.test.ts      the guarantees above
+  tests/                    engine.test.ts, ball.test.ts: the guarantees above
+                            (components/athlete/*.test.ts check the boots, the toe clip, the eye point)
 tools/
   stills.mjs                render chosen frames (one bundle) + contact sheet
   matchcut.mjs              visual proof of the match cut
@@ -149,7 +154,7 @@ npm install
 npm test                                  # engine guarantees
 npm run typecheck
 npm run studio                            # preview in the browser
-node tools/stills.mjs Scene1 0,250,600,660 --sheet out/s1.png   # quick frames
+node tools/stills.mjs Scene1 0,250,600,648 --sheet out/s1.png   # quick frames
 npm run matchcut                          # out/matchcut/*.png
 npm run render                            # out/messi-touch.mp4 (whole film)
 npm run render:scene1 && npm run render:scene4
