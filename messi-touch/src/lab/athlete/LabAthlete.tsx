@@ -10,18 +10,25 @@
 //   26    head study: every era's head at 1000 px/m (two columns)
 //   27    the frozen centimetre at 4000 px/m for the modern, classic and worn boots
 //   28-31 the legend drawn on: progress 0.15, 0.35, 0.6, 0.85
+//   32    era legibility at Scene 1 size (300-330 px/m, head radius ~34 px), all seven eras mid-stride
+//   33    the eye at 6500 px/m, centred on eyePoint at (540, 900), with AthleteShadow (culled)
+//   34    the eye at 4000 px/m (the push-in), 35: the chest at 1600 px/m (all stars clear of the sleeve)
+//   36-37 the legend at 430 px/m over the dusk sky with glow: progress 1 and 0.55
+//   38    the same legend without glow at 300 px/m (the cheap echo path: no details)
+//   39-40 the toe at 12000 px/m on the contact normal: veteran at scene4T(285, 292), the boy at scene4T(300, 305)
 
 import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
-import { Athlete, AthleteShadow, EtchedAthlete } from "../../components/Athlete";
-import { BALL, ballAt } from "../../lib/ball";
+import { Athlete, AthleteShadow, EtchedAthlete, eyePoint } from "../../components/Athlete";
+import { Backdrop, Ground } from "../../components/Environment";
+import { BALL, TOUCH_DIR, ballAt } from "../../lib/ball";
 import { eraScaleAtT, scene4T } from "../../lib/clock";
 import { ERAS, Look, VARIANT_LOOK, WorldStyle } from "../../lib/eras";
 import "../../lib/fonts";
 import { scene1FrameToT } from "../../lib/gait";
 import { PALETTE } from "../../lib/palette";
 import { Pose, footfallsBetween, solvePose } from "../../lib/rig";
-import { CLOSEUP_SHOT, EYES_SHOT, FREEZE_SHOT } from "../../lib/shots";
+import { CLOSEUP_SHOT, EYES_SHOT, FREEZE_SHOT, scene4Shot } from "../../lib/shots";
 import { T_FREEZE } from "../../lib/touch";
 import { Camera, Shot, cameraFromShot, project } from "../../lib/world";
 
@@ -190,6 +197,101 @@ const legend = (progress: number) => {
   );
 };
 
+/** Every era mid-stride at Scene 1's size, at true pixels: the era must read from hair, beard and kit alone. */
+const eraLineup = () => {
+  const t = scene1FrameToT(430);
+  return (
+    <Stage world="stadium-night" camera={cameraFromShot({ ...FREEZE_SHOT, screenY: 4000 })}>
+      {ERAS.map((look, i) => {
+        const pose = solvePose(t, look);
+        const x0 = i % 2 ? 540 : 0;
+        const y0 = Math.floor(i / 2) * 470 + 10;
+        const camera = cameraFromShot({ lookX: pose.pelvis.x + 0.05, lookY: pose.pelvis.y, screenX: x0 + 270, screenY: y0 + 330, pxPerM: 315, height: 1 });
+        const world: WorldStyle = i === ERAS.length - 1 ? "rosario-dusk" : "stadium-night";
+        return (
+          <Cell key={look.id} x={x0} y={y0} w={540} h={460} bg={world === "rosario-dusk" ? DUSK.skyMid : NIGHT.skyTop}>
+            <Athlete pose={pose} camera={camera} world={world} idPrefix={`l${i}`} />
+            <text x={x0 + 16} y={y0 + 30} fill="#8899AA" fontSize={18} fontFamily="monospace">
+              {look.year} {look.hair}/{look.beard} R={(pose.head.radius * 315).toFixed(0)}px
+            </text>
+          </Cell>
+        );
+      })}
+    </Stage>
+  );
+};
+
+/** The eye shot: the camera aimed at eyePoint, as Scene 4 holds it. */
+const eyeShot = (pxPerM: number, look: Look = ERAS[0]) => {
+  const pose = solvePose(T_FREEZE, look);
+  const e = eyePoint(pose);
+  const camera = cameraFromShot({ lookX: e.x, lookY: e.y, screenX: 540, screenY: 900, pxPerM, height: e.y });
+  return (
+    <Stage world="stadium-night" camera={camera}>
+      <AthleteShadow pose={pose} camera={camera} world="stadium-night" idPrefix="sh" />
+      <Athlete pose={pose} camera={camera} world="stadium-night" idPrefix="a" />
+    </Stage>
+  );
+};
+
+const chestShot = () => {
+  const pose = solvePose(T_FREEZE, ERAS[0]);
+  const camera = cameraFromShot({ lookX: pose.neck.x, lookY: pose.neck.y - 0.1, screenX: 540, screenY: 900, pxPerM: 1600, height: pose.neck.y });
+  return (
+    <Stage world="stadium-night" camera={camera}>
+      <Athlete pose={pose} camera={camera} world="stadium-night" idPrefix="a" />
+    </Stage>
+  );
+};
+
+/** The legend in the sky over the real dusk backdrop, blended as Scene 4 blends it. */
+const legendSky = (progress: number, pxPerM: number, glow: boolean) => {
+  const sky = cameraFromShot(scene4Shot(880));
+  const pose = solvePose(0, ERAS[0]);
+  const camera = cameraFromShot({ lookX: pose.pelvis.x + 0.3, lookY: pose.pelvis.y, screenX: 540, screenY: 560, pxPerM, height: pose.pelvis.y });
+  return (
+    <AbsoluteFill style={{ background: DUSK.skyTop }}>
+      <svg width={1080} height={1920} viewBox="0 0 1080 1920">
+        <Backdrop camera={sky} world="rosario-dusk" t={3} idPrefix="bd" />
+        <Ground camera={sky} world="rosario-dusk" t={3} idPrefix="bd" />
+      </svg>
+      <AbsoluteFill style={{ mixBlendMode: "screen", opacity: 0.55 }}>
+        <svg width={1080} height={1920} viewBox="0 0 1080 1920">
+          <EtchedAthlete pose={pose} camera={camera} idPrefix="legend" progress={progress} color={DUSK.sun} width={2.2} glow={glow} />
+        </svg>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/** The toe at contact, magnified, with the contact normal's half-plane through the engine's toe. */
+const toeStudy = (variant: "veteran-39" | "rosario-kid", frames: [number, number]) => {
+  const look = VARIANT_LOOK[variant];
+  const world: WorldStyle = variant === "veteran-39" ? "stadium-night" : "rosario-dusk";
+  return (
+    <Stage world="stadium-night" camera={cameraFromShot({ ...FREEZE_SHOT, screenY: 4000 })}>
+      {frames.map((f, i) => {
+        const t = scene4T(f);
+        const pose = solvePose(t, look);
+        const toe = pose.legs.L.toe;
+        const camera = cameraFromShot({ lookX: toe.x, lookY: toe.y, screenX: 540, screenY: 480 + i * 960, pxPerM: 12000, height: toe.y });
+        const p = project(camera, toe.x, toe.y);
+        const m = { x: Math.sin(TOUCH_DIR), y: Math.cos(TOUCH_DIR) };
+        return (
+          <Cell key={f} x={0} y={i * 960} w={1080} h={950} bg={world === "rosario-dusk" ? DUSK.skyMid : NIGHT.skyTop}>
+            <Athlete pose={pose} camera={camera} world={world} idPrefix={`t${i}`} midLayer={<BallGuide camera={camera} t={t} />} />
+            <path d={`M${p.x - m.x * 400} ${p.y - m.y * 400}L${p.x + m.x * 400} ${p.y + m.y * 400}`} stroke="#FF00FF" strokeOpacity={0.6} strokeWidth={1} />
+            <circle cx={p.x} cy={p.y} r={3} fill="none" stroke="#FF00FF" strokeWidth={1} />
+            <text x={20} y={i * 960 + 40} fill="#8899AA" fontSize={22} fontFamily="monospace">
+              {variant} scene4 f{f} t={t.toFixed(4)}
+            </text>
+          </Cell>
+        );
+      })}
+    </Stage>
+  );
+};
+
 export const Lab: React.FC = () => {
   const frame = useCurrentFrame();
   if (frame <= 6) return frozen(frame);
@@ -228,5 +330,14 @@ export const Lab: React.FC = () => {
   if (frame === 26) return headStudy();
   if (frame === 27) return gapStudy();
   if (frame >= 28 && frame <= 31) return legend([0.15, 0.35, 0.6, 0.85][frame - 28]);
+  if (frame === 32) return eraLineup();
+  if (frame === 33) return eyeShot(6500);
+  if (frame === 34) return eyeShot(4000);
+  if (frame === 35) return chestShot();
+  if (frame === 36) return legendSky(1, 430, true);
+  if (frame === 37) return legendSky(0.55, 430, true);
+  if (frame === 38) return legendSky(1, 300, false);
+  if (frame === 39) return toeStudy("veteran-39", [285, 292]);
+  if (frame === 40) return toeStudy("rosario-kid", [300, 305]);
   return <AbsoluteFill style={{ background: NIGHT.skyTop }} />;
 };

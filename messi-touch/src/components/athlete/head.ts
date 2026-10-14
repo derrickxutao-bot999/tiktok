@@ -8,8 +8,25 @@
 // watch dial; long hair carries flow lines from the crown to its tips.
 
 import { Beard, Hair, Look } from "../../lib/eras";
-import { clamp, hash2, lerp, smoothstep } from "../../lib/math";
+import { Vec2, clamp, hash2, lerp, smoothstep } from "../../lib/math";
+import { Pose } from "../../lib/rig";
 import { Frame, Pt, inFrame } from "./geom";
+
+/** The eye's own unit (head units per eye unit) and its centre on the face, head units: a child's eye sits a little lower. */
+const EYE_SCALE = 1.15;
+const eyeAt = (look: Look) => {
+  const c = smoothstep(1.02, 1.2, look.head);
+  return { x: lerp(0.63, 0.6, c), y: lerp(-0.03, -0.13, c) };
+};
+/** The centre of the open eye between the lids, eye units from eyeAt. */
+const EYE_OPEN_C = { x: 0.0, y: 0.009 };
+
+/** World point (metres) at the centre of the visible eye: aim the camera here for "stories in his eyes". */
+export const eyePoint = (pose: Pose): Vec2 => {
+  const e = eyeAt(pose.look);
+  const q = inFrame({ o: pose.head.center, a: pose.head.pitch, s: pose.head.radius }, e.x + EYE_OPEN_C.x * EYE_SCALE, e.y + EYE_OPEN_C.y * EYE_SCALE);
+  return { x: q.x, y: q.y };
+};
 
 /** (x, y, sharp) in head units. */
 type K = readonly [number, number, 0 | 1];
@@ -217,9 +234,8 @@ export const headGeometry = (look: Look, frame: Frame, phase: number): HeadGeo =
 
   const beard = look.beard === "none" ? null : BEARD[look.beard].map(K2);
 
-  // The eye sits a little lower and larger on a child's face.
-  const ex = lerp(0.63, 0.6, c);
-  const ey = lerp(-0.03, -0.13, c);
+  // The eye sits a little lower on a child's face.
+  const { x: ex, y: ey } = eyeAt(look);
   const lines: HeadGeo["lines"] = [];
   const ed = lerp(0, -0.08, c);
   if (!hs.coversEar) {
@@ -312,8 +328,7 @@ export const headGeometry = (look: Look, frame: Frame, phase: number): HeadGeo =
   // Long hair carries flow lines from the crown to its tips.
   const strands = (hs.flow ?? []).map((l, i) => ({ pts: l.map(([x, y]) => swept(x, y)), weight: 0.48 - 0.04 * i }));
 
-  const es = 1.15;
-  const E = (x: number, y: number) => P(ex + x * es, ey + y * es);
+  const E = (x: number, y: number) => P(ex + x * EYE_SCALE, ey + y * EYE_SCALE);
 
   return {
     outline,

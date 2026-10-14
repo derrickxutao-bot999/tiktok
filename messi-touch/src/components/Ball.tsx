@@ -13,7 +13,7 @@ import { PALETTE, lightOf } from "../lib/palette";
 import { HEIGHT, WIDTH } from "../lib/timeline";
 import { Camera, project } from "../lib/world";
 import { LEATHER, MODERN, polyPath } from "./env/ballPatterns";
-import { mix } from "./env/common";
+import { lod, mix } from "./env/common";
 
 export type BallProps = { ball: BallState; camera: Camera; world: WorldStyle; idPrefix: string };
 
@@ -77,8 +77,14 @@ export const Ball: React.FC<BallProps> = ({ ball, camera, world, idPrefix }) => 
   const hair = Math.min(2.6, Math.max(0.5, r * 0.012));
   const rimW = Math.min(3, Math.max(0.8, r * 0.018));
   const C = night ? NIGHT_BALL : DUSK_BALL;
+  // Under the squash the bulge would push the ball through the turf: the
+  // ground (y = 0 at the ball's depth) cuts it flat instead. The ball is never
+  // moved, so the contact face stays on the toe.
+  const squashed = ball.squash > 1e-4;
+  const groundY = project(camera, ball.x, 0, ball.z).y;
+  const pad = r * 2 + 8;
 
-  return (
+  const body = (
     <g transform={`translate(${p.x} ${p.y})${squashTransform(ball, r)}`}>
       <defs>
         <clipPath id={`${id}-clip`}>
@@ -135,12 +141,24 @@ export const Ball: React.FC<BallProps> = ({ ball, camera, world, idPrefix }) => 
       <circle r={r - rimW / 2} fill="none" stroke={`url(#${id}-rim)`} strokeWidth={rimW} />
     </g>
   );
+  if (!squashed) return body;
+  return (
+    <g>
+      <defs>
+        <clipPath id={`${id}-ground`} clipPathUnits="userSpaceOnUse">
+          <rect x={p.x - pad} y={p.y - pad} width={pad * 2} height={Math.max(0, groundY + 0.5 - (p.y - pad))} />
+        </clipPath>
+      </defs>
+      <g clipPath={`url(#${id}-ground)`}>{body}</g>
+    </g>
+  );
 };
 
 /** The leather: tinted panels, stitched seams, worn patches; all turn with the ball. */
 const DuskSurface: React.FC<{ r: number; rot: number; hair: number }> = ({ r, rot, hair }) => {
   const C = DUSK_BALL;
-  const detail = r > 26;
+  // Stitches and scratches fade in as the ball grows, so a zoom never pops them on.
+  const detail = lod(r, 22, 30);
   const pents = LEATHER.panels.filter((p) => p.pent).map((p) => p.pts);
   const lightHex = LEATHER.panels.filter((p) => !p.pent && p.tone > 0.55).map((p) => p.pts);
   return (
@@ -149,10 +167,10 @@ const DuskSurface: React.FC<{ r: number; rot: number; hair: number }> = ({ r, ro
       <path d={polyPath(lightHex, r, rot, true)} fill={C.hex} opacity={0.16} />
       <path d={polyPath(LEATHER.scuffs, r, rot, true)} fill={C.scuff} opacity={0.2} />
       <path d={polyPath(LEATHER.seams, r, rot)} fill="none" stroke={C.seam} strokeWidth={hair * 1.5} strokeLinejoin="round" opacity={0.85} />
-      {detail ? (
+      {detail > 0 ? (
         <>
-          <path d={polyPath(LEATHER.stitches, r, rot)} fill="none" stroke={C.thread} strokeWidth={hair * 0.8} strokeLinecap="round" opacity={0.55} />
-          <path d={polyPath(LEATHER.scratches, r, rot)} fill="none" stroke={C.scuff} strokeWidth={hair * 0.6} opacity={0.35} />
+          <path d={polyPath(LEATHER.stitches, r, rot)} fill="none" stroke={C.thread} strokeWidth={hair * 0.8} strokeLinecap="round" opacity={0.55 * detail} />
+          <path d={polyPath(LEATHER.scratches, r, rot)} fill="none" stroke={C.scuff} strokeWidth={hair * 0.6} opacity={0.35 * detail} />
         </>
       ) : null}
     </>

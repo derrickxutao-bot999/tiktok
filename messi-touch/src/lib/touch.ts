@@ -24,7 +24,10 @@ export const TOUCH = {
   landToeY: 0.018,
   /** Follow-through: the toe keeps rising briefly, then is driven down. */
   followUp: 0.45,
-  followDrag: 18,
+  /** Fraction of the contact speed carried through to the landing point. */
+  followCarry: 0.55,
+  /** Toe velocity as it plants, m/s (nearly at rest, a little down). */
+  landVel: { x: 0.3, y: -0.4 },
 } as const;
 
 /** World time of the frozen frame: the toe is exactly 1 cm from the ball. */
@@ -65,16 +68,23 @@ export const toeAt = (t: number, landT: number): Vec2 => {
     return v(b.x - dir.x * back, b.y - dir.y * back);
   }
   if (t <= tc) return contactPointAt(t);
-  // Ballistic-looking follow-through that lands at landT.
+  // Follow-through: the toe keeps travelling with the ball for a moment, rises a
+  // touch, then is brought down to plant almost at rest (Hermite in x and y).
   const p0 = contactPointAt(tc);
   const v0 = toeVelAtContactEnd();
-  const tau = Math.min(t, landT) - tc;
   const T = landT - tc;
-  // x: decelerating drag, y: chosen so that the toe reaches landToeY at landT.
-  const x = p0.x + v0.x * tau - (TOUCH.followDrag * tau * tau) / 2;
-  const g = (2 * (p0.y + v0.y * T - TOUCH.landToeY)) / (T * T);
-  const y = p0.y + v0.y * tau - (g * tau * tau) / 2;
+  const s = Math.min(t, landT) - tc;
+  const landX = p0.x + v0.x * T * TOUCH.followCarry;
+  const x = hermite1(p0.x, v0.x, landX, TOUCH.landVel.x, T, s);
+  const y = hermite1(p0.y, v0.y, TOUCH.landToeY, TOUCH.landVel.y, T, s);
   return v(x, y);
+};
+
+const hermite1 = (p0: number, v0: number, p1: number, v1: number, T: number, s: number) => {
+  const u = s / T;
+  const u2 = u * u;
+  const u3 = u2 * u;
+  return (2 * u3 - 3 * u2 + 1) * p0 + (u3 - 2 * u2 + u) * T * v0 + (-2 * u3 + 3 * u2) * p1 + (u3 - u2) * T * v1;
 };
 
 /** Foot pitch along the authored path. */

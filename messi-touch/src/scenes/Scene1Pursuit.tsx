@@ -1,16 +1,18 @@
 // Scene 1 - Pursuit and reverse flow (0-12 s).
 //
-// One tracking shot. The 39-year-old sprints after a ball that is drifting
-// over the touchline. Every footfall sends a ripple across the grass; on the
-// footfalls at frames 250, 320 ... 600 he steps back one era (the user's
+// One tracking shot. The 39-year-old sprints after a ball drifting over the
+// touchline. Every footfall rings out across the grass; on the footfalls at
+// frames 250, 320 ... 600 he steps back one era (the user's
 // Math.floor(interpolate(frame, [180, 600], [0, eras.length - 1]))), with a
-// glitch and a spring in his size. When his toe is 1 cm from the ball the
-// picture freezes, the last centimetre is measured, and the frozen frame is
-// shuffled through all his eras into white.
+// time-slip glitch and a spring in his size, and leaves a contour echo of
+// himself behind. When his toe is 1 cm from the ball the picture freezes, the
+// last centimetre is measured, and the frozen frame is shuffled through all
+// his eras, locks into one figure built from seven eras, and burns to white.
 
 import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
 import { EtchedAthlete } from "../components/Athlete";
+import { DetailInset } from "../components/DetailInset";
 import {
   BallPath,
   EraCaption,
@@ -21,14 +23,13 @@ import {
   Grain,
   PULSE_LIFE,
   Vignette,
-  WhiteOut,
   shuffleWhiteness,
 } from "../components/fx";
 import { TheTouch } from "../components/TheTouch";
 import { ballAt } from "../lib/ball";
 import { ERA_SWITCH_FRAMES, eraIndexAt, eraScaleAtT, scene1T } from "../lib/clock";
 import { ERAS, Look } from "../lib/eras";
-import { scene1FrameToT, stepAt, tToScene1Frame } from "../lib/gait";
+import { pelvisXCanonical, scene1FrameToT, stepAt } from "../lib/gait";
 import { clamp } from "../lib/math";
 import { PALETTE } from "../lib/palette";
 import { footfallsBetween, solvePose } from "../lib/rig";
@@ -36,67 +37,62 @@ import { FREEZE_SHOT, scene1Shot } from "../lib/shots";
 import { S1 } from "../lib/timeline";
 import { T_FREEZE, contactPointAt } from "../lib/touch";
 import { Camera, D0, project } from "../lib/world";
+import { FROZEN_ACCENT, FrozenEra, SHUFFLE_BANDS, SHUFFLE_PLATE, frozenFilter } from "./Frozen";
 
-/** Steps on which the era changes (each is a footfall). */
-const ERA_STEPS = new Set(ERA_SWITCH_FRAMES.map((f) => Math.round(stepAt(scene1FrameToT(f)))));
+const NIGHT = PALETTE["stadium-night"];
+
+/** Footfalls on which the era changes, in order; the era of any step follows from them. */
+const ERA_STEPS = ERA_SWITCH_FRAMES.map((f) => Math.round(stepAt(scene1FrameToT(f))));
+const eraOfStep = (n: number) => ERA_STEPS.filter((s) => n >= s).length;
+
 /** The first era's caption comes in once the run is established. */
 const FIRST_CAPTION = 24;
 const eraStartFrame = (i: number) => (i === 0 ? FIRST_CAPTION : ERA_SWITCH_FRAMES[i - 1]);
+/** The caption's box, kept clear of the stadium's hairlines. */
+const CAPTION_SAFE = { x0: 0, y0: 220, x1: 780, y1: 610 };
 
-const stepStrength = (n: number) => (ERA_STEPS.has(n) ? 1 : 0);
+const stepStrength = (n: number) => (ERA_STEPS.includes(n) ? 1 : 0);
 
 /** Glitch from recent footfalls: a flick on every step, a jolt on era changes. */
 const glitchAt = (t: number, look: Look, frame: number) => {
-  if (frame >= S1.freeze) return frame < S1.freeze + 5 ? 0.55 * (1 - (frame - S1.freeze) / 5) : 0;
+  if (frame >= S1.freeze) return 0;
   let g = 0;
   for (const ff of footfallsBetween(t - 0.3, t, look, { scaleAt: eraScaleAtT })) {
-    const age = t - ff.t;
-    const peak = ERA_STEPS.has(ff.n) ? 0.9 : 0.1;
-    const decay = ERA_STEPS.has(ff.n) ? 0.07 : 0.035;
-    g = Math.max(g, peak * Math.exp(-age / decay));
+    const strong = ERA_STEPS.includes(ff.n);
+    g = Math.max(g, (strong ? 0.9 : 0.1) * Math.exp(-(t - ff.t) / (strong ? 0.07 : 0.035)));
   }
   return g;
 };
 
-/** How long a chronophotographic echo stays on the pitch, world seconds. */
-const ECHO_LIFE = 0.8;
+/** How long an echo lingers, world seconds, and how fast it falls behind on screen (fraction of the run). */
+const ECHO_LIFE = 0.85;
+const ECHO_LAG = 0.22;
 
 /**
- * Marey's plates: at every footfall the runner leaves a contour of himself,
- * in the era he wore at that instant, held where it happened on the pitch.
+ * Marey's plates: at every footfall the runner leaves a contour of himself in
+ * the era he wore at that step. Like a long exposure, the contours fall behind
+ * him slower than the pitch does, so the last few eras trail him in a row.
  */
-const Echoes: React.FC<{ camera: Camera; t: number; look: Look }> = ({ camera, t, look }) => (
-  <g>
+const Echoes: React.FC<{ camera: Camera; t: number; look: Look; opacity: number }> = ({ camera, t, look, opacity }) => (
+  <g opacity={opacity}>
     {footfallsBetween(t - ECHO_LIFE, t - 1 / 60, look, { scaleAt: eraScaleAtT }).map((ff) => {
-      const era = ERAS[eraIndexAt(tToScene1Frame(ff.t))];
+      const era = ERAS[eraOfStep(ff.n)];
       const fade = 1 - (t - ff.t) / ECHO_LIFE;
+      const drift = (1 - ECHO_LAG) * (pelvisXCanonical(t) - pelvisXCanonical(ff.t));
       return (
         <EtchedAthlete
           key={ff.n}
           pose={solvePose(ff.t, era, { scaleAt: eraScaleAtT })}
-          camera={camera}
+          camera={{ ...camera, x: camera.x - drift }}
           idPrefix={`echo${ff.n}`}
           progress={1}
           color={era.accent}
           width={1.4}
-          opacity={0.55 * fade * fade}
+          opacity={0.6 * fade * fade}
         />
       );
     })}
   </g>
-);
-
-/** The frozen moment as a given era would have lived it (for the shuffle). */
-const FrozenEra: React.FC<{ look: Look; id: string }> = ({ look, id }) => (
-  <TheTouch
-    variant="veteran-39"
-    t={T_FREEZE}
-    shot={FREEZE_SHOT}
-    look={look}
-    scaleAt={() => look.scale}
-    world="stadium-night"
-    idPrefix={id}
-  />
 );
 
 export const Scene1Pursuit: React.FC = () => {
@@ -105,21 +101,20 @@ export const Scene1Pursuit: React.FC = () => {
   const eraIndex = eraIndexAt(frame);
   const look = ERAS[eraIndex];
   const shot = scene1Shot(frame);
-  const night = PALETTE["stadium-night"];
-
   const frozen = frame >= S1.freeze;
-  // The ball's fate (dotted, ending OUT) appears once the ball is in frame.
-  const pathOpacity = interpolate(frame, [470, 540, S1.shuffle[0] - 4, S1.shuffle[0]], [0, 0.85, 0.85, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
   const shuffling = frame >= S1.shuffle[0];
+  const fade = (a: number, b: number, from = 1, to = 0) =>
+    interpolate(frame, [a, b], [from, to], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
-  const measure = interpolate(frame, [...S1.measure], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const measureFade = interpolate(frame, [S1.shuffle[0], S1.shuffle[0] + 6], [1, 0], {
+  // On the frozen frame the traces of the run (echoes, rings, the ball's fate)
+  // fade away and leave only the measured centimetre.
+  const traces = fade(S1.freeze, S1.freeze + 28);
+  const pathOpacity = interpolate(frame, [40, 110, 450, S1.freeze, S1.freeze + 4], [0, 0.45, 0.85, 0.85, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
+  const measure = fade(S1.measure[0], S1.measure[1], 0, 1);
+  const measureOut = fade(S1.shuffle[0] - 6, S1.shuffle[0] + 2);
 
   const main = (
     <TheTouch
@@ -129,74 +124,89 @@ export const Scene1Pursuit: React.FC = () => {
       look={look}
       scaleAt={eraScaleAtT}
       world="stadium-night"
+      accent={frozen ? FROZEN_ACCENT : look.accent}
+      safe={frozen ? undefined : CAPTION_SAFE}
       idPrefix="s1"
       groundOverlay={({ camera }) => (
         <>
-          <FootfallPulses
-            camera={camera}
-            t={t}
-            footfalls={footfallsBetween(t - PULSE_LIFE, t, look, { scaleAt: eraScaleAtT })}
-            color={look.accent}
-            strength={stepStrength}
-            idPrefix="s1fp"
-          />
-          {pathOpacity > 0 ? <BallPath camera={camera} t={t} color={night.light.glow} opacity={pathOpacity} /> : null}
-          <Echoes camera={camera} t={t} look={look} />
+          <g opacity={traces}>
+            <FootfallPulses
+              camera={camera}
+              t={t}
+              footfalls={footfallsBetween(t - PULSE_LIFE, t, look, { scaleAt: eraScaleAtT })}
+              color={look.accent}
+              strength={stepStrength}
+              idPrefix="s1fp"
+            />
+          </g>
+          {pathOpacity > 0 ? <BallPath camera={camera} t={t} color={NIGHT.light.glow} opacity={pathOpacity} idPrefix="s1bp" /> : null}
+          {traces > 0 ? <Echoes camera={camera} t={t} look={look} opacity={traces} /> : null}
         </>
       )}
       overlay={({ camera, pose }) => {
-        if (!frozen || measure <= 0) return null;
+        if (!frozen || measure <= 0 || measureOut <= 0) return null;
         const toe = project(camera, pose.legs.L.toe.x, pose.legs.L.toe.y);
-        const b = ballAt(T_FREEZE);
         const cp = contactPointAt(T_FREEZE);
-        const on = project(camera, cp.x, cp.y, b.z);
+        const on = project(camera, cp.x, cp.y, ballAt(T_FREEZE).z);
         return (
-          <g opacity={measureFade}>
-            <GapMeasure a={toe} b={on} label="1 cm" progress={measure} color={night.light.glow} pxPerM={camera.f / D0} />
+          <g opacity={measureOut}>
+            <GapMeasure a={toe} b={on} label="1 cm" progress={measure} color={NIGHT.light.glow} pxPerM={camera.f / D0} fontSize={30} idPrefix="s1gm" />
           </g>
         );
       }}
     />
   );
 
-  // Before the freeze, every footfall flicks the picture; era changes jolt it.
-  const glitch = glitchAt(t, look, frame);
   const shuffleProgress = clamp((frame - S1.shuffle[0]) / (S1.shuffle[1] - S1.shuffle[0]));
   const picture = shuffling ? (
     <FrameShuffle
       direction="out"
       progress={shuffleProgress}
       seed={7}
-      layers={[main, ...ERAS.slice(0, ERAS.length - 1).map((e, i) => <FrozenEra key={e.id} look={e} id={`s1sh${i}`} />)]}
+      bands={SHUFFLE_BANDS}
+      plate={SHUFFLE_PLATE}
+      subject={ERAS.length - 1}
+      layers={ERAS.map((e, i) => (i === ERAS.length - 1 ? main : <FrozenEra key={e.id} look={e} id={`s1sh${i}`} />))}
     />
   ) : (
-    <Glitch amount={glitch} seed={Math.floor(t * 60)}>
+    <Glitch amount={glitchAt(t, look, frame)} seed={Math.floor(t * 60)}>
       {main}
     </Glitch>
   );
 
   const captionAge = frame - eraStartFrame(eraIndex);
-  const captionOpacity = interpolate(frame, [S1.freeze, S1.freeze + 10], [1, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const fadeIn = interpolate(frame, [0, 24], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  // A camera-flash beat on the freeze itself.
-  const freezeFlash = frozen ? interpolate(frame, [S1.freeze, S1.freeze + 8], [0.35, 0], { extrapolateRight: "clamp" }) : 0;
+  const captionOpacity = fade(S1.freeze, S1.freeze + 10);
+  const fadeIn = fade(0, 24);
+  // A camera-flash beat on the freeze itself: light added, darks never crushed.
+  const flash = frozen ? fade(S1.freeze, S1.freeze + 9, 0.32, 0) : 0;
+  const whiteness = shuffling ? shuffleWhiteness(shuffleProgress, "out") : 0;
 
   return (
-    <AbsoluteFill style={{ backgroundColor: night.skyTop }}>
-      <AbsoluteFill style={{ filter: frozen && !shuffling ? "saturate(0.72) contrast(1.08)" : undefined }}>{picture}</AbsoluteFill>
+    <AbsoluteFill style={{ backgroundColor: NIGHT.skyTop }}>
+      <AbsoluteFill style={{ filter: frozenFilter(frozen ? 1 : 0) }}>{picture}</AbsoluteFill>
+      {frozen && !shuffling ? (
+        <DetailInset
+          t={T_FREEZE}
+          shot={FREEZE_SHOT}
+          look={look}
+          scaleAt={eraScaleAtT}
+          world="stadium-night"
+          accent={FROZEN_ACCENT}
+          progress={fade(S1.measure[0] + 2, S1.measure[1] + 12, 0, 1)}
+          opacity={measureOut}
+          color={NIGHT.light.glow}
+          idPrefix="s1detail"
+        />
+      ) : null}
       {captionAge >= 0 && captionOpacity > 0 ? (
         <AbsoluteFill style={{ opacity: captionOpacity }}>
-          <EraCaption look={look} age={captionAge} accent={look.accent} />
+          <EraCaption look={look} age={captionAge} accent={look.accent} index={eraIndex + 1} total={ERAS.length} />
         </AbsoluteFill>
       ) : null}
-      <Vignette strength={0.55 * (1 - (shuffling ? shuffleWhiteness(shuffleProgress, "out") : 0))} />
-      <Grain frame={frame} opacity={0.07} />
-      {freezeFlash > 0 ? <WhiteOut amount={freezeFlash} /> : null}
+      <Vignette strength={0.55 * (1 - whiteness)} />
+      <Grain frame={frame} opacity={0.07 * (1 - whiteness)} />
+      {flash > 0 ? <AbsoluteFill style={{ backgroundColor: "#fff", opacity: flash, mixBlendMode: "screen" }} /> : null}
       {fadeIn > 0 ? <AbsoluteFill style={{ backgroundColor: "#000", opacity: fadeIn }} /> : null}
-      {frame >= S1.white ? <WhiteOut amount={1} /> : null}
     </AbsoluteFill>
   );
 };

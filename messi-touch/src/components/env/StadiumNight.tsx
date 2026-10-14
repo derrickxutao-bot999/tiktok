@@ -6,11 +6,28 @@
 // camera tracks, bordered by a glowing touchline and its ruler.
 
 import React from "react";
+import { ERA_SWITCH_FRAMES } from "../../lib/clock";
+import { RUN, pelvisXCanonical, scene1FrameToT, stepAt, timeOfStep } from "../../lib/gait";
 import { clamp, hash } from "../../lib/math";
 import { FONTS, PALETTE } from "../../lib/palette";
 import { HEIGHT, WIDTH } from "../../lib/timeline";
 import { Camera, D0, LINE_WIDTH, LINE_Z, project } from "../../lib/world";
-import { defocus, groundRow, hash3, lod, mix, n2, nearGroundZ, onScreen, pxPerM, rowAtElevation, xRangeAt } from "./common";
+import {
+  ScreenBox,
+  ScreenCircle,
+  clearDim,
+  defocus,
+  groundRow,
+  hash3,
+  lod,
+  mix,
+  n2,
+  nearGroundZ,
+  onScreen,
+  pxPerM,
+  rowAtElevation,
+  xRangeAt,
+} from "./common";
 
 const N = PALETTE["stadium-night"];
 const L = N.light;
@@ -28,15 +45,46 @@ const FLOODS = [
   { x: -18, y: 64, z: 300, b: 0.8, streak: 0.74 },
   { x: 22, y: 105, z: 390, b: 0.92, streak: 0.88 },
 ] as const;
-/** Mowing bands, phased so the contact point sits mid-band. */
-const BAND = 5.5;
-const BAND_PHASE = BAND / 2;
+/**
+ * Mowing bands. Every band boundary is a seam; every band also has a fainter
+ * pass line down its middle (where the mower's passes overlap), so a line
+ * crosses the turf every BAND / 2, major and minor like a bezel's ticks.
+ * Phased so the contact point (x = -0.1) sits between two lines, never on one.
+ */
+const BAND = 2.75;
+const BAND_PHASE = BAND / 4;
+/** Light running down a seam towards the lens after a footfall: world speed m/s, length m, life s. */
+const SEAM_PULSE = { v: 7.5, len: 1.5, life: 0.7 } as const;
+/** Steps on which the era changes (each is a footfall): their pulses run brighter. */
+const STRONG_STEPS = new Set(ERA_SWITCH_FRAMES.map((f) => Math.round(stepAt(scene1FrameToT(f)))));
 /** Accent pulses along the board band. They run against the sprint: the band shows time going backwards. */
 const PULSE = { spacing: 4.6, v: -2.4, len: 1.5 } as const;
 
 const standY = (z: number) => STAND.y0 + (z - STAND.zFront) * STAND.rake;
 
-type NightProps = { cam: Camera; t: number; id: string; accent: string };
+export type NightGroundProps = {
+  cam: Camera;
+  t: number;
+  id: string;
+  /** Tint of the light that runs down the seams after a footfall. */
+  accent: string;
+  /** Light pulses along the seams after each footfall of the run (derived from t through the gait). */
+  seamPulses: boolean;
+};
+
+type NightProps = {
+  cam: Camera;
+  t: number;
+  id: string;
+  accent: string;
+  /** Crowd lights inside this screen circle dim to ~30% (keeps the bokeh off the runner's head). */
+  clear?: ScreenCircle;
+  /** Roof hairline, bezel ticks and floodlights fade out inside this screen box (keeps them off the captions). */
+  safe?: ScreenBox;
+};
+
+/** Feather of the safe box, px: the black core overhangs the box by this much and is blurred by half of it. */
+const SAFE_FEATHER = 44;
 
 // ---------------------------------------------------------------- roof
 
@@ -218,12 +266,26 @@ const discGradient = (gid: string, color: string, edge: number) => (
 
 // ---------------------------------------------------------------- backdrop
 
-export const NightBackdrop: React.FC<NightProps> = ({ cam, t, id, accent }) => {
+/**
+ * Opacity of the stand's lights: they dim behind the runner's head, and at
+ * very long lenses (the eye close-up) they sink almost to black so nothing
+ * competes with the eye.
+ */
+const dimDiscs = (discs: Disc[], k: number, clear: ScreenCircle | undefined) => {
+  const lens = 1 - 0.75 * lod(k, 1800, 3600);
+  if (lens >= 1 && !clear) return discs;
+  return discs.map((d) => ({ ...d, o: d.o * lens * clearDim(clear, d.x, d.y) })).filter((d) => d.o >= 0.008);
+};
+
+export const NightBackdrop: React.FC<NightProps> = ({ cam, t, id, accent, clear, safe }) => {
   const k = pxPerM(cam);
   const roof = roofLines(cam);
   const roofMid = roofAt(cam, WIDTH / 2).y;
   const hazeH = clamp(0.07 * cam.f, 90, 500);
-  const discs = crowdDiscs(cam, t);
+  const discs = dimDiscs(crowdDiscs(cam, t), k, clear);
+  const sideDiscs = dimDiscs(pitchsideDiscs(cam, t), k, clear);
+  // The caption's box, with a soft edge, cut out of the sky's hairlines and stars.
+  const safeMask = safe && safe.x1 > safe.x0 && safe.y1 > safe.y0 ? `url(#${id}-safe)` : undefined;
   // Floodlit air over the bowl: a desaturated glow, so it reads as light in the air, not as a blue band.
   const haze = mix(N.skyHorizon, N.ruler, 0.3);
   // At long lenses the crowd melts into large discs behind his face: pull them
@@ -321,6 +383,31 @@ export const NightBackdrop: React.FC<NightProps> = ({ cam, t, id, accent }) => {
           <stop offset={0.5} stopColor={accent} stopOpacity={1} />
           <stop offset={1} stopColor={accent} stopOpacity={0} />
         </linearGradient>
+        {safe && safeMask ? (
+          <>
+            <filter
+              id={`${id}-safeblur`}
+              filterUnits="userSpaceOnUse"
+              x={safe.x0 - SAFE_FEATHER * 3}
+              y={safe.y0 - SAFE_FEATHER * 3}
+              width={safe.x1 - safe.x0 + SAFE_FEATHER * 6}
+              height={safe.y1 - safe.y0 + SAFE_FEATHER * 6}
+            >
+              <feGaussianBlur stdDeviation={SAFE_FEATHER / 2} />
+            </filter>
+            <mask id={`${id}-safe`} maskUnits="userSpaceOnUse" x={-WIDTH} y={-HEIGHT} width={WIDTH * 3} height={HEIGHT * 3}>
+              <rect x={-WIDTH} y={-HEIGHT} width={WIDTH * 3} height={HEIGHT * 3} fill="#fff" />
+              <rect
+                x={safe.x0 - SAFE_FEATHER / 2}
+                y={safe.y0 - SAFE_FEATHER / 2}
+                width={safe.x1 - safe.x0 + SAFE_FEATHER}
+                height={safe.y1 - safe.y0 + SAFE_FEATHER}
+                fill="#000"
+                filter={`url(#${id}-safeblur)`}
+              />
+            </mask>
+          </>
+        ) : null}
         {blur > 1.2 ? (
           <filter id={`${id}-bblur`} filterUnits="userSpaceOnUse" x={-200} y={bTop - glowH - blur * 4} width={WIDTH + 400} height={bH + 2 * glowH + blur * 8}>
             <feGaussianBlur stdDeviation={n2(blur * 0.6)} />
@@ -331,28 +418,32 @@ export const NightBackdrop: React.FC<NightProps> = ({ cam, t, id, accent }) => {
       <rect x={0} y={0} width={WIDTH} height={HEIGHT} fill={`url(#${id}-sky)`} />
       <rect x={0} y={roofMid - hazeH} width={WIDTH} height={hazeH + 40} fill={`url(#${id}-haze)`} />
 
-      {floods.map((f, i) => (
-        <g key={i} opacity={f.b}>
-          <circle cx={n2(f.x)} cy={n2(f.y)} r={150} fill={`url(#${id}-fl)`} opacity={0.08} />
-          <rect x={n2(f.x - WIDTH * 0.5 * f.streak)} y={n2(f.y - 1.6)} width={n2(WIDTH * f.streak)} height={3.2} fill={`url(#${id}-streak)`} opacity={0.07} />
-          <rect x={n2(f.x - 130 * f.streak)} y={n2(f.y - 0.55)} width={n2(260 * f.streak)} height={1.1} fill={`url(#${id}-streak)`} opacity={0.8} />
-          <circle cx={n2(f.x)} cy={n2(f.y)} r={14} fill={`url(#${id}-fl)`} opacity={0.9} />
-          <circle cx={n2(f.x)} cy={n2(f.y)} r={1.9} fill={N.floodlight} />
-        </g>
-      ))}
+      <g mask={safeMask}>
+        {floods.map((f, i) => (
+          <g key={i} opacity={f.b}>
+            <circle cx={n2(f.x)} cy={n2(f.y)} r={150} fill={`url(#${id}-fl)`} opacity={0.08} />
+            <rect x={n2(f.x - WIDTH * 0.5 * f.streak)} y={n2(f.y - 1.6)} width={n2(WIDTH * f.streak)} height={3.2} fill={`url(#${id}-streak)`} opacity={0.07} />
+            <rect x={n2(f.x - 130 * f.streak)} y={n2(f.y - 0.55)} width={n2(260 * f.streak)} height={1.1} fill={`url(#${id}-streak)`} opacity={0.8} />
+            <circle cx={n2(f.x)} cy={n2(f.y)} r={14} fill={`url(#${id}-fl)`} opacity={0.9} />
+            <circle cx={n2(f.x)} cy={n2(f.y)} r={1.9} fill={N.floodlight} />
+          </g>
+        ))}
+      </g>
 
       {/* The stand: a dark mass under the roof edge. */}
       <path d={roof.silhouette} fill={`url(#${id}-stand)`} />
       <Bokeh discs={discs} id={id} />
-      <path d={roof.edge} fill="none" stroke={N.ruler} strokeWidth={1.1} opacity={0.6} />
-      <path d={roof.under} fill="none" stroke={N.ruler} strokeWidth={0.8} opacity={0.16} />
-      <path d={roof.ticks} fill="none" stroke={N.ruler} strokeWidth={0.9} opacity={0.28} />
-      <path d={roof.majors} fill="none" stroke={N.ruler} strokeWidth={1} opacity={0.5} />
+      <g mask={safeMask} fill="none" stroke={N.ruler}>
+        <path d={roof.edge} strokeWidth={1.1} opacity={0.6} />
+        <path d={roof.under} strokeWidth={0.8} opacity={0.16} />
+        <path d={roof.ticks} strokeWidth={0.9} opacity={0.28} />
+        <path d={roof.majors} strokeWidth={1} opacity={0.5} />
+      </g>
 
       {stripBottom > faceTop - faceFade ? (
         <rect x={0} y={faceTop - faceFade} width={WIDTH} height={stripBottom - faceTop + faceFade + 1} fill={`url(#${id}-face)`} />
       ) : null}
-      <Bokeh discs={pitchsideDiscs(cam, t)} id={id} />
+      <Bokeh discs={sideDiscs} id={id} />
 
       {boardVisible ? (
         <g filter={blur > 1.2 ? `url(#${id}-bblur)` : undefined}>
@@ -405,12 +496,47 @@ const blades = (cam: Camera) => {
   return out.join("");
 };
 
+type SeamPulse = { x: number; zHead: number; zTail: number; o: number; major: boolean };
+
+/**
+ * After each footfall the strike runs down the two nearest seams towards the
+ * lens: a short bar of light leaving the touchline a beat after the foot
+ * lands (later on the farther seam), accelerating on screen as it nears the
+ * camera. A pure function of t: footfall times and places come from the gait
+ * (the canonical runner; a smaller body lands within a few centimetres).
+ */
+const seamPulsesAt = (t: number): SeamPulse[] => {
+  const out: SeamPulse[] = [];
+  const half = BAND / 2;
+  const last = Math.floor(stepAt(t));
+  for (let n = last; n > last - 4; n--) {
+    const tn = timeOfStep(n);
+    if (t - tn > SEAM_PULSE.life + 0.3) break;
+    const xf = pelvisXCanonical(tn) + RUN.landAhead;
+    const strong = STRONG_STEPS.has(n) ? 1 : 0;
+    const m0 = Math.floor((xf - BAND_PHASE) / half);
+    for (const m of [m0, m0 + 1]) {
+      const x = m * half + BAND_PHASE;
+      const d = Math.abs(x - xf);
+      const age = t - tn - 0.04 - 0.14 * d;
+      if (age <= 0 || age >= SEAM_PULSE.life) continue;
+      const major = ((m % 2) + 2) % 2 === 0;
+      const u = age / SEAM_PULSE.life;
+      const o = (major ? 1 : 0.75) * (0.55 + 0.45 * strong) * Math.exp(-d / 1.6) * Math.min(1, age / 0.05) * Math.pow(1 - u, 1.3);
+      const zHead = LINE_Z - SEAM_PULSE.v * age;
+      out.push({ x, zHead, zTail: Math.min(LINE_Z, zHead + SEAM_PULSE.len * (0.6 + 0.4 * u)), o, major });
+    }
+  }
+  return out;
+};
+
 /**
  * The ground from the frame bottom to the foot of the boards (z = BOARD.z);
- * the Backdrop paints the strip beyond. Velvet bands, seams that catch the
- * floodlight towards the line, the ruler, the touchline and its bloom.
+ * the Backdrop paints the strip beyond. Velvet bands; seams that are the
+ * luminous element of the turf, brightest close to the lens where they swing
+ * fastest; the ruler, the touchline and its bloom.
  */
-export const NightGround: React.FC<Omit<NightProps, "accent">> = ({ cam, id }) => {
+export const NightGround: React.FC<NightGroundProps> = ({ cam, t, id, accent, seamPulses }) => {
   const zBack = BOARD.z;
   const zNear = nearGroundZ(cam);
   if (!(zNear < zBack)) return null;
@@ -421,12 +547,18 @@ export const NightGround: React.FC<Omit<NightProps, "accent">> = ({ cam, id }) =
   const lineH = Math.max(0.9, yLineNear - yLineFar);
   const P = (x: number, z: number) => project(cam, x, 0, z);
 
-  // Mowing bands, their seams, and the mower's nap inside every band.
+  // Mowing bands, their seams and pass lines, and the mower's nap inside every band.
   const [xa, xb] = xRangeAt(cam, zBack, 10);
   const bandPolys: string[] = [];
   const seams: string[] = [];
+  const passes: string[] = [];
   const naps: string[] = [];
   const inView = (a: { x: number }, b: { x: number }) => Math.max(a.x, b.x) > -5 && Math.min(a.x, b.x) < WIDTH + 5;
+  const line = (x: number, into: string[]) => {
+    const a = P(x, zNear);
+    const b = P(x, zBack);
+    if (inView(a, b)) into.push(`M${n2(a.x)} ${n2(a.y)}L${n2(b.x)} ${n2(b.y)}`);
+  };
   for (let n = Math.floor((xa - BAND_PHASE) / BAND) - 1; n <= Math.ceil((xb - BAND_PHASE) / BAND); n++) {
     const x0 = n * BAND + BAND_PHASE;
     const x1 = x0 + BAND;
@@ -437,23 +569,22 @@ export const NightGround: React.FC<Omit<NightProps, "accent">> = ({ cam, id }) =
       const d = P(x0, zBack);
       bandPolys.push(`M${n2(a.x)} ${n2(a.y)}L${n2(b.x)} ${n2(b.y)}L${n2(c.x)} ${n2(c.y)}L${n2(d.x)} ${n2(d.y)}Z`);
     }
-    const s0 = P(x0, zNear);
-    const s1 = P(x0, zBack);
-    if (inView(s0, s1)) seams.push(`M${n2(s0.x)} ${n2(s0.y)}L${n2(s1.x)} ${n2(s1.y)}`);
+    line(x0, seams);
+    line(x0 + BAND / 2, passes);
     for (let q = 1; q < 8; q++) {
-      const xq = x0 + (q + (hash3(n, q, 21) - 0.5) * 0.5) * (BAND / 8);
-      const u0 = P(xq, zNear);
-      const u1 = P(xq, zBack);
-      if (inView(u0, u1)) naps.push(`M${n2(u0.x)} ${n2(u0.y)}L${n2(u1.x)} ${n2(u1.y)}`);
+      if (q === 4) continue;
+      line(x0 + (q + (hash3(n, q, 21) - 0.5) * 0.5) * (BAND / 8), naps);
     }
   }
+  const pulses = seamPulses && k < 1200 ? seamPulsesAt(t).filter((p) => p.zTail > zNear) : [];
 
   // The ruler on the outer side of the line: a tick every metre and a label
-  // every five; half metres and decimetres join only when the frame is tight.
+  // every five; half metres, then decimetres, fade in as the frame tightens.
   const zr = LINE_Z + LINE_WIDTH / 2 + 0.05;
   const kR = cam.f / zr;
   const ticks: string[] = [];
-  const minor: string[] = [];
+  const halves: string[] = [];
+  const decis: string[] = [];
   const labels: { x: number; y: number; text: string }[] = [];
   const [ra, rb] = xRangeAt(cam, zr, 40);
   const showHalf = lod(kR, 280, 340);
@@ -467,7 +598,7 @@ export const NightGround: React.FC<Omit<NightProps, "accent">> = ({ cam, id }) =
     const x = i / 10;
     const a = P(x, zr);
     const b = P(x, zr + len);
-    (is1 ? ticks : minor).push(`M${n2(a.x)} ${n2(a.y)}L${n2(b.x)} ${n2(b.y)}`);
+    (is1 ? ticks : isHalf ? halves : decis).push(`M${n2(a.x)} ${n2(a.y)}L${n2(b.x)} ${n2(b.y)}`);
     if (is5) {
       const at = project(cam, x + 0.06, 0, zr + 1.0);
       labels.push({ x: at.x, y: at.y, text: `${i < 0 ? "−" : ""}${Math.abs(i / 10)}` });
@@ -478,9 +609,16 @@ export const NightGround: React.FC<Omit<NightProps, "accent">> = ({ cam, id }) =
 
   const blade = k > 900 ? blades(cam) : "";
   const bloomH = Math.max(10, lineH * 7);
-  // Seams catch the floodlight towards the line and fade towards the camera.
+  // The second velvet tone: a clear step above the first, so the stripes read without shouting.
+  const bandB = mix(N.grassB, N.grassSeam, 0.4);
+  // Seams catch the floodlight: dim and fine where they converge far off,
+  // brightest towards the lens where they swing past fastest.
   const seamTone = mix(N.grassSeam, N.ruler, 0.22);
+  const seamHi = mix(N.grassSeam, N.ruler, 0.55);
+  const pulseCore = mix(N.line, accent, 0.2);
+  const pulseTone = mix(L.glow, accent, 0.3);
   const gStop = (y: number) => clamp((y - top) / Math.max(1, HEIGHT - top));
+  const seamW = clamp(0.0055 * k, 1.5, 2);
 
   return (
     <g>
@@ -488,18 +626,33 @@ export const NightGround: React.FC<Omit<NightProps, "accent">> = ({ cam, id }) =
         <linearGradient id={`${id}-gdepth`} gradientUnits="userSpaceOnUse" x1={0} y1={top} x2={0} y2={HEIGHT}>
           <stop offset={0} stopColor={N.haze} stopOpacity={0.08} />
           <stop offset={gStop(yLineFar)} stopColor={N.haze} stopOpacity={0.04} />
-          <stop offset={1} stopColor={N.skyTop} stopOpacity={0.55} />
+          <stop offset={1} stopColor={N.skyTop} stopOpacity={0.2} />
         </linearGradient>
         <linearGradient id={`${id}-sheen`} gradientUnits="userSpaceOnUse" x1={0} y1={top} x2={0} y2={HEIGHT}>
           <stop offset={0} stopColor={N.grassSeam} stopOpacity={0.5} />
           <stop offset={gStop(yLineFar) * 1.4} stopColor={N.grassSeam} stopOpacity={0.3} />
-          <stop offset={1} stopColor={N.grassSeam} stopOpacity={0.12} />
+          <stop offset={1} stopColor={N.grassSeam} stopOpacity={0.16} />
         </linearGradient>
         <linearGradient id={`${id}-seam`} gradientUnits="userSpaceOnUse" x1={0} y1={top} x2={0} y2={HEIGHT}>
-          <stop offset={0} stopColor={seamTone} stopOpacity={0.35} />
-          <stop offset={gStop(yLineFar)} stopColor={mix(seamTone, N.ruler, 0.25)} stopOpacity={0.65} />
-          <stop offset={1} stopColor={seamTone} stopOpacity={0.12} />
+          <stop offset={0} stopColor={seamTone} stopOpacity={0.16} />
+          <stop offset={gStop(yLineFar)} stopColor={mix(seamTone, seamHi, 0.4)} stopOpacity={0.36} />
+          <stop offset={1} stopColor={seamHi} stopOpacity={0.82} />
         </linearGradient>
+        <linearGradient id={`${id}-nap`} gradientUnits="userSpaceOnUse" x1={0} y1={top} x2={0} y2={HEIGHT}>
+          <stop offset={0} stopColor={seamTone} stopOpacity={0.1} />
+          <stop offset={1} stopColor={seamTone} stopOpacity={0.14} />
+        </linearGradient>
+        {pulses.map((p, i) => {
+          const a = P(p.x, p.zTail);
+          const b = P(p.x, Math.max(p.zHead, zNear * 0.9));
+          return (
+            <linearGradient key={i} id={`${id}-sp${i}`} gradientUnits="userSpaceOnUse" x1={n2(a.x)} y1={n2(a.y)} x2={n2(b.x)} y2={n2(b.y)}>
+              <stop offset={0} stopColor={pulseTone} stopOpacity={0} />
+              <stop offset={0.8} stopColor={pulseTone} stopOpacity={0.7} />
+              <stop offset={1} stopColor={pulseCore} stopOpacity={1} />
+            </linearGradient>
+          );
+        })}
         <linearGradient id={`${id}-spill`} x1={0} y1={0} x2={0} y2={1}>
           <stop offset={0} stopColor={N.board} stopOpacity={0.12} />
           <stop offset={1} stopColor={N.board} stopOpacity={0.02} />
@@ -517,12 +670,28 @@ export const NightGround: React.FC<Omit<NightProps, "accent">> = ({ cam, id }) =
       </defs>
 
       <rect x={0} y={top} width={WIDTH} height={HEIGHT - top} fill={N.grassA} />
-      <path d={bandPolys.join("")} fill={N.grassB} />
+      <path d={bandPolys.join("")} fill={bandB} />
       {/* Velvet: the stripes mown away from the camera hold more light, most of all at grazing angles. */}
       <path d={bandPolys.join("")} fill={`url(#${id}-sheen)`} />
-      <path d={naps.join("")} stroke={`url(#${id}-seam)`} strokeWidth={0.9} opacity={0.42} fill="none" />
-      <path d={seams.join("")} stroke={`url(#${id}-seam)`} strokeWidth={1.25} fill="none" />
       <rect x={0} y={top} width={WIDTH} height={HEIGHT - top} fill={`url(#${id}-gdepth)`} />
+      <path d={naps.join("")} stroke={`url(#${id}-nap)`} strokeWidth={0.9} fill="none" />
+      {/* Seams: a faint halo of floodlight and a hairline core; pass lines at half strength. */}
+      <g fill="none" stroke={`url(#${id}-seam)`}>
+        <path d={seams.join("")} strokeWidth={seamW * 3.5} opacity={0.13} />
+        <path d={passes.join("")} strokeWidth={seamW * 0.85} opacity={0.62} />
+        <path d={seams.join("")} strokeWidth={seamW} />
+      </g>
+      {pulses.map((p, i) => {
+        const a = P(p.x, p.zTail);
+        const b = P(p.x, Math.max(p.zHead, zNear * 0.9));
+        const d = `M${n2(a.x)} ${n2(a.y)}L${n2(b.x)} ${n2(b.y)}`;
+        return (
+          <g key={i} opacity={n2(p.o)} stroke={`url(#${id}-sp${i})`} fill="none" strokeLinecap="round">
+            <path d={d} strokeWidth={seamW * 4} opacity={0.22} />
+            <path d={d} strokeWidth={seamW * (p.major ? 1.25 : 1)} />
+          </g>
+        );
+      })}
       <rect x={0} y={top} width={WIDTH} height={Math.max(0, yLineFar - top)} fill={`url(#${id}-spill)`} />
 
       {/* The touchline: crisp, with bloom. */}
@@ -532,7 +701,8 @@ export const NightGround: React.FC<Omit<NightProps, "accent">> = ({ cam, id }) =
 
       {/* Ruler */}
       <path d={`M-10 ${n2(rl.y)}H${WIDTH + 10}`} stroke={N.ruler} strokeWidth={0.8} opacity={0.3} />
-      <path d={minor.join("")} stroke={N.ruler} strokeWidth={0.9} opacity={0.5 * Math.max(showDeci, showHalf)} fill="none" />
+      {halves.length ? <path d={halves.join("")} stroke={N.ruler} strokeWidth={0.9} opacity={n2(0.5 * showHalf)} fill="none" /> : null}
+      {decis.length ? <path d={decis.join("")} stroke={N.ruler} strokeWidth={0.9} opacity={n2(0.5 * showDeci)} fill="none" /> : null}
       <path d={ticks.join("")} stroke={N.ruler} strokeWidth={1.3} opacity={0.9} fill="none" />
       {labels.map((l) => (
         <text key={l.text} x={n2(l.x)} y={n2(l.y)} fontFamily={FONTS.mono} fontSize={n2(fontSize)} fill={N.ruler} opacity={0.85} letterSpacing={0.5}>

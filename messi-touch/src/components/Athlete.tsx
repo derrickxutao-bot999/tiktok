@@ -29,6 +29,7 @@ import { paintOf } from "./athlete/paint";
 
 export { AthleteShadow } from "./athlete/Shadow";
 export { EtchedAthlete } from "./athlete/Etched";
+export { eyePoint } from "./athlete/head";
 
 export type AthleteProps = {
   pose: Pose;

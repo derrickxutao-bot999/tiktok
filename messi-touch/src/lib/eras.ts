@@ -43,6 +43,8 @@ export type Look = {
   age: number;
   /** Accent used for glows, captions and pulses in this era. */
   accent: string;
+  /** Optional edge light on the jersey, to set an era apart at small sizes (Qatar's gold). */
+  edge?: string;
 };
 
 const ARG_SKY = "#7DB8E8";
@@ -125,6 +127,7 @@ export const ERAS: readonly Look[] = [
     foot: 1,
     age: 35,
     accent: "#F5D27A",
+    edge: "#F5D27A",
   },
   {
     id: "barca-10",
@@ -142,7 +145,7 @@ export const ERAS: readonly Look[] = [
       stars: 0,
     },
     hair: "short",
-    beard: "trim",
+    beard: "none",
     boot: "classic",
     scale: 0.95,
     head: 1.01,
@@ -223,7 +226,7 @@ export const ERAS: readonly Look[] = [
     head: 1.22,
     limb: 0.84,
     foot: 1.22,
-    age: 9,
+    age: 7,
     accent: "#FF7A45",
   },
 ];

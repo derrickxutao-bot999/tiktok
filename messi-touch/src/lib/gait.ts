@@ -18,18 +18,15 @@ export const tToScene1Frame = (t: number) => t * FPS + S1_CONTACT_FRAME;
 export const TOUCH_FOOTFALL = 43;
 /** Step phase at contact: three quarters of the way into the step before that footfall. */
 export const TOUCH_STEP = 42.75;
-/** Cadence after contact, steps/s (the boy's quick feet). */
-export const CADENCE_AFTER = 4.7;
 
 // Steps per era block: 10 in the opening, then 4, 4, 5, 5, 5, 5. Frequency rises.
 const KNOT_FRAMES = [0, 180, 250, 320, 390, 460, 530, 600, S1_CONTACT_FRAME];
 const KNOT_STEPS = [0, 10, 14, 18, 23, 28, 33, 38, TOUCH_STEP];
 
-const phase = monotoneCubic(
-  KNOT_FRAMES.map(scene1FrameToT),
-  KNOT_STEPS,
-  { end: CADENCE_AFTER },
-);
+// After contact the boy keeps the cadence he arrived with (his quick small feet);
+// the end slope is nudged up so the cadence never sags into the touch.
+const LAST_SECANT = ((TOUCH_STEP - 38) * FPS) / (S1_CONTACT_FRAME - 600);
+const phase = monotoneCubic(KNOT_FRAMES.map(scene1FrameToT), KNOT_STEPS, { end: LAST_SECANT * 1.06 });
 
 export const stepAt = (t: number) => phase.value(t);
 export const cadenceAt = (t: number) => phase.slope(t);
@@ -44,10 +41,10 @@ export const isLeftStep = (n: number) => Math.abs(n % 2) === 1;
 export const RUN = {
   /** Pelvis speed at contact, m/s. He runs with the ball, then closes the gap in a late burst. */
   vContact: 6.6,
-  burstTau: 2,
+  burstTau: 1,
   /** After the touch the runner settles in behind the ball. */
   settle: 0.3,
-  dropBack: 0.25,
+  dropBack: 0.15,
   dropBackTau: 1.5,
   /** Pelvis height while sprinting and at the reach of the touch. */
   height: 0.87,

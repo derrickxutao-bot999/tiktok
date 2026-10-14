@@ -3,8 +3,9 @@ import { ballAt, BALL } from "../lib/ball";
 import { ERA_SWITCH_FRAMES, eraIndexAt, eraScaleAtT, scene1T, scene4T } from "../lib/clock";
 import { ERAS, VARIANT_LOOK } from "../lib/eras";
 import { scene1FrameToT, stepAt, TOUCH_LAND_T } from "../lib/gait";
-import { solvePose } from "../lib/rig";
+import { BODY, onAbsoluteTouchPath, solvePose } from "../lib/rig";
 import { FREEZE_SHOT, scene1Shot, scene4Shot } from "../lib/shots";
+import { D0, Shot, cameraFromShot, project } from "../lib/world";
 import { S1, S4, SCENES } from "../lib/timeline";
 import { T_FREEZE, gapAt } from "../lib/touch";
 
@@ -107,5 +108,95 @@ describe("poses are finite and mostly in reach", () => {
       worst = Math.max(worst, Math.abs(p.legs.L.reachError), Math.abs(p.legs.R.reachError));
     }
     expect(worst).toBeLessThan(0.06);
+  });
+});
+
+describe("continuity between the scenes", () => {
+  test("Scene 1's frozen boy and Scene 4's frozen veteran put the same toe on the same ball", () => {
+    const boy = solvePose(T_FREEZE, ERAS[ERAS.length - 1], { scaleAt: eraScaleAtT });
+    const vet = solvePose(T_FREEZE, VARIANT_LOOK["veteran-39"]);
+    expect(close(boy.legs.L.toe.x, vet.legs.L.toe.x, 1e-12)).toBe(true);
+    expect(close(boy.legs.L.toe.y, vet.legs.L.toe.y, 1e-12)).toBe(true);
+    expect(close(boy.legs.L.pitch, vet.legs.L.pitch, 1e-12)).toBe(true);
+  });
+
+  test("a dissolve of up to 16 frames around the cut stays on the shared toe path", () => {
+    for (let f = S4.matchCut - 8; f <= S4.matchCut + 8; f++) expect(onAbsoluteTouchPath(scene4T(f))).toBe(true);
+  });
+});
+
+describe("feet plant instead of skidding", () => {
+  // Speed of the ball of the foot (the stance pivot) over the frame in which it touches down.
+  const pivot = (p: ReturnType<typeof solvePose>, s: "L" | "R") => {
+    const leg = p.legs[s];
+    const c = Math.cos(leg.pitch);
+    const n = Math.sin(leg.pitch);
+    return { x: leg.ankle.x + (BODY.footBall.x * c - BODY.footBall.y * n) * p.dims.foot, y: leg.ankle.y + (BODY.footBall.x * n + BODY.footBall.y * c) * p.dims.foot };
+  };
+  const touchdownSpeeds = (frames: number[], poseAt: (f: number) => ReturnType<typeof solvePose>) => {
+    const out: number[] = [];
+    for (const f of frames) {
+      const a = poseAt(f - 1);
+      const b = poseAt(f);
+      for (const s of ["L", "R"] as const) {
+        if (!a.legs[s].planted && b.legs[s].planted) {
+          const pa = pivot(a, s);
+          const pb = pivot(b, s);
+          out.push(Math.hypot(pb.x - pa.x, pb.y - pa.y) / Math.max(1e-6, b.t - a.t));
+        }
+      }
+    }
+    return out;
+  };
+  test("Scene 1: every touchdown arrives under 1.6 m/s over its last frame (it was 3.6-5.6)", () => {
+    const frames = Array.from({ length: S1.freeze - 1 }, (_, i) => i + 1);
+    const speeds = touchdownSpeeds(frames, (f) => solvePose(scene1T(f), ERAS[eraIndexAt(f)], { scaleAt: eraScaleAtT }));
+    expect(speeds.length).toBeGreaterThan(30);
+    expect(Math.max(...speeds)).toBeLessThan(1.6);
+  });
+  test("Scene 4: the boy's touchdowns too", () => {
+    const frames = Array.from({ length: SCENES.touch.duration - S4.matchCut - 1 }, (_, i) => S4.matchCut + 1 + i);
+    const speeds = touchdownSpeeds(frames, (f) => solvePose(scene4T(f), VARIANT_LOOK["rosario-kid"]));
+    expect(speeds.length).toBeGreaterThan(10);
+    expect(Math.max(...speeds)).toBeLessThan(1.6);
+  });
+});
+
+describe("the camera never jerks except on purpose", () => {
+  // Screen acceleration of probe points held still in the world for three frames.
+  const accel = (shotAt: (f: number) => Shot, f: number) => {
+    const c0 = cameraFromShot(shotAt(f - 1));
+    const c1 = cameraFromShot(shotAt(f));
+    const c2 = cameraFromShot(shotAt(f + 1));
+    let worst = 0;
+    for (const [x, y, z] of [
+      [c1.x, 0, D0],
+      [c1.x, 1.7, D0],
+      [c1.x + 1, 0, 30],
+    ]) {
+      const p0 = project(c0, x, y, z);
+      const p1 = project(c1, x, y, z);
+      const p2 = project(c2, x, y, z);
+      worst = Math.max(worst, Math.hypot(p2.x - 2 * p1.x + p0.x, p2.y - 2 * p1.y + p0.y));
+    }
+    return worst;
+  };
+  // A jerk is an acceleration spike against its neighbourhood (smooth pushes may accelerate hard).
+  const jerks = (shotAt: (f: number) => Shot, n: number, allowed: number[]) => {
+    const a = Array.from({ length: n }, (_, f) => (f === 0 || f === n - 1 ? 0 : accel(shotAt, f)));
+    const bad: number[] = [];
+    for (let f = 1; f < n - 1; f++) {
+      if (allowed.some((x) => Math.abs(f - x) <= 1)) continue;
+      const near = a.slice(Math.max(1, f - 6), Math.min(n - 1, f + 7)).sort((p, q) => p - q);
+      const median = near[Math.floor(near.length / 2)];
+      if (a[f] > Math.max(1, 4 * median)) bad.push(f);
+    }
+    return bad;
+  };
+  test("Scene 1 (the freeze itself is the one deliberate stop)", () => {
+    expect(jerks(scene1Shot, SCENES.pursuit.duration, [S1.freeze])).toEqual([]);
+  });
+  test("Scene 4 (the eyeline cut is the one deliberate cut)", () => {
+    expect(jerks(scene4Shot, SCENES.touch.duration, [S4.toFoot])).toEqual([]);
   });
 });

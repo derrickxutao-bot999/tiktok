@@ -11,7 +11,7 @@ import { clamp } from "../../lib/math";
 import { PALETTE } from "../../lib/palette";
 import { scene4Shot } from "../../lib/shots";
 import { HEIGHT, WIDTH } from "../../lib/timeline";
-import { Camera, LINE_WIDTH, LINE_Z, cameraFromShot, project } from "../../lib/world";
+import { Camera, D0, LINE_WIDTH, LINE_Z, cameraFromShot, project } from "../../lib/world";
 import { defocus, ellipsePath, fbm, groundRow, hash3, lod, mix, n2, nearGroundZ, onScreen, pxPerM, rowAtElevation, vnoise, xRangeAt } from "./common";
 
 const D = PALETTE["rosario-dusk"];
@@ -374,6 +374,9 @@ const wallGeometry = (cam: Camera) => {
 
 type Mote = { x: number; y: number; r: number; o: number };
 
+/** Sideways drift of a mote, m (amplitude of its sway). */
+const MOTE_SWAY = 0.3;
+
 /**
  * Dust motes adrift in the low sun, at a fixed density in the world: a wide
  * shot sees dozens of points of light, a long lens only a few, spread into
@@ -386,15 +389,20 @@ const motes = (cam: Camera, t: number, zMin: number, zMax: number, density: numb
   const sun = { x: cam.cx + SUN.az * cam.f, y: rowAtElevation(cam, SUN.el) };
   for (let j = Math.floor(zMin / cell); j < Math.ceil(zMax / cell); j++) {
     const z0 = (j + 0.5) * cell;
-    const [xa, xb] = xRangeAt(cam, z0, 80);
-    for (let i = Math.floor(xa / cell); i <= Math.ceil(xb / cell); i++) {
+    // Cull by where a mote of this row could possibly be drawn: its disc
+    // (largest at the near edge of the row), its sway, and one cell of slack
+    // for its depth jitter. A mote leaves the frame only by drifting out of it.
+    const rMax = Math.max(0.9, defocus(cam, Math.max(0.05, z0 - cell / 2), 6), defocus(cam, z0 + cell / 2, 6));
+    const [xa, xb] = xRangeAt(cam, z0, rMax * 1.6 + 4);
+    const pad = MOTE_SWAY + cell;
+    for (let i = Math.floor((xa - pad) / cell); i <= Math.ceil((xb + pad) / cell); i++) {
       const s = (a: number) => hash3(i, j, Math.round(170 + cell * 64) + a);
       // A density that changes with the lens thins motes out by fading them, never by cutting.
       const keep = clamp((density - s(1)) / (0.2 * density));
       if (keep <= 0) continue;
       const z = z0 + (s(2) - 0.5) * cell;
       if (z < zMin || z > zMax) continue;
-      const x = (i + s(3)) * cell + 0.3 * Math.sin(t * (0.2 + 0.2 * s(4)) + 6.28 * s(5));
+      const x = (i + s(3)) * cell + MOTE_SWAY * Math.sin(t * (0.2 + 0.2 * s(4)) + 6.28 * s(5));
       // Dust hangs thickest just above the ground.
       const y = 0.04 + 2.6 * Math.pow(s(6), 2.2) + 0.08 * Math.sin(t * (0.3 + 0.3 * s(7)) + 6.28 * s(8));
       const p = project(cam, x, y, z);
@@ -425,17 +433,43 @@ const MoteDefs: React.FC<{ id: string }> = ({ id }) => (
   </>
 );
 
+/** A sharp mote is a glint; out of focus (4-6 px) it cross-fades into a flat bokeh disc. */
 const MoteLayer: React.FC<{ list: Mote[]; id: string }> = ({ list, id }) => (
   <g style={{ mixBlendMode: "screen" }}>
-    {list.map((m, i) =>
-      m.r > 5 ? (
-        <circle key={i} cx={n2(m.x)} cy={n2(m.y)} r={n2(m.r)} fill={`url(#${id}-dbok)`} opacity={n2(m.o)} />
-      ) : (
-        <circle key={i} cx={n2(m.x)} cy={n2(m.y)} r={n2(m.r * 1.6)} fill={`url(#${id}-mote)`} opacity={n2(m.o)} />
-      ),
-    )}
+    {list.map((m, i) => {
+      const w = lod(m.r, 4, 6);
+      const glint = m.o * (1 - w);
+      const disc = m.o * w;
+      return (
+        <React.Fragment key={i}>
+          {glint > 0.004 ? <circle cx={n2(m.x)} cy={n2(m.y)} r={n2(m.r * 1.6)} fill={`url(#${id}-mote)`} opacity={n2(glint)} /> : null}
+          {disc > 0.004 ? <circle cx={n2(m.x)} cy={n2(m.y)} r={n2(m.r)} fill={`url(#${id}-dbok)`} opacity={n2(disc)} /> : null}
+        </React.Fragment>
+      );
+    })}
   </g>
 );
+
+/** Dust between the lens and the runner (z < D0): drawn over the athlete by DuskForeground. */
+const nearMotes = (cam: Camera, t: number) => [
+  ...motes(cam, t, 2.2, 7, 0.03 + 0.5 * lensSoft(cam), 0.25),
+  // Same cells and hashes as the far row below, split at the runner's depth.
+  ...motes(cam, t, 7, D0, 0.05, 0.5),
+];
+
+/** The dust in front of the runner, which hangs between him and the lens. Draw after the athlete and the ball. */
+export const DuskForeground: React.FC<DuskProps> = ({ cam, t, id }) => {
+  const list = nearMotes(cam, t);
+  if (list.length === 0) return null;
+  return (
+    <g>
+      <defs>
+        <MoteDefs id={id} />
+      </defs>
+      <MoteLayer list={list} id={id} />
+    </g>
+  );
+};
 
 // ---------------------------------------------------------------- backdrop
 
@@ -665,8 +699,9 @@ export const DuskBackdrop: React.FC<DuskProps> = ({ cam, t, id }) => {
 /**
  * The ground from the frame bottom to the foot of the wall (z = WALL.z); the
  * Backdrop paints the land beyond. Ruts, scuffs, pebbles and the chalk line,
- * and over them the dust hanging in front of the wall: thickest close to the
- * lens, where the long lens melts it into warm discs.
+ * and over them the dust hanging between the runner and the wall. The dust
+ * nearer than the runner (thickest close to the lens, where the long lens
+ * melts it into warm discs) is DuskForeground, drawn over the athlete.
  */
 export const DuskGround: React.FC<DuskProps> = ({ cam, t, id }) => {
   const zBack = WALL.z;
@@ -841,7 +876,8 @@ export const DuskGround: React.FC<DuskProps> = ({ cam, t, id }) => {
   const gStop = (y: number) => clamp((y - top) / Math.max(1, HEIGHT - top));
   const rutTone = mix(D.dirtSeam, D.wall, 0.45);
   const pebTone = mix(D.dirtB, D.dirtFar, 0.25);
-  const dustMotes = [...motes(cam, t, 2.2, 7, 0.03 + 0.5 * lensSoft(cam), 0.25), ...motes(cam, t, 7, WALL.z, 0.05, 0.5)];
+  // Only the dust beyond the runner; the nearer dust is DuskForeground's.
+  const dustMotes = motes(cam, t, D0, WALL.z, 0.05, 0.5);
 
   return (
     <g>

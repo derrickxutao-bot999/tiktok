@@ -1,7 +1,7 @@
 // Shared helpers for the two worlds: view ranges, lens blur, deterministic
 // noise and colour mixing. Everything is a pure function of its arguments.
 
-import { hash, hash2, clamp } from "../../lib/math";
+import { hash, hash2, clamp, smoothstep } from "../../lib/math";
 import { HEIGHT, WIDTH } from "../../lib/timeline";
 import { Camera, D0, groundDepthAt, groundXAt } from "../../lib/world";
 
@@ -82,3 +82,15 @@ export const onScreen = (x: number, y: number, r = 0) => x > -r && x < WIDTH + r
 /** An ellipse as a closed sub-path, for merging many small shapes into one <path>. */
 export const ellipsePath = (cx: number, cy: number, rx: number, ry: number) =>
   `M${n2(cx - rx)} ${n2(cy)}a${n2(rx)} ${n2(ry)} 0 1 0 ${n2(2 * rx)} 0a${n2(rx)} ${n2(ry)} 0 1 0 ${n2(-2 * rx)} 0Z`;
+
+/** A circle on screen, px. */
+export type ScreenCircle = { x: number; y: number; r: number };
+/** A box on screen, px. */
+export type ScreenBox = { x0: number; y0: number; x1: number; y1: number };
+
+/**
+ * Dimming for lights behind a subject: `floor` inside the circle, rising
+ * softly to 1 across its edge (from 0.75 r to 1.2 r).
+ */
+export const clearDim = (c: ScreenCircle | undefined, x: number, y: number, floor = 0.3) =>
+  c ? floor + (1 - floor) * smoothstep(0.75 * c.r, 1.2 * c.r, Math.hypot(x - c.x, y - c.y)) : 1;

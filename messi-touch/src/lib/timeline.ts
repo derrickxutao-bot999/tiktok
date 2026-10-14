@@ -21,14 +21,15 @@ export const SCENES = {
 export const S1 = {
   /** The era index sweeps over this window: Math.floor(interpolate(frame, ERA_SWEEP, [0, eras.length - 1])). */
   eraSweep: [180, 600] as const,
+  /** The camera holds its framing through the sweep, so the shrink reads; then it pushes in. */
+  pushIn: [612, 648] as const,
   /** The toe is exactly 1 cm from the ball on this frame, and the picture freezes. */
-  freeze: 660,
-  /** On the held frame a dimension line measures the last centimetre... */
-  measure: [661, 674] as const,
-  /** ...then the frozen picture is sliced and shuffled through the eras... */
-  shuffle: [684, 712] as const,
-  /** ...and is fully white from here to the end of the scene. */
-  white: 712,
+  freeze: 648,
+  /** On the held frame the last centimetre is measured, with a magnified detail... */
+  measure: [650, 662] as const,
+  /** ...then the frozen picture is shuffled through every era, locks into a plate, and burns to white
+   *  at the scene's last frame (Scene 2 opens on that white). */
+  shuffle: [686, 720] as const,
 } as const;
 
 /** Frames of cross-dissolve at the match cut; 0 = a hard cut on S4.matchCut. */
@@ -36,14 +37,14 @@ export const MATCH_CUT_DISSOLVE = 0;
 
 /** Scene 4 beats, in frames local to the scene. */
 export const S4 = {
-  /** Hard cut back to the frozen frame; the shuffled strips settle on the 39-year-old. */
+  /** Hard cut back to the frozen plate; the strips settle on the 39-year-old. */
   unshuffle: [0, 26] as const,
-  /** Time is frozen while the camera drifts up to his eyes... */
-  toEyes: [26, 120] as const,
-  /** ...holds there... */
-  eyesHold: [120, 150] as const,
-  /** ...and travels down to the foot and the ball. */
-  toFoot: [150, 228] as const,
+  /** Time is frozen while the camera pushes in on his eye... */
+  toEyes: [26, 92] as const,
+  /** ...and holds there ("stories in his eyes"). */
+  eyesHold: [92, 168] as const,
+  /** Eyeline cut: from his eye to what it sees, the boot and the ball (still frozen). */
+  toFoot: 168,
   /** Time starts again, in extreme slow motion. */
   resume: 214,
   /** Contact. Film frame 2985. */
@@ -52,11 +53,13 @@ export const S4 = {
   matchCut: 300,
   /** Slow motion ramps back to real time by here. */
   realtime: 470,
-  /** The close-up opens out and follows the boy. */
-  release: [330, 600] as const,
-  /** The camera pulls back towards the sunset. */
-  pullBack: [600, 900] as const,
-  subtitle: [636, 900] as const,
+  /** The close-up stays on the boy's shoe and the ball... */
+  holdShoe: [300, 400] as const,
+  /** ...then one long, slow pull-back towards the sunset. */
+  pullBack: [400, 900] as const,
+  /** The legend is etched into the sky, then the closing line is written. */
+  legend: [600, 720] as const,
+  subtitle: [720, 900] as const,
 } as const;
 
 export const TOUCH_FILM_FRAME = SCENES.touch.from + S4.touch; // 2985

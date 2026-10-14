@@ -18,7 +18,7 @@ import {
   timeOfStep,
   touchWeight,
 } from "./gait";
-import { DEG, Vec2, add, catmullRom, clamp, dist, lerp, mul, norm, rot, smoothstep, sub, v } from "./math";
+import { DEG, Vec2, add, catmullRom, clamp, dist, hermite, lerp, mul, norm, rot, smoothstep, sub, v } from "./math";
 import { TOUCH, toeAt, toePitchAt } from "./touch";
 
 /** Canonical body, 1.70 m. Lengths in metres. */
@@ -127,6 +127,10 @@ const stanceTarget = (n: number, u: number, scaleAt: ScaleAt, fs: number): FootT
 // under the hips as the knee drives through, then the leg reaches forward.
 const SWING_KEYS = [v(-0.52, -0.5), v(-0.08, -0.36), v(0.34, -0.6)];
 const SWING_PITCH = [-62 * DEG, -40 * DEG, -4 * DEG];
+/** World velocity of the ankle as it touches down: a little forward, a little down. */
+const LAND_VEL = v(0.3, -0.5);
+/** Where in the swing the foot starts braking towards touchdown. */
+const BRAKE_FROM = 0.6;
 
 const swingTarget = (
   t: number,
@@ -166,7 +170,20 @@ const swingTarget = (
     ...SWING_KEYS.map((k) => mul(k, s)),
     sub(endAnkle, hipEnd),
   ];
-  const rel = catmullRom(keys, u);
+  // The last 40% is a Hermite segment that ends with the foot nearly at
+  // rest on the ground (it paws back against the hips), so feet plant rather
+  // than skid. The touch swing hands over to the absolute toe path instead.
+  let rel: Vec2;
+  if (u < BRAKE_FROM || touchSwing) rel = catmullRom(keys, u);
+  else {
+    const span = 1 - BRAKE_FROM;
+    const p0 = catmullRom(keys, BRAKE_FROM);
+    const e = 1e-4;
+    const m0 = mul(sub(catmullRom(keys, BRAKE_FROM + e), catmullRom(keys, BRAKE_FROM - e)), span / (2 * e));
+    const hipVel = mul(sub(pelvisAt(tEnd + 1e-3, sEnd), pelvisAt(tEnd - 1e-3, sEnd)), 1 / 2e-3);
+    const endVel = v(LAND_VEL.x - hipVel.x, LAND_VEL.y - hipVel.y);
+    rel = hermite(p0, m0, keys[4], mul(endVel, span * (tEnd - tOff)), 1, (u - BRAKE_FROM) / span);
+  }
   const pitches = [off.pitch, ...SWING_PITCH, endPitch];
   const pf = u * (pitches.length - 1);
   const i = Math.min(pitches.length - 2, Math.floor(pf));

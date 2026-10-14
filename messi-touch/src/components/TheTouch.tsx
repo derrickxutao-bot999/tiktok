@@ -15,10 +15,10 @@ import { ballAt } from "../lib/ball";
 import { Look, Variant, VARIANT_LOOK, VARIANT_WORLD, WorldStyle } from "../lib/eras";
 import { ScaleAt, solvePose, Pose } from "../lib/rig";
 import { HEIGHT, WIDTH } from "../lib/timeline";
-import { Camera, D0, Shot, cameraFromShot } from "../lib/world";
+import { Camera, D0, Shot, cameraFromShot, project } from "../lib/world";
 import { Athlete, AthleteShadow } from "./Athlete";
 import { Ball, BallShadow } from "./Ball";
-import { Backdrop, Ground } from "./Environment";
+import { Backdrop, Foreground, Ground } from "./Environment";
 
 export type TheTouchProps = {
   /** Who runs: decides the look and the world unless overridden. */
@@ -33,6 +33,10 @@ export type TheTouchProps = {
   scaleAt?: ScaleAt;
   /** Override the world. */
   world?: WorldStyle;
+  /** Override the board accent (the frozen frames share one, whoever is frozen in them). */
+  accent?: string;
+  /** Screen box the backdrop keeps clear of hairlines and streaks (behind a caption). */
+  safe?: { x0: number; y0: number; x1: number; y1: number };
   /** Unique per instance when several are on screen at once (dissolves, shuffles). */
   idPrefix?: string;
   /** Extra SVG drawn on top, in the same coordinate space; receives the camera and pose. */
@@ -48,6 +52,8 @@ export const TheTouch: React.FC<TheTouchProps> = ({
   look,
   scaleAt,
   world,
+  accent,
+  safe,
   idPrefix = "tt",
   overlay,
   groundOverlay,
@@ -61,17 +67,21 @@ export const TheTouch: React.FC<TheTouchProps> = ({
   // it sits between his far and near legs.
   const ballInFront = ball.z < D0 - 0.05;
   const ballEl = <Ball ball={ball} camera={camera} world={wd} idPrefix={idPrefix} />;
-  const env = { camera, world: wd, t, idPrefix, accent: lk.accent };
+  const env = { camera, world: wd, t, idPrefix, accent: accent ?? lk.accent };
+  // The crowd's bokeh dims behind his head so the profile always reads.
+  const head = project(camera, pose.head.center.x, pose.head.center.y);
+  const clear = { x: head.x, y: head.y, r: pose.head.radius * head.k * 3 };
   return (
     <AbsoluteFill>
       <svg width={WIDTH} height={HEIGHT} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} style={{ display: "block" }}>
-        <Backdrop {...env} />
+        <Backdrop {...env} clear={clear} safe={safe} />
         <Ground {...env} />
         {groundOverlay?.({ camera, pose })}
         <AthleteShadow pose={pose} camera={camera} world={wd} idPrefix={idPrefix} />
         <BallShadow ball={ball} camera={camera} world={wd} idPrefix={idPrefix} />
         <Athlete pose={pose} camera={camera} world={wd} idPrefix={idPrefix} midLayer={ballInFront ? null : ballEl} />
         {ballInFront ? ballEl : null}
+        <Foreground {...env} />
         {overlay?.({ camera, pose })}
       </svg>
     </AbsoluteFill>

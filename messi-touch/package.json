@@ -11,7 +11,7 @@
     "stills": "node tools/stills.mjs",
     "matchcut": "node tools/matchcut.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run --dir src"
   },
   "dependencies": {
     "@remotion/cli": "4.0.529",
@@ -20,8 +20,8 @@
     "remotion": "4.0.529"
   },
   "devDependencies": {
-    "@remotion/bundler": "^4.0.529",
-    "@remotion/renderer": "^4.0.529",
+    "@remotion/bundler": "4.0.529",
+    "@remotion/renderer": "4.0.529",
     "@types/react": "19.1.12",
     "typescript": "5.9.2",
     "vitest": "3.2.4"
