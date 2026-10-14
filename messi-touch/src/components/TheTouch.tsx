@@ -16,7 +16,7 @@ import { Look, Variant, VARIANT_LOOK, VARIANT_WORLD, WorldStyle } from "../lib/e
 import { ScaleAt, solvePose, Pose } from "../lib/rig";
 import { HEIGHT, WIDTH } from "../lib/timeline";
 import { Camera, D0, Shot, cameraFromShot } from "../lib/world";
-import { Athlete } from "./Athlete";
+import { Athlete, AthleteShadow } from "./Athlete";
 import { Ball, BallShadow } from "./Ball";
 import { Backdrop, Ground } from "./Environment";
 
@@ -68,6 +68,7 @@ export const TheTouch: React.FC<TheTouchProps> = ({
         <Backdrop {...env} />
         <Ground {...env} />
         {groundOverlay?.({ camera, pose })}
+        <AthleteShadow pose={pose} camera={camera} world={wd} idPrefix={idPrefix} />
         <BallShadow ball={ball} camera={camera} world={wd} idPrefix={idPrefix} />
         <Athlete pose={pose} camera={camera} world={wd} idPrefix={idPrefix} midLayer={ballInFront ? null : ballEl} />
         {ballInFront ? ballEl : null}

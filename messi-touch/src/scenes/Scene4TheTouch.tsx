@@ -16,10 +16,10 @@ import { EtchedAthlete } from "../components/Athlete";
 import { ContactPulse, FrameShuffle, GapMeasure, Grain, Subtitle, Vignette } from "../components/fx";
 import { TheTouch } from "../components/TheTouch";
 import { BALL, ballAt } from "../lib/ball";
-import { scene4T } from "../lib/clock";
+import { scene4Speed, scene4T } from "../lib/clock";
 import { ERAS, Variant, VARIANT_LOOK } from "../lib/eras";
 import { clamp, smoothstep } from "../lib/math";
-import { PALETTE } from "../lib/palette";
+import { FONTS, PALETTE } from "../lib/palette";
 import { solvePose } from "../lib/rig";
 import { FREEZE_SHOT, scene4Shot } from "../lib/shots";
 import { HEIGHT, MATCH_CUT_DISSOLVE, S4, WIDTH } from "../lib/timeline";
@@ -72,6 +72,40 @@ export const Shot4: React.FC<{ frame: number; variant: Variant; id: string; over
         );
       }}
     />
+  );
+};
+
+/**
+ * A chronograph readout while time is held: the world clock counting to the
+ * touch, and the playback speed. Small, mono, at the foot of the frame.
+ */
+const TimeReadout: React.FC<{ frame: number; color: string }> = ({ frame, color }) => {
+  const t = scene4T(frame);
+  const speed = scene4Speed(frame);
+  const opacity = interpolate(frame, [S4.unshuffle[1], S4.unshuffle[1] + 20, S4.matchCut + 40, S4.matchCut + 70], [0, 0.8, 0.8, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  if (opacity <= 0) return null;
+  const sign = t < 0 ? "\u2212" : "+";
+  const rate = speed < 1e-6 ? "HELD" : speed > 0.98 ? "1:1" : `1:${Math.round(1 / speed)}`;
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 84,
+        bottom: 132,
+        opacity,
+        fontFamily: FONTS.mono,
+        fontSize: 26,
+        letterSpacing: 3,
+        color,
+        textShadow: `0 0 12px ${color}`,
+        whiteSpace: "pre",
+      }}
+    >
+      {`T ${sign}${Math.abs(t).toFixed(4)} s    ${rate}`}
+    </div>
   );
 };
 
@@ -132,6 +166,7 @@ export const Scene4TheTouch: React.FC = () => {
           </svg>
         </AbsoluteFill>
       ) : null}
+      <TimeReadout frame={frame} color={kid ? dusk.light.glow : night.light.glow} />
       {frame >= S4.subtitle[0] ? <Subtitle text={SUBTITLE} frame={frame - S4.subtitle[0]} y={1560} /> : null}
       <Vignette strength={kid ? 0.4 : 0.55} />
       <Grain frame={frame} opacity={0.07} />

@@ -10,19 +10,20 @@
 
 import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
-import { EraCaption, FootfallPulses, FrameShuffle, GapMeasure, Glitch, Grain, Vignette, WhiteOut } from "../components/fx";
+import { EtchedAthlete } from "../components/Athlete";
+import { BallPath, EraCaption, FootfallPulses, FrameShuffle, GapMeasure, Glitch, Grain, Vignette, WhiteOut } from "../components/fx";
 import { TheTouch } from "../components/TheTouch";
 import { ballAt } from "../lib/ball";
 import { ERA_SWITCH_FRAMES, eraIndexAt, eraScaleAtT, scene1T } from "../lib/clock";
 import { ERAS, Look } from "../lib/eras";
-import { scene1FrameToT, stepAt } from "../lib/gait";
+import { scene1FrameToT, stepAt, tToScene1Frame } from "../lib/gait";
 import { clamp } from "../lib/math";
 import { PALETTE } from "../lib/palette";
-import { footfallsBetween } from "../lib/rig";
+import { footfallsBetween, solvePose } from "../lib/rig";
 import { FREEZE_SHOT, scene1Shot } from "../lib/shots";
 import { S1 } from "../lib/timeline";
 import { T_FREEZE, contactPointAt } from "../lib/touch";
-import { project } from "../lib/world";
+import { Camera, project } from "../lib/world";
 
 /** Steps on which the era changes (each is a footfall). */
 const ERA_STEPS = new Set(ERA_SWITCH_FRAMES.map((f) => Math.round(stepAt(scene1FrameToT(f)))));
@@ -44,6 +45,34 @@ const glitchAt = (t: number, look: Look, frame: number) => {
   }
   return g;
 };
+
+/** How long a chronophotographic echo stays on the pitch, world seconds. */
+const ECHO_LIFE = 0.8;
+
+/**
+ * Marey's plates: at every footfall the runner leaves a contour of himself,
+ * in the era he wore at that instant, held where it happened on the pitch.
+ */
+const Echoes: React.FC<{ camera: Camera; t: number; look: Look }> = ({ camera, t, look }) => (
+  <g>
+    {footfallsBetween(t - ECHO_LIFE, t - 1 / 60, look, { scaleAt: eraScaleAtT }).map((ff) => {
+      const era = ERAS[eraIndexAt(tToScene1Frame(ff.t))];
+      const fade = 1 - (t - ff.t) / ECHO_LIFE;
+      return (
+        <EtchedAthlete
+          key={ff.n}
+          pose={solvePose(ff.t, era, { scaleAt: eraScaleAtT })}
+          camera={camera}
+          idPrefix={`echo${ff.n}`}
+          progress={1}
+          color={era.accent}
+          width={1.4}
+          opacity={0.55 * fade * fade}
+        />
+      );
+    })}
+  </g>
+);
 
 /** The frozen moment as a given era would have lived it (for the shuffle). */
 const FrozenEra: React.FC<{ look: Look; id: string }> = ({ look, id }) => (
@@ -67,6 +96,11 @@ export const Scene1Pursuit: React.FC = () => {
   const night = PALETTE["stadium-night"];
 
   const frozen = frame >= S1.freeze;
+  // The ball's fate (dotted, ending OUT) appears once the ball is in frame.
+  const pathOpacity = interpolate(frame, [470, 540, S1.shuffle[0] - 4, S1.shuffle[0]], [0, 0.85, 0.85, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
   const shuffling = frame >= S1.shuffle[0];
 
   const measure = interpolate(frame, [...S1.measure], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
@@ -85,14 +119,18 @@ export const Scene1Pursuit: React.FC = () => {
       world="stadium-night"
       idPrefix="s1"
       groundOverlay={({ camera }) => (
-        <FootfallPulses
-          camera={camera}
-          t={t}
-          footfalls={footfallsBetween(t - 0.6, t, look, { scaleAt: eraScaleAtT })}
-          color={look.accent}
-          strength={stepStrength}
-          idPrefix="s1fp"
-        />
+        <>
+          <FootfallPulses
+            camera={camera}
+            t={t}
+            footfalls={footfallsBetween(t - 0.6, t, look, { scaleAt: eraScaleAtT })}
+            color={look.accent}
+            strength={stepStrength}
+            idPrefix="s1fp"
+          />
+          {pathOpacity > 0 ? <BallPath camera={camera} t={t} color={night.light.glow} opacity={pathOpacity} /> : null}
+          <Echoes camera={camera} t={t} look={look} />
+        </>
       )}
       overlay={({ camera, pose }) => {
         if (!frozen || measure <= 0) return null;
