@@ -7,9 +7,9 @@
 // Where the whole ball is over the outer edge of the line, a hairline ghost
 // of the ball waits, a dotted plumb line drops from its centre to a small
 // cross on the ground, and a mono label says OUT. Past it the beads fade
-// away. When that spot is beyond the frame, the label waits at the frame's
-// edge and counts down the metres left. After the touch the fate is void and
-// the path fades out.
+// away. When that spot is beyond the frame, a chevron waits at the frame's
+// edge and a label above the path counts down the seconds left, like a
+// stopwatch. After the touch the fate is void and the path fades out.
 
 import React from "react";
 import { BALL } from "../../lib/ball";
@@ -34,6 +34,10 @@ const SIN_H = Math.sin(BALL.heading);
 const sAt = (tau: number) => BALL.vIn * tau - (BALL.decelIn * tau * tau) / 2;
 /** Where the whole ball is over the outer edge of the line, m along the heading. */
 export const S_OUT = (LINE_Z + LINE_WIDTH / 2 + BALL.r - D0) / SIN_H;
+/** When the ball would be wholly out if untouched, s after contact. */
+const T_OUT = (BALL.vIn - Math.sqrt(BALL.vIn * BALL.vIn - 2 * BALL.decelIn * S_OUT)) / BALL.decelIn;
+/** Labels stay left of the right-hand band where social-video buttons sit. */
+const LABEL_MAX_X = 900;
 /** The fate is plotted for this much travel after the contact instant, s. */
 const TRAVEL = 1.5;
 const S_END = sAt(TRAVEL);
@@ -92,10 +96,12 @@ export const BallPath: React.FC<BallPathProps> = ({ camera, t, color, opacity = 
   const g = groundAt(camera, S_OUT);
   const rOut = BALL.r * c.k;
   const outVisible = onScreen(c, -EDGE) && S_OUT > s0;
-  // When OUT is beyond the right edge, the path's exit point there carries the countdown.
-  const sExit = (camera.x + ((WIDTH - EDGE - camera.cx) * D0) / camera.f) / COS_H;
+  // When OUT is beyond the right edge, the path's exit point there carries a
+  // chevron. Solved at the path's own depth (it runs nearer than D0 before the line).
+  const X = WIDTH - EDGE - camera.cx;
+  const sExit = (camera.x + (X * D0) / camera.f) / (COS_H - (X * SIN_H) / camera.f);
   const exit = !outVisible && c.x > WIDTH ? centreAt(camera, sExit) : null;
-  const left = S_OUT - sBall;
+  const left = T_OUT - Math.min(t, 0);
 
   const label = (x: number, y: number, text: string, anchor: "start" | "end") => (
     <text
@@ -151,8 +157,8 @@ export const BallPath: React.FC<BallPathProps> = ({ camera, t, color, opacity = 
       {exit && left > 0 ? (
         <g stroke={ink} fill={ink} strokeLinecap="round">
           <path d={`M${f1(exit.x - 5)} ${f1(exit.y - 5)}l6 5l-6 5`} fill="none" strokeWidth={1.3} />
-          {/* The count waits on the empty grass below the line, clear of the ball rolling above it. */}
-          {label(exit.x + 2, groundAt(camera, sExit).y + 40, `OUT ${left.toFixed(1)} m`, "end")}
+          {/* The countdown sits in the dark air above the path, clear of the ball and the buttons. */}
+          {label(Math.min(exit.x - 12, LABEL_MAX_X), exit.y - 62, `OUT IN ${left.toFixed(1)} s`, "end")}
         </g>
       ) : null}
     </g>

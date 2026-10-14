@@ -51,15 +51,15 @@ export const S4 = {
   touch: 285,
   /** 15 frames after contact the 39-year-old becomes the boy. Film frame 3000. */
   matchCut: 300,
-  /** Slow motion ramps back to real time by here. */
-  realtime: 470,
-  /** The close-up stays on the boy's shoe and the ball... */
-  holdShoe: [300, 400] as const,
+  /** Slow motion ramps back to real time by here (late, so the shoe and the ball stay together). */
+  realtime: 580,
+  /** The close-up widens just enough to keep the boy's shoe and the ball together... */
+  holdShoe: [300, 380] as const,
   /** ...then one long, slow pull-back towards the sunset. */
-  pullBack: [400, 900] as const,
+  pullBack: [380, 900] as const,
   /** The legend is etched into the sky, then the closing line is written. */
-  legend: [600, 720] as const,
-  subtitle: [720, 900] as const,
+  legend: [600, 700] as const,
+  subtitle: [706, 900] as const,
 } as const;
 
 export const TOUCH_FILM_FRAME = SCENES.touch.from + S4.touch; // 2985

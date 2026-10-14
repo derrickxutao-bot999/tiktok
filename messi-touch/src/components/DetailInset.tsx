@@ -48,7 +48,7 @@ export const DetailInset: React.FC<DetailInsetProps> = ({
   progress,
   opacity,
   color,
-  center = { x: 560, y: 500 },
+  center = { x: 640, y: 500 },
   radius = 285,
   magnification = 10,
   idPrefix,

@@ -21,8 +21,8 @@ export type SubtitleProps = {
 const SIZE = 66;
 const LEADING = 88;
 /** Frames between words, the extra pause at the line break, and each word's ease. */
-const WORD_GAP = 8;
-const LINE_PAUSE = 18;
+const WORD_GAP = 6;
+const LINE_PAUSE = 12;
 const EASE = 34;
 const FIRST = 4;
 

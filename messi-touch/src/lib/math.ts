@@ -33,6 +33,11 @@ export const invLerp = (a: number, b: number, x: number) => (b === a ? 0 : (x - 
 /** Clamped remap of x from [a0,a1] to [b0,b1]. */
 export const remap = (x: number, a0: number, a1: number, b0: number, b1: number) =>
   lerp(b0, b1, clamp(invLerp(a0, a1, x)));
+/** A smooth minimum (log-sum-exp) with a blend width of about k: no kink where the two cross. */
+export const smoothMin = (a: number, b: number, k: number) => {
+  const m = Math.min(a, b);
+  return m - k * Math.log(Math.exp((m - a) / k) + Math.exp((m - b) / k));
+};
 export const smoothstep = (a: number, b: number, x: number) => {
   const t = clamp(invLerp(a, b, x));
   return t * t * (3 - 2 * t);
@@ -184,4 +189,38 @@ export const hermite = (p0: Vec2, v0: Vec2, p1: Vec2, v1: Vec2, T: number, s: nu
     x: h00 * p0.x + h10 * T * v0.x + h01 * p1.x + h11 * T * v1.x,
     y: h00 * p0.y + h10 * T * v0.y + h01 * p1.y + h11 * T * v1.y,
   };
+};
+
+/**
+ * Piecewise-linear interpolation through increasing knots, with linear
+ * extrapolation by the end slopes (overridable). Same helpers as monotoneCubic.
+ */
+export const piecewiseLinear = (xs: readonly number[], ys: readonly number[], endSlopes?: { start?: number; end?: number }) => {
+  const n = xs.length;
+  const slopes = xs.slice(1).map((x, i) => (ys[i + 1] - ys[i]) / (x - xs[i]));
+  const s0 = endSlopes?.start ?? slopes[0];
+  const s1 = endSlopes?.end ?? slopes[n - 2];
+  const seg = (x: number) => {
+    let i = 0;
+    while (i < n - 2 && x > xs[i + 1]) i++;
+    return i;
+  };
+  const value = (x: number) => {
+    if (x <= xs[0]) return ys[0] + s0 * (x - xs[0]);
+    if (x >= xs[n - 1]) return ys[n - 1] + s1 * (x - xs[n - 1]);
+    const i = seg(x);
+    return ys[i] + slopes[i] * (x - xs[i]);
+  };
+  const slope = (x: number) => (x < xs[0] ? s0 : x >= xs[n - 1] ? s1 : slopes[seg(x)]);
+  const inverse = (y: number, lo = xs[0] - 1e4, hi = xs[n - 1] + 1e4) => {
+    let a = lo;
+    let b = hi;
+    for (let k = 0; k < 80; k++) {
+      const c = (a + b) / 2;
+      if (value(c) < y) a = c;
+      else b = c;
+    }
+    return (a + b) / 2;
+  };
+  return { value, slope, inverse };
 };

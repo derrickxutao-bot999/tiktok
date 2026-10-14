@@ -24,7 +24,10 @@ Everything on screen is a pure function of three things:
 - **The touching toe** (`src/lib/touch.ts`) follows an absolute path in world space from just before contact until the foot lands. The rest of the body hangs off that toe through two-bone inverse kinematics (`src/lib/rig.ts`). Smaller bodies keep their hips in reach because the pelvis is offset by `(1 − scale) × reach`.
 - **The drawn boot** is built in the foot's own frame, so its tip is the engine's toe point. While the touch is in effect, its outline strokes are clipped at the contact plane.
 
-As a result, the 39-year-old (scale 1) and the boy (scale 0.65) put the same toe, at the same angle, on the same ball, on the same pixels, at every shared `t`. Scene 4 switches `variant` on frame 300 of the scene (film frame 3000), 15 frames after contact on film frame 2985, and nothing else changes. Only the shoe, the leg, the ground and the sky become the boy's.
+As a result, the 39-year-old (scale 1) and the boy (scale 0.65) put the same toe, at the same angle, on the same ball, on the same pixels, at every shared `t`. Scene 4 switches `variant` on frame 300 of the scene (film frame 3000), 15 frames after contact on film frame 2985.
+
+- **Identical across the cut:** the camera, the clock, the toe and the ball's outline (including its contact squash).
+- **Becomes the boy's:** the body and his worn shoe, the ball's leather, the world and its light (ground, sky, shadows, the colour of the glows).
 
 `MATCH_CUT_DISSOLVE` in `src/lib/timeline.ts` turns the hard cut into a cross-dissolve of up to 16 frames. Both variants then render with the same clock and camera, and the world's colours (vignette, readout, background) blend with the picture.
 
@@ -54,7 +57,7 @@ The same idea links the two ends of the film:
 ## Scene 1: pursuit and reverse flow
 
 - **Tracking shot.** One side-on tracking shot along the touchline at night. The camera is a real pinhole with perspective, so the mowing stripes swing and slide with parallax as it tracks. Their hairline seams glow brightest nearest the lens.
-- **Framing.** The camera holds its framing through the era sweep, so his shrinking reads against a fixed frame. The ball rolls just ahead of him, its dotted path running to "OUT", and he closes the gap in a late burst.
+- **Framing.** The camera holds its framing through the era sweep, so his shrinking reads against a fixed frame. The ball rolls just ahead of him and he closes the gap in a late burst. Its dotted path runs to "OUT", and a stopwatch count ("OUT IN 1.0 s") ticks down.
 - **Footfalls.** Every footfall rings out on the grass. He leaves a contour echo of himself in the era of that step, after Marey: the echoes fall behind like a long exposure.
 - **Eras.** The era index is the formula from the brief, verbatim: `Math.floor(interpolate(frame, [180, 600], [0, eras.length − 1]))`. It changes on frames 250, 320, 390, 460, 530 and 600. The step phase is shaped so that each of those frames is a footfall: every step back in time is literally a step, with a time-slip glitch.
   - The order runs from 2026 Argentina 10 → Inter Miami pink 10 → Qatar 2022 → Barcelona 10 → long-haired Barcelona 19 → Barcelona 30 → a boy in Newell's Old Boys red and black.
@@ -67,15 +70,15 @@ The same idea links the two ends of the film:
 
 | Frames (scene) | What happens |
 |---|---|
-| 0–26 | Hard cut back to the frozen plate. It settles on the 39-year-old, and the 1 cm callout returns. |
-| 26–168 | Time stays frozen. The camera pushes in to his eye: seven tiny reflections in the era colours, his career in his cornea. |
+| 0–26 | Hard cut back to the frozen plate. It settles on the 39-year-old, and the "1 cm" callout returns. |
+| 26–168 | Time stays frozen. The camera pushes in to his eye and holds. One by one, seven reflections light up in his cornea in the era colours, from 2026 back to 1994: his career in his eye. |
 | 168 | Eyeline cut to what he is looking at: his left boot and the ball, at ground level. |
 | 214–285 | Time resumes in extreme slow motion. A chronograph readout counts `T −0.0083 s` to zero, and the dimension line counts the gap down to "0.0 cm". He taps the ball with the tip of his left boot (film frame 2985). |
 | 300 | **The match cut** (film frame 3000): same camera, toe and ball. It is now the boy's broken, oversized shoe on the red dirt of Rosario at sunset. |
-| 300–470 | Slow motion ramps back to real time while the close-up holds the shoe and the rolling ball. |
-| 400–900 | One long pull-back towards a sun cut by horizontal slits. The boy and the ball run in the middle of the frame. |
-| 600–720 | The 39-year-old's touch is etched in the sky as glowing line art. The sun stands in for his ball. |
-| 720–900 | Closing line: *His story is told. The boy is still playing.* |
+| 300–580 | Slow motion ramps back to real time. The close-up widens just enough to keep the boy's shoe and the parting ball together. |
+| 380–900 | One long pull-back, carried on the ball, towards a sun cut by horizontal slits. The boy and the ball run in the middle of the frame. |
+| 600–700 | The 39-year-old's touch is etched in the sky as glowing line art. The sun stands in for his ball. |
+| 706–900 | Closing line: *His story is told. The boy is still playing.* |
 
 ## Structure
 

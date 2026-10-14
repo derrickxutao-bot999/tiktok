@@ -7,14 +7,14 @@
 // next key's look point travels in a straight line on screen to its mark,
 // which reads as a deliberate push to a subject rather than a swing.
 
-import { ballAt } from "./ball";
+import { BALL, ballAt } from "./ball";
 import { ERAS, VARIANT_LOOK } from "./eras";
-import { pelvisXCanonical, RUN } from "./gait";
+import { pelvisXCanonical, RUN, TOUCH_LAND_T } from "./gait";
 import { eyePoint } from "../components/athlete/head";
-import { easeInOutSine, invLerp, clamp, smootherstep } from "./math";
+import { easeInOutSine, invLerp, clamp, smoothMin, smootherstep } from "./math";
 import { solvePose } from "./rig";
 import { S1, S4 } from "./timeline";
-import { CONTACT_POINT, T_FREEZE } from "./touch";
+import { CONTACT_POINT, T_FREEZE, toeAt } from "./touch";
 import { Shot, cameraFromShot, mixShots, project } from "./world";
 import { scene1T, scene4T } from "./clock";
 
@@ -107,39 +107,49 @@ const KID_REACH = (1 - ERAS[ERAS.length - 1].scale) * RUN.reach;
 /** The boy's hips once he runs on. */
 const kidX = (frame: number) => pelvisXCanonical(scene4T(frame)) + KID_REACH;
 
-/** How far the action (the boy and the ball, averaged) has moved since contact. */
-const actionMoved = (frame: number) => {
-  const t = scene4T(frame);
-  if (t <= 0) return 0;
-  return (ballAt(t).x - ballAt(0).x + pelvisXCanonical(t) - pelvisXCanonical(0)) / 2;
-};
-
-/** Midway between the boy and the ball. */
-const pairX = (frame: number) => (kidX(frame) + ballAt(scene4T(frame)).x) / 2;
+const R = BALL.r;
+/** Where the boy's touching foot came down after the tap. */
+const SHOE_X = toeAt(TOUCH_LAND_T, TOUCH_LAND_T).x;
 
 /**
- * The close-up eases into following the action after contact (identical for
- * both variants), then hands its aim over to the boy-and-ball pair that the
- * pull-back frames, so neither ever leaves the picture.
+ * A framing expressed on the ball (so that moves between these keys carry the
+ * ball in a straight line on screen): the ball sits at (bx, by) on screen.
  */
-const closeupFollow = (zoom: number) => (frame: number): Shot => {
-  const follow = CLOSEUP_SHOT.lookX + actionMoved(frame) * smootherstep(S4.touch, S4.touch + 60, frame);
-  return {
-    ...CLOSEUP_SHOT,
-    lookX: follow + (pairX(frame) - follow) * smootherstep(S4.holdShoe[0] + 30, S4.pullBack[0] + 120, frame),
-    pxPerM: CLOSEUP_SHOT.pxPerM * zoom,
-  };
+const onBall = (frame: number, bx: number, by: number, pxPerM: number, height: number): Shot => {
+  const b = ballAt(scene4T(frame));
+  return { lookX: b.x, lookY: R, screenX: bx, screenY: by, pxPerM, height };
 };
 
-/** The last frame: the boy and the ball together in the middle, the sunset above. */
-const sunsetWide = (frame: number): Shot => ({
-  lookX: pairX(frame),
-  lookY: 1.6,
-  screenX: 540,
-  screenY: 930,
-  pxPerM: 210,
-  height: 1.1,
-});
+/** Ball's screen x that centres the span [x0, ball's far edge], clamped clear of the right-hand UI band. */
+const centredBallX = (frame: number, x0: number, pxPerM: number) => {
+  const b = ballAt(scene4T(frame)).x;
+  const mid = (x0 + b + R) / 2;
+  return smoothMin(540 + (b - mid) * pxPerM, 900 - R * pxPerM, 40);
+};
+
+/** The close-up after contact: the planted shoe and the ball, widening as they part. */
+const shoeAndBall = (frame: number): Shot => {
+  const k = 1500;
+  return onBall(frame, centredBallX(frame, SHOE_X - 0.22, k), CLOSEUP_SHOT.screenY + (CLOSEUP_SHOT.lookY - R) * k * 0.7, k, 0.16);
+};
+
+/** The boy's legs and the ball, low. */
+const legsAndBall = (frame: number): Shot => {
+  const k = 860;
+  return onBall(frame, centredBallX(frame, kidX(frame) - 0.35, k), 1260, k, 0.3);
+};
+
+/** The whole boy and the ball in the middle of the frame. */
+const boyAndBall = (frame: number): Shot => {
+  const k = 520;
+  return onBall(frame, centredBallX(frame, kidX(frame) - 0.3, k), 1290 - R * k, k, 0.6);
+};
+
+/** The last frame: the boy and the ball together in the middle, the sunset above (feet near y 1266). */
+const sunsetWide = (frame: number): Shot => {
+  const k = 210;
+  return onBall(frame, centredBallX(frame, kidX(frame) - 0.25, k), 1266 - R * k, k, 1.1);
+};
 
 const S4_KEYS: readonly Key[] = [
   { f: S4.unshuffle[1], shot: () => FREEZE_SHOT },
@@ -149,8 +159,10 @@ const S4_KEYS: readonly Key[] = [
 
 const S4_FOOT_KEYS: readonly Key[] = [
   { f: S4.toFoot, shot: () => ({ ...CLOSEUP_SHOT, pxPerM: CLOSEUP_SHOT.pxPerM * 0.97 }) },
-  { f: S4.touch, shot: closeupFollow(1), ease: (u) => 1 - (1 - u) * (1 - u) },
-  { f: S4.holdShoe[1], shot: closeupFollow(1.04) },
+  { f: S4.touch, shot: () => CLOSEUP_SHOT, ease: (u) => 1 - (1 - u) * (1 - u) },
+  { f: S4.holdShoe[0] + 40, shot: shoeAndBall },
+  { f: S4.holdShoe[1] + 60, shot: legsAndBall },
+  { f: 600, shot: boyAndBall },
   { f: S4.pullBack[1], shot: sunsetWide },
 ];
 

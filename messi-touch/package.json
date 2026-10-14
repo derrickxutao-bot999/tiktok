@@ -11,7 +11,7 @@
     "stills": "node tools/stills.mjs",
     "matchcut": "node tools/matchcut.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --dir src"
+    "test": "vitest run"
   },
   "dependencies": {
     "@remotion/cli": "4.0.529",

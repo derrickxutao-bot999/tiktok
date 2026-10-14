@@ -114,7 +114,11 @@ export const Scene1Pursuit: React.FC = () => {
     extrapolateRight: "clamp",
   });
   const measure = fade(S1.measure[0], S1.measure[1], 0, 1);
-  const measureOut = fade(S1.shuffle[0] - 6, S1.shuffle[0] + 2);
+  // The DETAIL lens opens quickly and stays until the deck has started turning;
+  // the main callout hands its "1 cm" over to the lens as the lens label writes.
+  const lens = fade(S1.measure[0] + 2, S1.measure[1] + 2, 0, 1);
+  const lensOut = fade(S1.shuffle[0] + 4, S1.shuffle[0] + 12);
+  const mainCallout = fade(S1.measure[1] + 2, S1.measure[1] + 10) * lensOut;
 
   const main = (
     <TheTouch
@@ -125,7 +129,7 @@ export const Scene1Pursuit: React.FC = () => {
       scaleAt={eraScaleAtT}
       world="stadium-night"
       accent={frozen ? FROZEN_ACCENT : look.accent}
-      safe={frozen ? undefined : CAPTION_SAFE}
+      safe={shuffling ? undefined : CAPTION_SAFE}
       idPrefix="s1"
       groundOverlay={({ camera }) => (
         <>
@@ -144,12 +148,12 @@ export const Scene1Pursuit: React.FC = () => {
         </>
       )}
       overlay={({ camera, pose }) => {
-        if (!frozen || measure <= 0 || measureOut <= 0) return null;
+        if (!frozen || measure <= 0 || mainCallout <= 0) return null;
         const toe = project(camera, pose.legs.L.toe.x, pose.legs.L.toe.y);
         const cp = contactPointAt(T_FREEZE);
         const on = project(camera, cp.x, cp.y, ballAt(T_FREEZE).z);
         return (
-          <g opacity={measureOut}>
+          <g opacity={mainCallout}>
             <GapMeasure a={toe} b={on} label="1 cm" progress={measure} color={NIGHT.light.glow} pxPerM={camera.f / D0} fontSize={30} idPrefix="s1gm" />
           </g>
         );
@@ -177,7 +181,7 @@ export const Scene1Pursuit: React.FC = () => {
 
   const captionAge = frame - eraStartFrame(eraIndex);
   const captionOpacity = fade(S1.freeze, S1.freeze + 10);
-  const fadeIn = fade(0, 24);
+  const fadeIn = fade(0, 10, 0.45, 0);
   // A camera-flash beat on the freeze itself: the picture over-exposes for a
   // moment (darks stay dark) and light blooms from the 1 cm gap.
   const flash = frozen ? fade(S1.freeze, S1.freeze + 10, 1, 0) : 0;
@@ -189,7 +193,7 @@ export const Scene1Pursuit: React.FC = () => {
       <AbsoluteFill style={{ filter: [frozenFilter(frozen ? 1 : 0), flash > 0 ? `brightness(${(1 + 0.9 * flash).toFixed(3)})` : ""].join(" ").trim() || undefined }}>
         {picture}
       </AbsoluteFill>
-      {frozen && !shuffling ? (
+      {frozen && lensOut > 0 ? (
         <DetailInset
           t={T_FREEZE}
           shot={FREEZE_SHOT}
@@ -197,8 +201,8 @@ export const Scene1Pursuit: React.FC = () => {
           scaleAt={eraScaleAtT}
           world="stadium-night"
           accent={FROZEN_ACCENT}
-          progress={fade(S1.measure[0] + 2, S1.measure[1] + 12, 0, 1)}
-          opacity={measureOut}
+          progress={lens}
+          opacity={lensOut}
           color={NIGHT.light.glow}
           idPrefix="s1detail"
         />

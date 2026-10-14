@@ -35,6 +35,8 @@ export type TheTouchProps = {
   world?: WorldStyle;
   /** Override the board accent (the frozen frames share one, whoever is frozen in them). */
   accent?: string;
+  /** 0..1: the seven eras lighting up one by one in his eye (Scene 4's hold). */
+  eyeStory?: number;
   /** Screen box the backdrop keeps clear of hairlines and streaks (behind a caption). */
   safe?: { x0: number; y0: number; x1: number; y1: number };
   /** Unique per instance when several are on screen at once (dissolves, shuffles). */
@@ -53,6 +55,7 @@ export const TheTouch: React.FC<TheTouchProps> = ({
   scaleAt,
   world,
   accent,
+  eyeStory,
   safe,
   idPrefix = "tt",
   overlay,
@@ -79,7 +82,7 @@ export const TheTouch: React.FC<TheTouchProps> = ({
         {groundOverlay?.({ camera, pose })}
         <AthleteShadow pose={pose} camera={camera} world={wd} idPrefix={idPrefix} />
         <BallShadow ball={ball} camera={camera} world={wd} idPrefix={idPrefix} />
-        <Athlete pose={pose} camera={camera} world={wd} idPrefix={idPrefix} midLayer={ballInFront ? null : ballEl} />
+        <Athlete pose={pose} camera={camera} world={wd} idPrefix={idPrefix} midLayer={ballInFront ? null : ballEl} eyeStory={eyeStory} />
         {ballInFront ? ballEl : null}
         <Foreground {...env} />
         {overlay?.({ camera, pose })}

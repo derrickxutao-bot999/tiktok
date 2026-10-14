@@ -7,7 +7,7 @@
 import { FPS, S1 } from "./timeline";
 import { T_FREEZE, CONTACT_POINT } from "./touch";
 import { BALL } from "./ball";
-import { monotoneCubic, smoothstep } from "./math";
+import { piecewiseLinear, smoothstep } from "./math";
 
 /** Scene 1 frame at which contact would happen if the picture did not freeze (freeze + the last 1 cm). */
 export const S1_CONTACT_FRAME = S1.freeze - T_FREEZE * FPS;
@@ -19,14 +19,15 @@ export const TOUCH_FOOTFALL = 43;
 /** Step phase at contact: three quarters of the way into the step before that footfall. */
 export const TOUCH_STEP = 42.75;
 
-// Steps per era block: 10 in the opening, then 4, 4, 5, 5, 5, 5. Frequency rises.
-const KNOT_FRAMES = [0, 180, 250, 320, 390, 460, 530, 600, S1_CONTACT_FRAME];
-const KNOT_STEPS = [0, 10, 14, 18, 23, 28, 33, 38, TOUCH_STEP];
+// The cadence is constant within runs of equal era blocks and only ever steps
+// up, on era-change footfalls (where the glitch and the new body hide the
+// change): 10 steps over 0-180, then 4 + 4 steps (180-320), 5 + 5 + 5 + 5
+// (320-600), and the boy's 4.75 to contact. Every era frame lands on a whole step.
+const KNOT_FRAMES = [0, 180, 320, 600, S1_CONTACT_FRAME];
+const KNOT_STEPS = [0, 10, 18, 38, TOUCH_STEP];
 
-// After contact the boy keeps the cadence he arrived with (his quick small feet);
-// the end slope is nudged up so the cadence never sags into the touch.
-const LAST_SECANT = ((TOUCH_STEP - 38) * FPS) / (S1_CONTACT_FRAME - 600);
-const phase = monotoneCubic(KNOT_FRAMES.map(scene1FrameToT), KNOT_STEPS, { end: LAST_SECANT * 1.06 });
+// After contact the boy keeps the cadence he arrived with (his quick small feet).
+const phase = piecewiseLinear(KNOT_FRAMES.map(scene1FrameToT), KNOT_STEPS);
 
 export const stepAt = (t: number) => phase.value(t);
 export const cadenceAt = (t: number) => phase.slope(t);

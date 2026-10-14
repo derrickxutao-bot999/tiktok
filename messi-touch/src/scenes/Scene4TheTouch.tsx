@@ -36,7 +36,7 @@ const DUSK = PALETTE["rosario-dusk"];
 
 /** The legend's touch, etched in the sky: the 39-year-old at the instant of contact. */
 const LEGEND_POSE = solvePose(0, VARIANT_LOOK["veteran-39"]);
-const LEGEND_PX_PER_M = 430;
+const LEGEND_PX_PER_M = 380;
 
 /** The legend is framed so his toe rests on the sun's lower-left rim, where it met the ball. */
 const legendCamera = (dusk: Camera): Camera => {
@@ -86,6 +86,7 @@ export const Shot4: React.FC<{ frame: number; variant: Variant; id: string; over
       t={t}
       shot={scene4Shot(frame)}
       accent={variant === "veteran-39" ? FROZEN_ACCENT : undefined}
+      eyeStory={interpolate(frame, [S4.eyesHold[0] - 6, S4.eyesHold[1] - 10], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}
       idPrefix={id}
       overlay={({ camera, pose }) => {
         if (!overlays) return null;
@@ -101,7 +102,7 @@ export const Shot4: React.FC<{ frame: number; variant: Variant; id: string; over
                 <GapMeasure
                   a={toe}
                   b={on}
-                  label={`${(gap * 100).toFixed(1)} cm`}
+                  label={frame < S4.resume ? "1 cm" : `${(gap * 100).toFixed(1)} cm`}
                   progress={clamp(measure * 1.4)}
                   color={light.glow}
                   pxPerM={camera.f / D0}
@@ -131,7 +132,7 @@ export const Shot4: React.FC<{ frame: number; variant: Variant; id: string; over
  * A chronograph readout while time is held: the world clock counting to the
  * touch and the playback rate. Small and mono, top left, like a mark on a bezel.
  */
-const TimeReadout: React.FC<{ frame: number; color: string }> = ({ frame, color }) => {
+const TimeReadout: React.FC<{ frame: number; mix: number }> = ({ frame, mix }) => {
   const t = scene4T(frame);
   const speed = scene4Speed(frame);
   const opacity = interpolate(frame, [S4.unshuffle[1], S4.unshuffle[1] + 20, S4.matchCut + 50, S4.matchCut + 80], [0, 0.8, 0.8, 0], {
@@ -139,8 +140,10 @@ const TimeReadout: React.FC<{ frame: number; color: string }> = ({ frame, color 
     extrapolateRight: "clamp",
   });
   if (opacity <= 0) return null;
-  const sign = t < 0 ? "−" : "+";
+  const sign = t < 0 ? "\u2212" : "+";
   const rate = speed < 1e-3 ? "HELD" : speed > 0.98 ? "1:1" : `1:${Number((1 / speed).toPrecision(2))}`;
+  // Light on the night, dark ink on the dusk: the clock keeps counting into the boy's world.
+  const color = mixHex(NIGHT.light.glow, DUSK.skyTop, mix);
   return (
     <div
       style={{
@@ -152,7 +155,7 @@ const TimeReadout: React.FC<{ frame: number; color: string }> = ({ frame, color 
         fontSize: 26,
         letterSpacing: 3,
         color,
-        textShadow: `0 0 12px ${color}`,
+        textShadow: mix < 0.5 ? `0 0 12px ${color}` : undefined,
         whiteSpace: "pre",
       }}
     >
@@ -198,7 +201,7 @@ export const Scene4TheTouch: React.FC = () => {
 
   // The legend is etched into the sky, then the closing line is written.
   const legend = interpolate(frame, [...S4.legend], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const legendOpacity = interpolate(frame, [S4.legend[0], S4.legend[0] + 50], [0, 0.72], {
+  const legendOpacity = interpolate(frame, [S4.legend[0], S4.legend[0] + 40], [0, 0.72], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -222,7 +225,7 @@ export const Scene4TheTouch: React.FC = () => {
           </svg>
         </AbsoluteFill>
       ) : null}
-      <TimeReadout frame={frame} color={mixHex(NIGHT.light.glow, DUSK.light.glow, mix)} />
+      <TimeReadout frame={frame} mix={mix} />
       {frame >= S4.subtitle[0] ? <Subtitle text={SUBTITLE} frame={frame - S4.subtitle[0]} y={1400} /> : null}
       <Vignette strength={lerp(0.55, 0.4, mix) * (1 - whiteness)} />
       <Grain frame={frame} opacity={0.07 * (1 - whiteness)} />

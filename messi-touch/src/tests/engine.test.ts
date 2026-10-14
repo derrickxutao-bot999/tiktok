@@ -38,16 +38,16 @@ describe("era changes", () => {
       expect(Math.abs(n - Math.round(n))).toBeLessThan(1e-9);
     });
   });
-  test("the step frequency rises (never drops by more than 0.5% frame to frame)", () => {
-    let prev = 0;
+  test("the step frequency only ever rises", () => {
+    let peak = 0;
     for (let f = 0; f < S1.freeze; f++) {
       const d = stepAt(scene1FrameToT(f + 1)) - stepAt(scene1FrameToT(f));
-      expect(d).toBeGreaterThanOrEqual(prev * 0.995);
-      prev = d;
+      expect(d).toBeGreaterThanOrEqual(peak * 0.999);
+      peak = Math.max(peak, d);
     }
     const early = stepAt(scene1FrameToT(60)) - stepAt(scene1FrameToT(0));
-    const late = stepAt(scene1FrameToT(660)) - stepAt(scene1FrameToT(600));
-    expect(late / early).toBeGreaterThan(1.35);
+    const late = stepAt(scene1FrameToT(S1.freeze)) - stepAt(scene1FrameToT(S1.freeze - 40));
+    expect(late / 40 / (early / 60)).toBeGreaterThan(1.6);
   });
 });
 
