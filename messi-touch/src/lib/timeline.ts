@@ -23,11 +23,16 @@ export const S1 = {
   eraSweep: [180, 600] as const,
   /** The toe is exactly 1 cm from the ball on this frame, and the picture freezes. */
   freeze: 660,
-  /** The frozen picture is sliced and shuffled through the eras... */
-  shuffle: [664, 708] as const,
+  /** On the held frame a dimension line measures the last centimetre... */
+  measure: [662, 684] as const,
+  /** ...then the frozen picture is sliced and shuffled through the eras... */
+  shuffle: [684, 712] as const,
   /** ...and is fully white from here to the end of the scene. */
   white: 712,
 } as const;
+
+/** Frames of cross-dissolve at the match cut; 0 = a hard cut on S4.matchCut. */
+export const MATCH_CUT_DISSOLVE = 0;
 
 /** Scene 4 beats, in frames local to the scene. */
 export const S4 = {

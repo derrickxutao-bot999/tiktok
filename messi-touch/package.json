@@ -9,13 +9,12 @@
     "render:scene1": "remotion render Scene1 out/scene1.mp4",
     "render:scene4": "remotion render Scene4 out/scene4.mp4",
     "stills": "node tools/stills.mjs",
-    "matchcut": "node tools/matchcut-check.mjs",
+    "matchcut": "node tools/matchcut.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
     "@remotion/cli": "4.0.529",
-    "@remotion/paths": "4.0.529",
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "remotion": "4.0.529"
