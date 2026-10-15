@@ -358,14 +358,14 @@ function crtTV(g, x, y, w, h, kind, o = {}) {
 // ---------------------------------------------------------------- rooms
 // common: floor line, back wall, glow, rim settings per era
 function floorAndWall(g, wallTop, wallCol, floorY, floorCol) {
-  g.fillStyle = wallCol; g.fillRect(0, 0, W, floorY);
+  g.fillStyle = wallCol; g.fillRect(-W, -H, 3 * W, H + floorY);
   const fg = g.createLinearGradient(0, floorY, 0, H); fg.addColorStop(0, floorCol); fg.addColorStop(1, "#07090d");
-  g.fillStyle = fg; g.fillRect(0, floorY, W, H - floorY);
+  g.fillStyle = fg; g.fillRect(-W, floorY, 3 * W, 2 * H);
   g.fillStyle = "rgba(0,0,0,0.25)"; g.fillRect(0, floorY - 6, W, 6);
 }
 
 function sofaBack(g, top, o = {}) {
-  g.fillStyle = o.col || "#11151d"; rr(g, -40, top, W + 80, H - top + 40, 60); g.fill();
+  g.fillStyle = o.col || "#11151d"; rr(g, -400, top, W + 800, H - top + 900, 60); g.fill();
   g.strokeStyle = o.rim || "rgba(150,175,215,0.22)"; g.lineWidth = 3; g.beginPath(); g.moveTo(40, top + 2); g.lineTo(W - 40, top + 2); g.stroke();
   if (o.lace) { // crocheted antimacassar over the sofa back (1990s)
     for (const cx of o.lace) {

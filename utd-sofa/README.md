@@ -21,24 +21,48 @@ rim-lit by the screen. Shirts are plain red with no badge or sponsor.
 Render a shot: `node tools/shot.mjs storyboard.html out/sb1.png 1080 1920 "?f=1"`.
 The real interview clip goes on the TV via `screenContent(..., { image })`.
 
-## Segment 1 (`seg1.html` + `seg1.js`, 47 s)
+## Segment 1 v2 — "the same sofa" (`film.html` = `toon.js` + `views.js` + `film.js`, 76 s)
 
-| Time | Shot | Outside |
-|---|---|---|
-| 0–12.5 | The real interview (Prime Video Sport on X, 2:29.3–2:38.8) fills the screen; the camera pulls back to the TV in his flat; on "I can't say more" he switches it off | rain |
-| 12.5–16.7 | He stands, walks out through the door into the corridor light; the door closes | rain |
-| 16.7–19.3 | Empty room, a line of light under the door | rain |
-| 19.3–23 | The door opens on a child, who walks to the sofa, climbs up and presses the remote | rain |
-| 23–29 | The TV light carries the room back to 1999 (Dad, CRT, 02:45, calendar 27 May); the injury-time winner, arms up | clear night, crickets |
-| 29–35 | 2008 dorm, roommates, the penalty save, arms up | windy night, branches, clouds over the moon |
-| 35–37 | The roommates fade out; he grows up; the rain comes back | rain |
-| 37–47 | 2026, alone: the same interview, the same click, the room goes dark | rain |
+Many angles and cinematic transitions instead of one locked camera; the people are full-colour
+cartoon characters (the same man at three ages, his dad, two roommates) with faces, lit by the
+light in the scene (TV, laptop, corridor, rainy window).
+
+| # | Time | Shot | Transition out |
+|---|---|---|---|
+| 1 | 0–6 | The real interview (Prime Video, 2:29.3–), pulled back to reveal his TV | dissolve |
+| 2 | 6–8 | His face in the TV light, rain light on the wall | cut |
+| 3 | 8–9.4 | Insert: his thumb on the remote | cut on the click |
+| 4 | 9.4–11.2 | The screen dies; his reflection in the black glass | dissolve |
+| 5 | 11.2–14.6 | Profile in the dark; head goes down; piano starts | cut |
+| 6 | 14.6–20.2 | He stands; crosses to the door, looks back once, leaves | dissolve |
+| 7 | 20.2–22.6 | The empty room, slow push on the dark TV | dissolve |
+| 8 | 22.6–25.2 | Floor level: feet under the door, it opens on a child | cut |
+| 9 | 25.2–28 | The child in the doorway (oversized No.7 shirt), walks in | cut |
+| 10 | 28–31 | He hops onto the sofa, legs dangling, picks up the remote | cut |
+| 11 | 31–32.6 | Insert: two small hands, the same button (match cut with 3) | cut |
+| 12 | 32.6–34.6 | The screen opens on an old broadcast; the camera flies into it | push-through |
+| 13 | 34.6–39.6 | 1999 from behind: out of the CRT to Dad and the boy | dissolve |
+| 14 | 39.6–42.2 | Clock 02:45 -> calendar 27 May 1999 (focus pull) | dissolve |
+| 15 | 42.2–48.6 | Their faces; the winner (45.0); Dad on his feet, the boy jumping | camera move |
+| 16 | 48.6–51.2 | Up to the moon, across the night sky, down into a dorm window | whip + dissolves |
+| 17 | 51.2–56.5 | 2008: three faces in laptop light; the save (54.0); they jump | cut |
+| 18 | 56.5–59.5 | The moment holds; the roommates fade; closer on him | cut |
+| 19 | 59.5–62 | The student's face dissolves into the man's | dissolve |
+| 20 | 62–66.4 | His face; the same interview | cut |
+| 21 | 66.4–67.8 | From behind: the same picture on the TV | cut |
+| 22 | 67.8–68.6 | Insert: his thumb, the same button | cut on the click |
+| 23 | 68.6–76 | Black screen: his reflection, and beside him, faint, the boy | fade out |
+
+Score (`score.py`, original): one theme in D major on real instrument recordings (University of
+Iowa MIS, fetched by `../banana-39/audio/fetch_samples.py`). Silence under the interview; solo
+piano when he is alone; an octave higher with glockenspiel for the child; strings in 1999 with the
+goal on a downbeat; a piano/pizzicato pulse in 2008 and the save; back to piano; silence; a coda.
+
+Build: `tools/fetch_footage.sh`, `python3 score.py`, `python3 sound.py` (-> `out/film.wav`),
+`node render.mjs film.html out/film.mp4 out/film.wav`.
 
 Words (checked with two transcription passes): "You start changing, changing, changing manager
 and… But what about other areas? … I can't say more." Subtitles: 一直在换、换、换主教练…… /
 但其他方面呢？ / 我不能再多说了。 On-screen credit: 画面：Prime Video.
-
-Build: `tools/fetch_footage.sh` (the interview, not in git) and `tools/fetch_music.sh`, then
-`python3 sound.py` -> `out/seg1.wav`, then `node render.mjs seg1.html out/seg1.mp4 out/seg1.wav`.
-Sound sources and the credits the video description needs are in `audio/LICENSES.md`
-(music: Kevin MacLeod "Danse Morialta", CC BY 4.0; crowd: Gregor Quendel, CC BY 4.0; the rest CC0).
+Credits for the description (crowd sounds, CC BY 4.0) are in `audio/LICENSES.md`; the music is
+original.

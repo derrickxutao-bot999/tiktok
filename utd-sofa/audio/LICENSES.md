@@ -7,9 +7,9 @@
 | `door_creak_open.wav`, `door_creak_close.wav`, `door_close.wav`, `floor_creak1.wav`, `switch_on.wav`, `switch_off.wav` | laleksic | CC0 | https://opengameart.org/content/various-sound-effects |
 | `crowd_roar.mp3` (file 04), `crowd_ambience.mp3` (file 10) | Gregor Quendel | **CC BY 4.0 — credit required** | https://opengameart.org/content/free-crowd-cheering-sounds |
 
-Music (not in git, fetched by `tools/fetch_music.sh`): "Danse Morialta" by Kevin MacLeod
-(incompetech.com), **CC BY 4.0 — credit required**.
+Music for v2 is original (`score.py`, from University of Iowa MIS recordings, free to use
+without restriction). v1 used "Danse Morialta" by Kevin MacLeod (CC BY 4.0), fetched by
+`tools/fetch_music.sh`; it is no longer in the mix.
 
 Credits for the video description:
-- Music: "Danse Morialta" Kevin MacLeod (incompetech.com), Licensed under Creative Commons: By Attribution 4.0
 - Crowd sounds: "Free Crowd Cheering Sounds" by Gregor Quendel (opengameart.org), CC BY 4.0
