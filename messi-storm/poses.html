@@ -1,8 +1,0 @@
-<!doctype html><html><head><meta charset="utf-8"><style>@font-face{font-family:"Oswald";font-weight:700;src:url(fonts/Oswald-SemiBold.ttf)}</style></head>
-<body style="margin:0"><canvas id="c" width="3200" height="1300"></canvas>
-<script src="silhouette.js"></script><script>
-const g=document.getElementById("c").getContext("2d");
-window.draw=()=>{g.fillStyle="#d8d6d0";g.fillRect(0,0,3200,1300);
- const L=[["skyBack",{name:"MESSI",armband:"A"}],["backWalk",{}],["relaxed",{young:true}],["shush",{}],["crossed",{armband:"B"}],["hips",{}],["sky",{}],["sideWalk",{}],["dribble",{}]];
- L.forEach(([k,o],i)=>drawFig(g,180+i*350,1220,640,POSES[k],o));};
-window.ready=document.fonts.load("700 40px Oswald","MESSI10");</script></body></html>

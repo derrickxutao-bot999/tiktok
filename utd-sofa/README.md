@@ -16,7 +16,7 @@ rim-lit by the screen. Shirts are plain red with no badge or sponsor.
 - `scene.js` — rooms (1999 flat, 2008 dorm, 2026 flat), TVs and screen content, rain
   window, door with corridor light, back-view fans (`bustBack`), rim light, grade.
 - `storyboard.html?f=N` — storyboard shots 1–5; `storyboard-seg1.png` is the sheet.
-  Standing doorway figures use `../messi-storm/silhouette.js`.
+  Standing doorway figures use `silhouette.js`.
 
 Render a shot: `node tools/shot.mjs storyboard.html out/sb1.png 1080 1920 "?f=1"`.
 The real interview clip goes on the TV via `screenContent(..., { image })`.

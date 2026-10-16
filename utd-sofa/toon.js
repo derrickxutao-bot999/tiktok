@@ -1,5 +1,5 @@
 // Cartoon people for the United episode: the same man at three ages, his dad,
-// two roommates. Built on the limb outlines from ../messi-storm/silhouette.js
+// two roommates. Built on the limb outlines from silhouette.js
 // (prof, chain, ribbon, closedCurve), but in colour, with faces, and lit as a
 // whole by the light in the scene (a TV, a door, a window).
 //
