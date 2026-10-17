@@ -367,3 +367,50 @@ def dorm(t, fi):
     return tvroom("2013", tt, fi, FT.frame("fergie", 204.0 + tt, "modern"), figs, zf * 0.62, zf * 0.82, grade=("#C9CCC4", .14))
 
 FN.update({"corner2": corner2, "dorm": dorm})
+
+# ------------------------------------------------------------------ text instead of tactics boards
+def minute_card(t, fi, minute, lines, score0, score1=None, t_flip=None, hit=None):
+    """Kinetic type: the minute slams in, a line or two of what happens, the
+    score flips on the hit. lines: [(t_in, text), ...]"""
+    p = G.svg_open()
+    k = ease_out(t / 0.3)
+    sc = 1.25 - 0.25 * k
+    p.append(f'<g transform="translate({W / 2} 760) scale({sc:.3f}) translate({-W / 2} -760)" opacity="{min(1, t / .15):.2f}">')
+    p.append(G.T(W / 2, 800, minute, 250, C["red"], 600, fam="Noto Serif SC", ls=4))
+    p.append('</g>')
+    p.append(G.wobble_line([(W / 2 - 150 * k, 880), (W / 2 + 150 * k, 880)], 3, C["ink"], seed=5))
+    for i, (ti, txt) in enumerate(lines):
+        a = ease((t - ti) / .25)
+        if a > 0:
+            p.append(G.T(W / 2, 990 + i * 78 + (1 - a) * 14, txt, 54, C["ink"], 400, op=a, ls=3))
+    flipped = t_flip is not None and t >= t_flip
+    s = score1 if flipped else score0
+    kk = ease((t - t_flip) / .25) if flipped else 1
+    box_y = 1180 + len(lines) * 30
+    p.append(f'<rect x="{W / 2 - 230}" y="{box_y}" width="460" height="96" fill="{C["ink"]}"/>')
+    p.append(G.T(W / 2 - 150, box_y + 63, "曼联", 36, C["paper"], 600))
+    p.append(G.T(W / 2 + 150, box_y + 63, "拜仁", 36, C["paper"], 600))
+    p.append(G.T(W / 2, box_y + 66, s, 54, C["ochre_l"] if flipped else C["paper"], 600, op=kk))
+    a = G.out_frame(p, fi)
+    if hit is not None and t >= hit:
+        dx, dy, r = shake(t, hit, .5, 14)
+        a = zoom(a, 1.0 + 0.04 * max(0, 1 - (t - hit) / .5), (W / 2, 900), r, dx, dy)
+        a = flash(a, 0.4 * max(0, 1 - (t - hit) / .2))
+    return zoom(a, 1.0 + 0.03 * t / 2.5, (W / 2, 900))
+
+def basler(t, fi):
+    return minute_card(t, fi, "6'", [(0.2, "巴斯勒 · 任意球")], "0 – 0", "0 – 1", 2.05, 2.05)
+
+def corner1(t, fi):
+    if t < 2.5:
+        return minute_card(t, fi, "90+1'", [(0.15, "贝克汉姆 · 角球"), (1.3, "谢林汉姆 · 扫进")], "0 – 1", "1 – 1", 2.45, 2.45)
+    return minute_card(t, fi, "90+1'", [(0.0, "贝克汉姆 · 角球"), (0.0, "谢林汉姆 · 扫进")], "1 – 1", "1 – 1", 0.0) if t < 3.75 else \
+        minute_card(t - 3.75, fi, "90+3'", [(0.1, "又是角球")], "1 – 1")
+
+_corner2_tv = corner2
+def corner2(t, fi):
+    if t < 2.5:
+        return minute_card(t + 1.25, fi, "90+3'", [(0.1, "又是角球"), (1.0, "谢林汉姆 · 头球一摆")], "1 – 1")
+    return _corner2_tv(t, fi)
+
+FN.update({"basler": basler, "corner1": corner1, "corner2": corner2})
