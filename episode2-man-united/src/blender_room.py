@@ -446,6 +446,14 @@ elif MODE == "pullback":
     for fc in (cam.animation_data.action.fcurves if cam.animation_data else []):
         for kp in fc.keyframe_points:
             kp.interpolation = "BEZIER"; kp.easing = "AUTO"
+    if "dump" in EXTRA:
+        quads = {}
+        for f in range(1, n_frames + hold + 1):
+            sc.frame_set(f)
+            quads[f] = [proj(scr_c + Vector((dx * scr_w / 2, -0.001, dz * scr_h / 2)))[:2]
+                        for dx, dz in ((-1, 1), (1, 1), (1, -1), (-1, -1))]
+        json.dump(quads, open(os.path.join(OUT, "pull_quads.json"), "w"))
+        sys.exit(0)
     show({"set", "screen", "door", "sofa", "hero"})
     sc.render.filepath = os.path.join(OUT, "pull_")
     sc.render.film_transparent = False

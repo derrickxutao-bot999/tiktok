@@ -78,6 +78,9 @@ def subtitle_events():
             tail = 0.35 if j == len(cs) - 1 else 0.0
             ev.append((t, t + dd + tail, shown, spk is not NARRATOR))
             t += dd
+    import clipmap
+    for a, b, s in clipmap.SUBS:
+        ev.append((a, b, "「" + s.rstrip("。").replace("。", "  ") + "」", True))
     ev.sort()
     return [(a, min(b, ev[i + 1][0] - 0.02) if i + 1 < len(ev) else b, c, q) for i, (a, b, c, q) in enumerate(ev)]
 
@@ -107,7 +110,9 @@ def draw_tag(img, text, a):
     y = 250
     region = np.asarray(img.crop((300, y - 25, W - 300, y + 25)).convert("L"), np.float32).mean()
     col = hex2rgb(C["ink"]) if region > 150 else hex2rgb(C["paper"])
-    d.text((W / 2, y), "  ".join(text) if len(text) <= 4 else text, font=f, fill=(*col, int(230 * a)), anchor="mm")
+    for k, line in enumerate(text.split("|")):
+        ff = f if k == 0 else font(SERIF, 24)
+        d.text((W / 2, y + k * 42), "  ".join(line) if len(line) <= 4 else line, font=ff, fill=(*col, int(230 * a)), anchor="mm")
 
 def final():
     segs = [os.path.join(SEG, f"{s[0]}.mp4") for s in SHOTS]

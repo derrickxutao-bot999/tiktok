@@ -169,7 +169,6 @@ def build_sfx():
     # 2026 flat: rain and room tone through the opening and the empty room
     put(rain(26.8), 0.0, 1.0, -0.4)
     put(room(26.8), 0.0)
-    put(lp(murmur(17.3, 0.018, 1400), 1500), 0.0, 1.0)  # interview room sound in the TV
     # s03 leave (16.0)
     put(click(), 16.0 + 1.22)
     put(tv_off(), 16.0 + 1.25, 0.9)
@@ -263,6 +262,34 @@ def build_vo():
         vo[:, c] = lp(vo[:, c], 9000, 2)
     return vo
 
+def build_tv():
+    """The Prime Video interview as heard from the TV, following clipmap.SEGMENTS."""
+    import clipmap
+    sr, a = wavfile.read(os.path.join(BUILD, "clip", "audio48k.wav"))
+    a = a.astype(np.float32).mean(1) / 32768
+    out = np.zeros(NS, np.float32)
+    for f0, f1, c0, gdb, muf in clipmap.SEGMENTS:
+        n = int((f1 - f0) * SR)
+        x = a[int(c0 * SR): int(c0 * SR) + n].astype(np.float64)
+        if len(x) < n:
+            x = np.pad(x, (0, n - len(x)))
+        cut = 12000 * (1 - muf) + 2600 * muf
+        x = lp(x, cut, 2)
+        if muf > 0:
+            x = hp(x, 120 + 180 * muf, 2)
+        g = 10 ** (gdb / 20) * np.ones(n)
+        if f0 == 44.0:   # under the narration until it ends, then the loop is heard
+            tt = f0 + np.arange(n) / SR
+            g = np.where(tt < 47.0, 10 ** (-24 / 20), g)
+            g = np.convolve(g, np.ones(2400) / 2400, mode="same")
+        fade = int(0.03 * SR)
+        e = np.ones(n); e[:fade] = np.linspace(0, 1, fade); e[-fade:] = np.linspace(1, 0, fade)
+        out[int(f0 * SR): int(f0 * SR) + n] += (x * g * e).astype(np.float32)
+    # small room on the muffled parts
+    from music import reverb
+    st = np.stack([out, out], 1)
+    return reverb(st, secs=1.2, wet=0.18, seed=5)
+
 def music_gain(t):
     """Automation: hard cut at the TV click; silence where the picture needs it."""
     g = np.ones_like(t)
@@ -275,7 +302,7 @@ def music_gain(t):
 def main():
     from scipy.io.wavfile import read
     build_sfx()
-    vo = build_vo()
+    vo = build_vo() + build_tv()
     m = np.zeros((NS, 2), np.float32)
     levels = {"piano": 0.55, "winds": 0.6, "strings": 0.5, "perc": 0.7}
     for st, lv in levels.items():

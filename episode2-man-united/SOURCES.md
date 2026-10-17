@@ -4,23 +4,27 @@ Everything shown with a 史实 (documented) label, or stated in the narration wi
 The father, the boy who grows up, the roommates, the phone call and every scene inside a room are **fiction**.
 The film says so on screen with a 虚构 label and again on the end card.
 
-## Opening and ending: Lisandro Martínez interview
+## Opening, loop and ending: Lisandro Martínez interview
 
-The quotes appear as text only. There is no voice imitation and no likeness. The TV shows captions over a plain interview backdrop.
+The TV plays Prime Video Sport UK's post-match interview with Martínez, from their post of 13 Oct 2026 after Atlético Madrid 2-0 Manchester United (Champions League):
+https://twitter.com/primevideosport/status/2110119478176411773/video/1
 
-| On screen | Original English | Context |
+The opening is a tight edit of three continuous passages from the clip. Nothing is reordered or put together from separate sentences. Each Chinese subtitle translates exactly what is heard:
+
+| Clip time | Heard | Subtitle |
 |---|---|---|
-| 真的很差。真的很差。 | "Really poor. Really poor." | Prime Video, after Atlético Madrid 2-0 Man United, Champions League, 13 Oct 2026 |
-| 有时候，这就是俱乐部现状的一面镜子。 | "Sometimes it's a reflection of the mirror of how is our club at the moment" | Same interview |
-| 我们期待高层做得更多。 | "We expect more from the top, from up." | Same interview |
-| 如果我们不说真话，什么都不会改变。 | "But if we don't say the truth, nothing will change." | Follow-up interview the same week (with Peter Schmeichel, CBS Sports) |
+| 0:06–0:09 | "Really poor. Really poor." | 真的很差。真的很差。 |
+| 0:15–0:21 | "…sometimes it's a reflection of the mirror of how is our club at the moment." | 有时候，这就是俱乐部现状的一面镜子。 |
+| 0:25–0:28 | "…now we expect more from the top, from up…" | 我们期待高层做得更多。 |
 
-Sources:
+When the time loop closes (0:44–0:50), the same clip is heard again ("Really poor."). At the end (3:38) the TV plays a later passage from the same interview: "You can't stay with what you did last season. The teams know how you play…" It sits low under the narration, without subtitles.
+
+Reports of the same interview:
 - [Irish Times / PA, 14 Oct 2026](https://www.irishtimes.com/sport/soccer/2026/10/14/lisandro-martinez-says-manchester-united-lack-ambition-in-criticism-of-clubs-leadership/)
 - [Yahoo Sports: "We expect more from the top"](https://sports.yahoo.com/articles/expect-more-top-lisandro-martinez-213516002.html)
-- [Yahoo Sports / The Independent: Martínez's follow-up statement](https://sports.yahoo.com/articles/lisandro-martinez-issues-fresh-statement-231858252.html)
+- [Yahoo Sports / The Independent: Martínez's follow-up statement](https://sports.yahoo.com/articles/lisandro-martinez-issues-fresh-statement-231858252.html). He said he "spoke out of anger and frustration" and did not apologise.
 
-Martínez later said he "spoke out of anger and frustration" and did not apologise. The film does not claim more than the quoted words.
+**Rights:** the footage belongs to Prime Video / UEFA. It is used briefly, for commentary, and credited on screen. Whether it can be posted to TikTok is the publisher's call.
 
 ## 1999 Champions League final
 

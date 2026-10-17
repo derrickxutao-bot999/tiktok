@@ -473,7 +473,7 @@ def s26(t, fi):
         ("标注“史实”的日期、比分与引语依据公开报道。", 28, INK, 400),
         ("", 20, INK, 400),
         ("资料来源", 34, INK, 600),
-        ("马丁内斯赛后采访（2026.10.13，Prime Video / CBS Sports）", 24, C["charcoal"], 400),
+        ("开场电视画面：Prime Video Sport 马丁内斯赛后采访（2026.10.13）", 24, C["charcoal"], 400),
         ("—— 据 PA / Irish Times、Yahoo Sports、The Independent 报道", 24, C["charcoal"], 400),
         ("1999年欧冠决赛、2024年足总杯决赛：比赛记录", 24, C["charcoal"], 400),
         ("2021年5月2日老特拉福德抗议：BBC、CBS Sports 等报道", 24, C["charcoal"], 400),

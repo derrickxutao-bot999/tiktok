@@ -51,6 +51,9 @@ def _tv_hold(which):
     return tv.martinez(20, which, hold_all=True)
 
 def tv_content(kind, t):
+    if kind == "clip":
+        import clipmap
+        return clipmap.at(t)
     if kind == "martinez":
         return _tv_hold(1)
     if kind == "martinez2":
@@ -97,10 +100,21 @@ def breathe(t, f=0.23, ph=0.0):
     return math.sin(2 * math.pi * f * t + ph)
 
 # ---------------------------------------------------------------- s01
+@lru_cache(maxsize=1)
+def _pull_quads():
+    import json
+    return json.load(open(os.path.join(BL, "2026", "pull_quads.json")))
+
 def s01(t, fi):
+    import clipmap
     i = min(312, int(t * FPS) + 1)
     img = Image.open(os.path.join(BL, "2026", f"pull_{i:04d}.png")).convert("RGBA")
-    return finish(img, fi, grade=("#C7CCD6", .16))
+    q = _pull_quads()[str(i)]
+    warp_into(img, clipmap.at(t), q)
+    k = ease((t - 6.5) / 6.5)   # the TV glow only matters once the room is visible
+    cx = sum(p[0] for p in q) / 4; cy = sum(p[1] for p in q) / 4
+    light = light_pool((W, H), (cx, cy), abs(q[1][0] - q[0][0]) * 2.0, "#9FB8C8", 0.18 * k) if k > 0 else None
+    return finish(img, fi, grade=("#C7CCD6", .16 * k), light=light)
 
 # ---------------------------------------------------------------- s02
 @lru_cache(maxsize=1)
@@ -135,7 +149,7 @@ def s03(t, fi):
     tv_on = t < T_CLICK
     # TV switches off: picture collapses to a bright line in 0.2s
     door = seq(t, [(5.65, 0), (6.35, 82), (7.15, 82), (7.75, 0)])
-    img = room_base(era, t, door=door, tvk="martinez" if tv_on else "off")
+    img = room_base(era, 16.0 + t, door=door, tvk="clip" if tv_on else "off")
     if T_CLICK <= t < T_CLICK + 0.22:
         q = anchors(era)["screen"]
         k = (t - T_CLICK) / 0.22
@@ -279,7 +293,7 @@ def _era_frame(era, t, fi):
         items.append(place(ADULT, seated_back(breathe=breathe(t), arm="chin"), P, SEAT, "back", seed))
         grade = ("#C9CDD2", .16)
     else:
-        img = room_base(era, t, tvk="martinez")
+        img = room_base(era, 33.0 + t, tvk="clip")
         items.append(place(ADULT, seated_back(breathe=breathe(t), arm="remote_low"), P, SEAT, "back", seed))
         grade = ("#BCC4CF", .2)
     img = with_sofa(img, era, items)
@@ -396,8 +410,8 @@ def s24(t, fi):
     seed = fi // 2
     door = seq(t, [(1.6, 0), (2.5, 84), (6.0, 84), (6.8, 0)])
     tv_on_t = 8.3
-    tvk = "martinez2" if t >= tv_on_t else "off"
-    img = room_base(era, t - tv_on_t, door=door, tvk=tvk)
+    tvk = "clip" if t >= tv_on_t else "off"
+    img = room_base(era, 209.5 + t, door=door, tvk=tvk)
     items = []; over = []
     tw = t - 2.4
     if tw >= 0:
