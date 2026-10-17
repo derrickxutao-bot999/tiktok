@@ -3,7 +3,7 @@
 A Chinese-language animated documentary for TikTok (1080×1920, 24 fps, about 4 minutes).
 It is about Manchester United fans: why they stay loyal through disappointment, and why loyalty can also mean demanding change.
 
-- Final video: `out/ep2_man_united.mp4`
+- Final video: `out/ep2_man_united.mp4` (master) and `out/ep2_man_united_tiktok.mp4` (92 MB). Both are kept out of git because they contain Prime Video broadcast footage; the interview clip comes from Prime Video Sport UK's post of 13 Oct 2026 (see SOURCES.md).
 - Facts, quotes and sources: [`SOURCES.md`](SOURCES.md). Fictional scenes are labelled 虚构 on screen.
 - Music for Logic Pro: `music/score.mid` (one track per instrument, tempo 60 bpm so 1 beat = 1 second of picture), plus audio stems in `music/stems/`.
 
