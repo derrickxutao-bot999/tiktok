@@ -90,29 +90,41 @@ def font(path, size):
         _fonts[(path, size)] = ImageFont.truetype(path, size)
     return _fonts[(path, size)]
 
+def _halo_text(img, xy, text, f, fill, halo, a, anchor="mm", blur=9, strength=0.6):
+    """Text with a soft blurred halo behind it, so it reads on any background."""
+    from PIL import ImageFilter
+    m = Image.new("L", img.size, 0)
+    ImageDraw.Draw(m).text(xy, text, font=f, fill=255, anchor=anchor, stroke_width=6)
+    bbox = m.getbbox()
+    if bbox:
+        pad = 40
+        box = (max(0, bbox[0] - pad), max(0, bbox[1] - pad), min(W, bbox[2] + pad), min(H, bbox[3] + pad))
+        sub = m.crop(box).filter(ImageFilter.GaussianBlur(blur))
+        sub = sub.point(lambda v: int(min(255, v * 1.6) * strength * a))
+        layer = Image.new("RGBA", (box[2] - box[0], box[3] - box[1]), (*halo, 255))
+        layer.putalpha(sub)
+        img.alpha_composite(layer, (box[0], box[1]))
+    ImageDraw.Draw(img).text(xy, text, font=f, fill=(*fill, int(255 * a)), anchor=anchor)
+
 def draw_sub(img, text, quote, a):
-    d = ImageDraw.Draw(img, "RGBA")
     f = font(SERIF, 50)
     y = 1480
     region = np.asarray(img.crop((140, y - 40, W - 140, y + 40)).convert("L"), np.float32).mean()
-    bright = region > 150
-    if bright:
-        fill = (*hex2rgb(C["red_d"] if quote else C["ink"]), int(255 * a))
-        d.text((W / 2, y), text, font=f, fill=fill, anchor="mm")
+    if region > 150:
+        _halo_text(img, (W / 2, y), text, f, hex2rgb(C["red_d"] if quote else C["ink"]), hex2rgb(C["paper"]), a, strength=.85)
     else:
-        fill = (*hex2rgb(C["ochre_l"] if quote else C["paper"]), int(255 * a))
-        d.text((W / 2 + 2, y + 3), text, font=f, fill=(20, 18, 16, int(150 * a)), anchor="mm")
-        d.text((W / 2, y), text, font=f, fill=fill, anchor="mm", stroke_width=2, stroke_fill=(30, 26, 24, int(120 * a)))
+        _halo_text(img, (W / 2, y), text, f, hex2rgb(C["ochre_l"] if quote else C["paper"]), (18, 16, 14), a, strength=.7)
 
 def draw_tag(img, text, a):
-    d = ImageDraw.Draw(img, "RGBA")
     f = font(SERIF, 30)
     y = 250
     region = np.asarray(img.crop((300, y - 25, W - 300, y + 25)).convert("L"), np.float32).mean()
-    col = hex2rgb(C["ink"]) if region > 150 else hex2rgb(C["paper"])
+    light = region > 150
+    col = hex2rgb(C["ink"]) if light else hex2rgb(C["paper"])
+    halo = hex2rgb(C["paper"]) if light else (18, 16, 14)
     for k, line in enumerate(text.split("|")):
         ff = f if k == 0 else font(SERIF, 24)
-        d.text((W / 2, y + k * 42), "  ".join(line) if len(line) <= 4 else line, font=ff, fill=(*col, int(230 * a)), anchor="mm")
+        _halo_text(img, (W / 2, y + k * 42), "  ".join(line) if len(line) <= 4 else line, ff, col, halo, a * .92, blur=7, strength=.6)
 
 def final():
     segs = [os.path.join(SEG, f"{s[0]}.mp4") for s in SHOTS]
@@ -123,7 +135,7 @@ def final():
                             "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE)
     out = os.path.join(BUILD, "video_subs.mp4")
     enc = subprocess.Popen(["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
-                            "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "slow", "-crf", "17",
+                            "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "fast", "-crf", "16",
                             "-pix_fmt", "yuv420p", out], stdin=subprocess.PIPE)
     n = int(TOTAL * FPS)
     for i in range(n):
@@ -157,7 +169,14 @@ if __name__ == "__main__":
         subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", v, "-i", os.path.join(BUILD, "mix.wav"),
                         "-af", "loudnorm=I=-15:TP=-1.5:LRA=14", "-ar", "48000",
                         "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", out], check=True)
-        print(out)
+        # repo/TikTok copy under 100 MB: light grain clean-up, two-pass ~2.9 Mbps
+        small = os.path.join(OUTDIR, "ep2_man_united_tiktok.mp4")
+        base = ["ffmpeg", "-y", "-v", "error", "-i", out, "-vf", "hqdn3d=1.2:1.2:3:3", "-c:v", "libx264",
+                "-preset", "slow", "-b:v", "2900k", "-pix_fmt", "yuv420p"]
+        subprocess.run(base + ["-pass", "1", "-passlogfile", os.path.join(BUILD, "x264"), "-an", "-f", "mp4", "/dev/null"], check=True)
+        subprocess.run(base + ["-pass", "2", "-passlogfile", os.path.join(BUILD, "x264"), "-c:a", "aac", "-b:a", "160k",
+                               "-movflags", "+faststart", small], check=True)
+        print(out, small)
     elif cmd == "still":
         t = float(sys.argv[2])
         sid, start, dur, _ = [s for s in SHOTS if s[1] <= t][-1]
