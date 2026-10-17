@@ -54,6 +54,12 @@ def tv_content(kind, t):
     if kind == "clip":
         import clipmap
         return clipmap.at(t)
+    if kind == "clip2":
+        import clipmap, edit2
+        ct = edit2.clip_time(t)
+        return None if ct is None else clipmap.frame(round(ct * 25) / 25)
+    if kind == "inject":
+        return TV_INJECT
     if kind == "martinez":
         return _tv_hold(1)
     if kind == "martinez2":
@@ -70,6 +76,8 @@ def room_base(era, t, door=0.0, tvk="match", tvop=1.0, side=False, cam=False):
     """Background plate with the TV picture and the door at an angle."""
     key = "m" if cam == "m" else False
     pre = "m_" if cam == "m" else ""
+    if TV_OVERRIDE:
+        tvk = TV_OVERRIDE
     if door > 0.5 and not pre:
         img = plate(era, "bg_nodoor.png").copy()
         img.alpha_composite(door_layer(era, door))
@@ -86,14 +94,31 @@ def tv_light(era, img, strength, col="#9FB8C8", cam=False):
     r = abs(q[1][0] - q[0][0]) * 2.2
     return light_pool((W, H), (cx, cy), r, col, strength)
 
+TV_INJECT = None
+TV_OVERRIDE = None
+CAM = None   # dict(z=zoom, c=(x, y) focus, par=extra zoom factor for foreground) set by shots2
+
+def _zoom_layer(im, z, c):
+    if abs(z - 1) < 1e-4:
+        return im
+    x0 = c[0] * (1 - 1 / z); y0 = c[1] * (1 - 1 / z)   # c stays fixed on screen
+    return im.transform((W, H), Image.AFFINE, (1 / z, 0, x0, 0, 1 / z, y0), Image.BICUBIC)
+
 def with_sofa(img, era, items, cam=False, behind=None):
     """Composite: plate -> (behind items) -> sofa -> figures in front? No:
     seated figures sit *behind* the sofa back from the camera's view, so the
     order is plate -> figures -> sofa."""
     pre = "m_" if cam == "m" else ""
+    fg = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     if items:
-        img.alpha_composite(figures_layer(items))
-    img.alpha_composite(plate(era, pre + "sofa.png"))
+        fg.alpha_composite(figures_layer(items))
+    fg.alpha_composite(plate(era, pre + "sofa.png"))
+    if CAM:
+        z, c, par = CAM["z"], CAM["c"], CAM.get("par", 1.3)
+        img = _zoom_layer(img.convert("RGBA"), z, c)
+        fg = _zoom_layer(fg, 1 + (z - 1) * par, c)
+    img = img.convert("RGBA")
+    img.alpha_composite(fg)
     return img
 
 def breathe(t, f=0.23, ph=0.0):

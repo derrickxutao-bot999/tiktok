@@ -7,18 +7,24 @@ It is about Manchester United fans: why they stay loyal through disappointment, 
 - Facts, quotes and sources: [`SOURCES.md`](SOURCES.md). Fictional scenes are labelled 虚构 on screen.
 - Music for Logic Pro: `music/score.mid` (one track per instrument, tempo 60 bpm so 1 beat = 1 second of picture), plus audio stems in `music/stems/`.
 
-## Structure
+## Cut 2 (current): no narration, music only, 2:40
+
+Cut 2 drops the voice-over. A 96 BPM score (beat = 15 frames, bar = 2.5 s) carries the film, every cut lands on a bar or beat, and short kinetic Chinese captions tell the story. The only voice is Martínez himself in the opening, de-noised. There are no ambient noise beds, just a TV click and a door.
+
+- `src/edit2.py`: the cut list (with the transition into each shot), the captions and the Martínez audio edit
+- `src/shots2.py`: cut-1 shots retimed to the beat, with parallax dollies (sofa and figures move more than the back wall), a push through the 1999 CRT into the 90:00 clock, shake and confetti on the winner
+- Blender `orbit` mode: one continuous camera move around the seat. Each era renders its own slice of the same path, so on every bar the room changes from 1999 to 2013, 2019 and 2026 while the camera keeps moving and he stays in the same place on screen.
+- `src/render2.py`: transitions (whip pan, ink blot, iris, flash, dip, dissolve) and kinetic captions
+- `src/music2.py`: the score (piano, clarinet, harp, strings, bass, drums, timpani). `music/score2.mid` is at 96 BPM for Logic Pro.
 
 | Time | Section |
 |---|---|
-| 0:00 | Martínez's words fill the screen. The camera pulls back to a TV in a 2026 flat. He switches it off and leaves. The room stays empty. |
-| 0:26 | The door opens on 1999: a father and his small son. The same seat in 1999, 2013, 2019 and 2026 brings the loop back to the same interview. |
-| 0:49 | Title: 再等一会儿 |
-| 0:55 | 1999 final: Basler 6', "再等一会儿", +3, Sheringham, Solskjær, joy |
-| 1:50 | 2013 Ferguson retires. The seasons pass with a few small lights. The 2024 FA Cup final. A phone call to his father. |
-| 2:43 | 2005 takeover, Newton Heath's green and gold, 2010 scarves, 2 May 2021 |
-| 3:21 | Red shirt, green-and-gold scarf. He comes back into the room. Martínez: "如果我们不说真话，什么都不会改变。" |
-| 3:46 | 再等一会儿。但不是永远。 Then the sources card. |
+| 0:00 | Martínez on the TV, with his own voice and subtitles. The camera pulls back, he clicks it off and leaves, and the room is empty. |
+| 0:20 | The door opens on 1999. An orbit around the same seat changes era on every bar. Title. |
+| 0:37 | 1999 final: Basler, "再等一会儿", a push through the CRT into 90:00 +3, the two corners, the joy, Ferguson |
+| 1:07 | 2013, the seasons ticking on the beat, the 2024 FA Cup final, the phone call, the morning after |
+| 1:40 | 2005 takeover, Newton Heath, the scarves, the fans, 2 May 2021, the red shirt and green-and-gold scarf |
+| 2:12 | He comes back. 二十七年. 再等一会儿。但不是永远。 Then the sources. |
 
 ## How it is made
 

@@ -486,3 +486,35 @@ def s26(t, fi):
         p.append(T(110, y, s, sz, col, w, anchor="start", op=a))
         y += sz + 30
     return out_frame(p, fi)
+
+
+def s16b(t, fi, per=0.625):
+    """Seasons on the beat: one row per beat, the list scrolls like a ledger."""
+    p = svg_open()
+    n = len(SEASONS)
+    step = 110
+    shown = min(n, int(t / per) + 1)
+    scroll = max(0.0, (t / per - 6)) * step
+    top = 520 - scroll
+    for i in range(shown):
+        y = top + i * step
+        if y < 140 or y > H - 360:
+            continue
+        a = ease((t - i * per) / .18)
+        s = SEASONS[i]
+        x_in = (1 - a) * -40
+        p.append(T(150 + x_in, y, s, 48, INK, 600, anchor="start", op=a))
+        L = 340 * ease((t - i * per) / .4)
+        p.append(wobble_line([(345, y - 15), (345 + L, y - 15)], 2.4, C["grey"], seed=40 + i, op=a))
+        if s in LIGHTS:
+            for j, nm in enumerate(LIGHTS[s]):
+                k = ease((t - i * per - .1) / .25)
+                gx = 420 + j * 210
+                pulse = 1 + .5 * max(0, 1 - (t - i * per - .1) / .4)
+                p.append(f'<circle cx="{gx}" cy="{y - 15}" r="{34 * k * pulse:.1f}" fill="{C["ochre_l"]}" opacity="{.4 * k:.2f}"/>')
+                p.append(f'<circle cx="{gx}" cy="{y - 15}" r="{12 * k:.1f}" fill="{OCH}" stroke="{INK}" stroke-width="2"/>')
+                p.append(T(gx + 26, y - 3, nm, 32, INK, 400, anchor="start", op=k))
+        else:
+            k = ease((t - i * per - .15) / .3)
+            p.append(T(930, y - 2, "再等一会儿", 40, C["red_d"], 400, fam="LXGW WenKai", anchor="end", op=k * (.45 + .5 * (i / n))))
+    return out_frame(p, fi)

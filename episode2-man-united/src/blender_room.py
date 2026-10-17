@@ -472,3 +472,53 @@ elif MODE == "side":
          "cam": dict(mw_inv=[list(r) for r in sc.camera.matrix_world.inverted()], lens=sc.camera.data.lens, sensor_h=36)}
     json.dump(A, open(os.path.join(OUT, "anchors_side.json"), "w"), indent=1)
     show({"set", "screen", "door", "sofa"}); render(os.path.join(OUT, "side_bg.png"))
+
+if MODE == "orbit":
+    # One continuous camera move behind the sofa; each era renders its own slice
+    # of the same path, so cuts between eras keep the motion seamless.
+    #   EXTRA: f0 f1 tv_seq_first_png card_spec...   card_spec = path@x,y,z
+    f0, f1, tvp = int(EXTRA[0]), int(EXTRA[1]), EXTRA[2]
+    N_ORBIT = 240
+    if tvp != "none":
+        m = img_mat(tvp, sequence=True, frames=f1 - f0 + 1)
+        screen.data.materials.clear(); screen.data.materials.append(m)
+    cards = []
+    for spec in EXTRA[3:]:
+        path, xyz = spec.split("@")
+        x, y, z = (float(v) for v in xyz.split(","))
+        ch = bpy.data.images.load(path)
+        cw, chh = ch.size
+        hm = 1.45
+        c = plane("card", (0, 0, 0), (hm * cw / chh, hm), img_mat(path), rot=(math.pi / 2, 0, 0), cname="hero")
+        c.location = (x, y - 0.02, z - 0.62 + hm / 2)
+        cards.append(c)
+    # ink lines only on the set, never on the figure cards
+    ls.select_by_collection = True
+    ls.collection = coll("hero")
+    ls.collection_negation = "EXCLUSIVE"
+    pivot = Vector((-0.30, -0.55, 0.0))
+    target0 = Vector((-0.30, -0.15, 1.0))
+    for f in range(f0, f1 + 1):
+        u = f / (N_ORBIT - 1)
+        th = math.radians(-26 + 50 * u)
+        R = 3.5 - 0.6 * u
+        loc = pivot + Vector((R * math.sin(th), -R * math.cos(th), 1.72 - 0.1 * u))
+        cam.location = loc
+        d = target0 - loc
+        cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
+        cam.data.lens = 28 + 3 * u
+        cam.keyframe_insert("location", frame=f - f0 + 1)
+        cam.keyframe_insert("rotation_euler", frame=f - f0 + 1)
+        cam.data.keyframe_insert("lens", frame=f - f0 + 1)
+        for c in cards:
+            c.rotation_euler = (math.pi / 2, 0, th)
+            c.keyframe_insert("rotation_euler", frame=f - f0 + 1)
+    for fc in cam.animation_data.action.fcurves:
+        for kp in fc.keyframe_points:
+            kp.interpolation = "LINEAR"
+    sc.frame_start, sc.frame_end = 1, f1 - f0 + 1
+    show({"set", "screen", "door", "sofa", "hero"})
+    sc.render.film_transparent = False
+    os.makedirs(os.path.join(HERE, "..", "build", "orbit"), exist_ok=True)
+    sc.render.filepath = os.path.join(HERE, "..", "build", "orbit", f"o{ERA}_")
+    bpy.ops.render.render(animation=True)
