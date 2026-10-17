@@ -414,8 +414,8 @@ def s22(t, fi):
     if t > 6.4:
         k = ease((t - 6.4) / .35)
         sc = 1.6 - .6 * k
-        p.append(f'<g transform="translate(540 1500) rotate(-8) scale({sc:.2f})" opacity="{k:.2f}">'
-                 f'<rect x="-210" y="-70" width="420" height="120" fill="none" stroke="{RED}" stroke-width="7"/>'
+        p.append(f'<g transform="translate(540 1330) rotate(-8) scale({sc:.2f})" opacity="{k:.2f}">'
+                 f'<rect x="-210" y="-70" width="420" height="120" fill="{IV}" stroke="{RED}" stroke-width="7"/>'
                  + T(0, 22, "比赛推迟", 72, RED, 600, ls=8) + '</g>')
     return out_frame(p, fi)
 

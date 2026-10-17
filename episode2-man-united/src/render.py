@@ -90,7 +90,7 @@ def font(path, size):
 def draw_sub(img, text, quote, a):
     d = ImageDraw.Draw(img, "RGBA")
     f = font(SERIF, 50)
-    y = 1520
+    y = 1480
     region = np.asarray(img.crop((140, y - 40, W - 140, y + 40)).convert("L"), np.float32).mean()
     bright = region > 150
     if bright:
@@ -104,7 +104,7 @@ def draw_sub(img, text, quote, a):
 def draw_tag(img, text, a):
     d = ImageDraw.Draw(img, "RGBA")
     f = font(SERIF, 30)
-    y = 210
+    y = 250
     region = np.asarray(img.crop((300, y - 25, W - 300, y + 25)).convert("L"), np.float32).mean()
     col = hex2rgb(C["ink"]) if region > 150 else hex2rgb(C["paper"])
     d.text((W / 2, y), "  ".join(text) if len(text) <= 4 else text, font=f, fill=(*col, int(230 * a)), anchor="mm")
