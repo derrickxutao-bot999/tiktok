@@ -27,3 +27,16 @@ if __name__ == "__main__":
                 im = tv.match(t, "MUN 0-1 BAY" if era == "1999" else ("MUN 1-0 ---" if era == "2013" else "MUN 0-0 ---"))
             im.convert("RGB").resize((960, 540)).save(os.path.join(d, f"{i + 1:04d}.png"))
     print("ok")
+
+def grade_cards():
+    """Give the orbit cards the same room light as the 2D composites."""
+    from PIL import Image
+    import shots_room as R
+    for name, era, dark in (("father", "1999", 0), ("child", "1999", 0), ("teen", "2013", 0), ("mate1", "2013", 0),
+                            ("mate2", "2013", 0), ("adult19", "2019", 0.05), ("adult26", "2026", 0.08)):
+        src = Image.open(os.path.join(OUT, name + ".png")).convert("RGBA")
+        canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        ox, oy = (W - src.width) // 2, 300
+        canvas.paste(src, (ox, oy))
+        g = R.grade_figs(canvas, era, dark, rim=0.6)
+        g.crop((ox, oy, ox + src.width, oy + src.height)).save(os.path.join(OUT, name + "_g.png"))

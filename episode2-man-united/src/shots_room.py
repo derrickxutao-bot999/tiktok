@@ -18,11 +18,48 @@ ADULT, CHILD, TEEN, FATHER = Figure("adult"), Figure("child"), Figure("teen"), F
 MATE1, MATE2 = Figure("mate1"), Figure("mate2")
 ADULT_SCARF = Figure("adult"); ADULT_SCARF.scarf = True
 
+SHADOW_DEF = ('<defs><radialGradient id="cs"><stop offset="0" stop-color="#1E1A17" stop-opacity="0.5"/>'
+              '<stop offset="0.6" stop-color="#1E1A17" stop-opacity="0.22"/><stop offset="1" stop-color="#1E1A17" stop-opacity="0"/></radialGradient></defs>')
+
 def place(fig, pose, P, world, view, seed=0, flip=False, expr=None, k=1.0):
     if fig is CHILD and "ft_l" not in pose:
         world = (world[0], world[1], world[2] + 0.15)  # a small boy kneels up on the cushion
     x, y, ppm = P(world)
-    return fig.svg(pose, x, y, ppm * UNIT * k, view, flip=flip, seed=seed, expr=expr)
+    svg = fig.svg(pose, x, y, ppm * UNIT * k, view, flip=flip, seed=seed, expr=expr)
+    if "ft_l" in pose and world[2] < 0.05:
+        # soft contact shadow on the floor, squashed by the camera's view of the floor
+        rx = 0.34 * ppm * fig.body_s; ry = 0.07 * ppm * fig.body_s
+        svg = SHADOW_DEF + f'<ellipse cx="{x:.1f}" cy="{y + 2:.1f}" rx="{rx:.1f}" ry="{ry:.1f}" fill="url(#cs)"/>' + svg
+    return svg
+
+ERA_LIGHT = {"1999": ("#F4DDB2", "#D9EBC9"), "2013": ("#E6E3D3", "#DCE4EA"),
+             "2019": ("#DFDFE0", "#CFDCEA"), "2026": ("#D8DCE3", "#C6D8EA")}
+FIG_DARK = 0.0   # extra darkening when figures sit in front of a bright TV (set by shots2)
+
+def grade_figs(lay, era, dark=0.0, rim=0.5, rim_dir=(0, 6)):
+    """Sit the flat figures in the room's light: lose some saturation, take the
+    room's colour, fall off toward the floor, and catch a rim of TV light on
+    their upper edges."""
+    a = np.asarray(lay, np.float32)
+    al = a[..., 3:4] / 255
+    if al.max() == 0:
+        return lay
+    rgb = a[..., :3]
+    g = rgb.mean(2, keepdims=True)
+    rgb = g + (rgb - g) * 0.8
+    tint, rimc = ERA_LIGHT.get(era, ("#E0E0E0", "#D0DCE8"))
+    tc = np.array(hex2rgb(tint), np.float32) / 255
+    rgb = rgb * (0.62 + 0.38 * tc)
+    ys = np.linspace(0, 1, H, dtype=np.float32)[:, None, None]
+    rgb = rgb * (1.04 - 0.16 * ys) * (1 - dark)
+    A = al[..., 0]
+    sh = np.roll(np.roll(A, rim_dir[1], 0), rim_dir[0], 1)
+    edge = np.clip(A - sh, 0, 1)
+    edge = np.asarray(Image.fromarray((edge * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(2.5)), np.float32)[..., None] / 255
+    rc = np.array(hex2rgb(rimc), np.float32)
+    rgb = rgb + (rc - rgb) * np.clip(edge * rim * (1 + dark), 0, 0.8)
+    out = np.concatenate([rgb.clip(0, 255), a[..., 3:4]], 2).astype(np.uint8)
+    return Image.fromarray(out, "RGBA")
 
 def path_pos(pts, d):
     """Point at distance d along polyline pts (xy ground), plus total length."""
@@ -111,7 +148,7 @@ def with_sofa(img, era, items, cam=False, behind=None):
     pre = "m_" if cam == "m" else ""
     fg = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     if items:
-        fg.alpha_composite(figures_layer(items))
+        fg.alpha_composite(grade_figs(figures_layer(items), era, FIG_DARK))
     fg.alpha_composite(plate(era, pre + "sofa.png"))
     if CAM:
         z, c, par = CAM["z"], CAM["c"], CAM.get("par", 1.3)
@@ -159,7 +196,7 @@ def s02(t, fi):
     s = 4.8 + 0.05 * t           # very slow push
     x, y = W * 0.62, H * 0.38 + 280 * s
     svg = ADULT.svg(pose, x, y, s, "side", seed=fi // 2, expr=expr)
-    img.alpha_composite(figures_layer([svg]))
+    img.alpha_composite(grade_figs(figures_layer([svg]), "2026", rim=0.9, rim_dir=(14, 0)))
     light = light_pool((W, H), (-80, H * 0.36), 900, "#9FB8C8", 0.35 * (1 + .1 * math.sin(t * 9)))
     return finish(img, fi, grade=("#BFC7D2", .18), light=light, vignette=.3)
 
@@ -213,7 +250,7 @@ def s03(t, fi):
             else:
                 items.append(svg)
     if over:
-        lay = masked(figures_layer(over), poly_mask(anchors(era)["door_open"]))
+        lay = masked(grade_figs(figures_layer(over), era), poly_mask(anchors(era)["door_open"]))
         # redraw door on top so the closing leaf covers him
         base = plate(era, "bg_nodoor.png").copy()
         img2 = img.copy()
@@ -285,7 +322,7 @@ def s05(t, fi):
     P = projector("1999")
     items, over = _enter_figs(t, P)
     if over:
-        lay = masked(figures_layer(over), poly_mask(q))
+        lay = masked(grade_figs(figures_layer(over), "1999"), poly_mask(q))
         img.alpha_composite(lay)
         img.alpha_composite(door_layer("1999", door))
     img = with_sofa(img, "1999", items)
@@ -458,7 +495,7 @@ def s24(t, fi):
                 items.append(place(ADULT_SCARF, seated_back(arm=arm, breathe=breathe(t)), P, SEAT, "back", seed))
     if over:
         q = anchors(era)["door_open"]
-        img.alpha_composite(masked(figures_layer(over), poly_mask(q)))
+        img.alpha_composite(masked(grade_figs(figures_layer(over), era), poly_mask(q)))
         img.alpha_composite(door_layer(era, door))
     img = with_sofa(img, era, items)
     if t > 9.0:
@@ -483,7 +520,8 @@ def s18(t, fi):
                 closed=(4.2 < t < 4.4), lid=t > 9.5)
     s = 4.6
     x, y = W * 0.62, H * 0.40 + 280 * s
-    img.alpha_composite(figures_layer([ADULT.svg(pose, x, y, s, "side", seed=fi // 2, expr=expr)]))
+    img.alpha_composite(grade_figs(figures_layer([ADULT.svg(pose, x, y, s, "side", seed=fi // 2, expr=expr)]), "2026",
+                                   rim=0.9 * (1 - morning), rim_dir=(14, 0)))
     tvl = (1 - morning) * 0.35 * (1 + .08 * math.sin(t * 8.1))
     light = light_pool((W, H), (-60, H * .4), 950, "#B9D3B0", tvl)
     if morning > 0:

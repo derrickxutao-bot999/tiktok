@@ -250,13 +250,12 @@ def compose():
     bass_line(b(33), ["D2", "G1", "A1"], v=80)
     pads(b(33), [D_, G_, A_], v=50)
     arps(b(33), [D_, G_, A_], v=50)
-    for g in (86.62, 87.08):
+    for g in (84.75,):
         note(g, "timp", "D2", 92, 1.0); drum(g, CRASH, 100)
         chord(g, "harp", ["D4", "F#4", "A4", "D5", "F#5"], 58, 1.0, spread=0.03)
-    note(89.39, "timp", "A1", 70, 0.6)
-    motif(88.0, "clarinet", 0.25, 80, resolve=True, last=1.4)
-    drum(89.5, CRASH, 110)
-    chord(89.5, "strings", ["D3", "A3", "D4", "F#4", "A4"], 72, 1.5)
+    motif(87.55, "clarinet", 0.25, 80, resolve=True, last=1.6)
+    drum(88.8, CRASH, 112); note(88.8, "timp", "D2", 100, 1.2)
+    chord(88.8, "strings", ["D3", "A3", "D4", "F#4", "A4"], 74, 1.6)
     # ---- 90-100 the phone call, then morning
     for i, (bb, ns) in enumerate([("F#2", ["D3", "A3", "D4"]), ("G2", ["D3", "G3", "B3"]), ("A2", ["E3", "A3", "C#4"])]):
         note(b(36) + i * BAR, "piano", bb, 42, 2.4)

@@ -23,13 +23,10 @@ def wobble_line(pts, w=3, col=INK, seed=0, op=1.0, amp=1.2, dash=None):
     d = f'stroke-dasharray="{dash}"' if dash else ""
     return f'<polyline points="{p}" fill="none" stroke="{col}" stroke-width="{w}" stroke-linecap="round" stroke-linejoin="round" opacity="{op:.2f}" {d}/>'
 
-def stamp(x, y, lines, t, t0=0.0, col=INK, size=30, label="史实"):
-    """Documentary date label: small box tag + lines, typed in."""
+def stamp(x, y, lines, t, t0=0.0, col=INK, size=30, label=""):
+    """Date label: a short red rule + lines, typed in."""
     a = ease((t - t0) / .5)
-    out = [f'<g opacity="{a:.2f}">',
-           f'<rect x="{x}" y="{y - 30}" width="{len(label) * 30 + 26}" height="42" fill="none" stroke="{col}" stroke-width="2"/>',
-           T(x + 13 + len(label) * 15, y, label, 24, col, 600, ls=4),
-           '</g>']
+    out = [f'<rect x="{x}" y="{y - 14}" width="{70 * a:.0f}" height="5" fill="{RED}"/>']
     for i, ln in enumerate(lines):
         ai = ease((t - t0 - .25 - i * .35) / .5)
         out.append(T(x, y + 70 + i * (size + 22), ln, size, INK, 400, anchor="start", op=ai))
@@ -337,7 +334,7 @@ def s20(t, fi):
         return out_frame(p, fi)
     tt = t - 5.0
     # a stand of supporters; green-and-gold specks spread through the red
-    p += stamp(130, 360, ["2010年前后"], tt, 0.0, size=52, label="史实")
+    p += stamp(130, 360, ["2010年前后"], tt, 0.0, size=52, label="")
     rng = random.Random(4)
     rows, cols = 16, 22
     k = ease((tt - 1.0) / 5.5)
@@ -466,27 +463,12 @@ def s25(t, fi):
 # ------------------------------------------------------------------ s26 sources
 def s26(t, fi):
     p = svg_open()
-    a = ease(t / .8)
-    lines = [
-        ("说明", 34, INK, 600),
-        ("片中球迷父子、室友等人物与家庭场景为虚构。", 28, INK, 400),
-        ("标注“史实”的日期、比分与引语依据公开报道。", 28, INK, 400),
-        ("", 20, INK, 400),
-        ("资料来源", 34, INK, 600),
-        ("开场电视画面：Prime Video Sport 马丁内斯赛后采访（2026.10.13）", 24, C["charcoal"], 400),
-        ("—— 据 PA / Irish Times、Yahoo Sports、The Independent 报道", 24, C["charcoal"], 400),
-        ("1999年欧冠决赛、2024年足总杯决赛：比赛记录", 24, C["charcoal"], 400),
-        ("2021年5月2日老特拉福德抗议：BBC、CBS Sports 等报道", 24, C["charcoal"], 400),
-        ("格雷泽家族2005年杠杆收购；绿金围巾运动（2010）", 24, C["charcoal"], 400),
-        ("", 20, INK, 400),
-        ("原创配乐 · 中文旁白 · 插画与三维场景均为本片制作", 24, C["grey"], 400),
-    ]
-    y = 560
-    for s, sz, col, w in lines:
-        p.append(T(110, y, s, sz, col, w, anchor="start", op=a))
-        y += sz + 30
+    a = ease(t / .8) * (1 - ease((t - 5.6) / .9))
+    p.append(T(W / 2, 900, "再等一会儿", 96, INK, 400, fam="LXGW WenKai", op=a, ls=10))
+    p.append(wobble_line([(W / 2 - 160, 960), (W / 2 + 160, 960)], 3, RED, seed=3, op=a))
+    p.append(T(W / 2, 1040, "第二集 · 完", 34, C["grey"], op=a, ls=8))
+    p.append(T(W / 2, 1600, "片中人物与家庭场景为虚构", 24, C["grey"], op=a * .8, ls=2))
     return out_frame(p, fi)
-
 
 def s16b(t, fi, per=0.625):
     """Seasons on the beat: one row per beat, the list scrolls like a ledger."""
