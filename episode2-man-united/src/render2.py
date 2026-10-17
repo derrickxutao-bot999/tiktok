@@ -137,8 +137,16 @@ def lum(img, box):
 def split2(text, maxlen=15):
     if len(text) <= maxlen:
         return [text]
-    cut = max((i for i, ch in enumerate(text) if ch in "，：" and i < len(text) - 2), default=len(text) // 2)
-    return [text[:cut + 1], text[cut + 1:]]
+    # prefer a sentence break, then a comma or colon, nearest the middle
+    for marks in ("。", "，：；·"):
+        cands = [i for i, ch in enumerate(text) if ch in marks and 2 < i < len(text) - 2]
+        if cands:
+            cut = min(cands, key=lambda i: abs(i - len(text) / 2))
+            break
+    else:
+        cut = len(text) // 2
+    a, b = text[:cut + 1].strip(), text[cut + 1:].strip()
+    return [a.rstrip("·").strip(), b] if a.endswith("·") else [a, b]
 
 def draw_caption(img, t, t0, t1, text, style):
     a_in = ease((t - t0) / 0.22)
