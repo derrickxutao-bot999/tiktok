@@ -364,7 +364,7 @@ def dorm(t, fi):
     zf = _z_fill("2013", "m")
     figs = [(R.MATE1, seated_back(head_drop=.3), R.SEAT_L), (R.MATE2, seated_back(arm="chin"), R.SEAT_R),
             (R.TEEN, seated_back(head_drop=0.4), R.SEAT)]
-    return tvroom("2013", tt, fi, FT.frame("fergie", 204.0 + tt, "modern"), figs, zf * 0.62, zf * 0.82, grade=("#C9CCC4", .14))
+    return tvroom("2013", tt, fi, FT.frame("fergie", 204.6 + tt, "modern"), figs, zf * 0.62, zf * 0.82, grade=("#C9CCC4", .14))
 
 FN.update({"corner2": corner2, "dorm": dorm})
 
