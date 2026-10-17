@@ -65,6 +65,15 @@ Reports of the same interview:
 - 2 May 2021: protests outside Old Trafford after the failed European Super League. Thousands gathered outside, some fans got into the stadium, and the match against Liverpool was postponed. It was the first Premier League match postponed because of a protest. Sources: [Wikipedia: 2021 Old Trafford protests](https://en.wikipedia.org/wiki/2021_Old_Trafford_protests), [CBS Sports](https://www.cbssports.com/soccer/news/manchester-united-liverpool-postponed-after-fans-invade-old-trafford-pitch-during-glazer-protest/).
 - FC United of Manchester is deliberately not included.
 
+## Cut 3 additions
+
+- **Munich air disaster, 6 February 1958:** 23 people died, 8 of them Manchester United players. The Munich clock at Old Trafford is stopped at 3:04. Ten years later, on 29 May 1968, United beat Benfica 4-1 at Wembley and became the first English club to win the European Cup. Sources: [Wikipedia: Munich air disaster](https://en.wikipedia.org/wiki/Munich_air_disaster), [The42](https://the42.ie/347779)
+- **"£10亿 收购债务的利息（估算）":** Kieran Maguire's estimate of net interest on the debt over almost 20 years of Glazer ownership is about £1.06bn. Other measures differ: dividends about £166m, and wider totals reach £1.6bn. The card says 估算 (estimate). Sources: [90min](https://www.90min.com/glazer-family-costs-man-utd-more-1bn), [Wikipedia: Glazer ownership](https://en.wikipedia.org/wiki/Glazer_ownership_of_Manchester_United)
+- **May 2024, rain pouring from the roof into the stands (home defeat to Arsenal):** the club said the drainage system overflowed rather than the roof leaking. The film shows water pouring in and doesn't use the word "leak". Source: [90min](https://www.90min.com/man-utd-controversial-leaky-roof-decision-revealed)
+- **November 2024, remaining tickets set at £66 for every age:** concessions of £25 (children) and £40 (adults) were scrapped. Sources: [The Ticketing Business](https://www.theticketingbusiness.com/2025/01/paul-scholes-castigates-sir-jim-ratcliffe-over-ticket-prices/), [Football365](https://www.football365.com/news/ratcliffe-slammed-man-utd-fans-mid-season-ineos-call-offensive)
+- **"约450 两轮裁员":** about 250 roles went in 2024, and up to 150–200 more were announced in February 2025. Sources: [ESPN](https://global.espn.com/football/story/_/id/43995711/man-united-announce-200-more-redundancies-latest-cuts), [EWN/AFP](https://www.ewn.co.za/2025/02/24/man-utd-announce-up-to-200-fresh-job-cuts)
+- **Fiction:** the grandfather (19 in 1958, waiting ten years for 1968), the aged father in 2026, and their exchange 「再等一会儿？」「等。可这一次，我们也要说出来。」 are invented.
+
 ## Fiction
 
 - The protagonist is 7 in May 1999, at university in May 2013, and 34 in 2026. "二十七年" counts 1999 to 2026.

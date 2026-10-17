@@ -59,6 +59,10 @@ class Figure:
             self.shirt = C["red_d"]; self.hairstyle = "short"; self.hair = C["hair_f"]
             self.cap = True; self.tache = True; self.nose = 1.15; self.trouser = "#5E574E"
             self.coat = C["ochre"]
+        elif k == "oldfather":   # the father in 2026: grey, no cap, a little smaller
+            self.shirt = C["red_d"]; self.hairstyle = "short"; self.hair = "#B8B2A8"
+            self.tache = True; self.nose = 1.15; self.trouser = "#5E574E"; self.coat = "#6E655A"
+            self.body_s = 0.96
         elif k == "mate1":
             self.shirt = "#5D6B73"; self.hairstyle = "bowl"; self.hair = "#6B4A2E"; self.nose = 0.9
             self.skin = "#E8C29C"; self.collar = None
@@ -289,7 +293,7 @@ class Figure:
         if "ft_l" in pose:
             self._leg(pose["hip_l"], pose["kn_l"], pose["ft_l"], facing=0)
             self._leg(pose["hip_r"], pose["kn_r"], pose["ft_r"], facing=0)
-        coat = getattr(self, "coat", None) if self.kind == "father" else None
+        coat = getattr(self, "coat", None) if self.kind in ("father", "oldfather") else None
         for side in ("l", "r"):
             if pose.get(f"arm_{side}_front"):
                 continue
@@ -310,7 +314,7 @@ class Figure:
             self.poly([(hx - 4, hy + 4), (hx + 26, hy - 4), (hx + 28, hy + 3), (hx - 2, hy + 11)], C["ink"])
 
     def _draw_front(self, pose):
-        coat = getattr(self, "coat", None) if self.kind == "father" else None
+        coat = getattr(self, "coat", None) if self.kind in ("father", "oldfather") else None
         self._leg(pose["hip_r"], pose["kn_r"], pose["ft_r"], facing=-1)
         self._arm(pose["sh_r"], pose["el_r"], pose["ha_r"], coat=coat)
         self._leg(pose["hip_l"], pose["kn_l"], pose["ft_l"], facing=-1)
@@ -328,7 +332,7 @@ class Figure:
         self._arm(pose["sh_l"], pose["el_l"], pose["ha_l"], coat=coat)
 
     def _draw_side(self, pose):
-        coat = getattr(self, "coat", None) if self.kind == "father" else None
+        coat = getattr(self, "coat", None) if self.kind in ("father", "oldfather") else None
         if "ft_r" in pose:
             self._leg(pose["hip_r"], pose["kn_r"], pose["ft_r"], facing=-1)
         if not pose.get("arm_r_front"):

@@ -500,3 +500,142 @@ def s16b(t, fi, per=0.625):
             k = ease((t - i * per - .15) / .3)
             p.append(T(930, y - 2, "再等一会儿", 40, C["red_d"], 400, fam="LXGW WenKai", anchor="end", op=k * (.45 + .5 * (i / n))))
     return out_frame(p, fi)
+
+# ------------------------------------------------------------------ cut 3: the grandfather's ten years
+def _snow(t, n=60, seed=4, col="#F4ECDA", op=.8):
+    rng = random.Random(seed)
+    out = []
+    for i in range(n):
+        x0, y0, sp, r = rng.uniform(0, W), rng.uniform(-H, H), rng.uniform(60, 140), rng.uniform(2, 6)
+        y = (y0 + sp * t) % (H + 40) - 20
+        x = x0 + 18 * math.sin(t * .8 + i)
+        out.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="{r:.1f}" fill="{col}" opacity="{op * rng.uniform(.4, 1):.2f}"/>')
+    return out
+
+def munich(t, fi):
+    """The Munich clock at Old Trafford, stopped at 3:04, 6 February 1958."""
+    p = svg_open("#2E3236")
+    a = ease(t / .5)
+    cx, cy = W / 2, 780
+    p.append(f'<rect x="{cx - 300}" y="{cy - 330}" width="600" height="760" fill="#8C8273" stroke="{INK}" stroke-width="4" opacity="{a:.2f}"/>')
+    p.append(f'<rect x="{cx - 270}" y="{cy - 300}" width="540" height="700" fill="#A39886" opacity="{a:.2f}"/>')
+    p.append(f'<circle cx="{cx}" cy="{cy - 40}" r="210" fill="{C["paper"]}" stroke="{INK}" stroke-width="6" opacity="{a:.2f}"/>')
+    for i in range(12):
+        ang = i / 12 * 2 * math.pi
+        r0, r1 = (170, 200) if i % 3 else (155, 200)
+        p.append(f'<line x1="{cx + r0 * math.sin(ang):.0f}" y1="{cy - 40 - r0 * math.cos(ang):.0f}" x2="{cx + r1 * math.sin(ang):.0f}" '
+                 f'y2="{cy - 40 - r1 * math.cos(ang):.0f}" stroke="{INK}" stroke-width="{7 if i % 3 == 0 else 4}" opacity="{a:.2f}"/>')
+    hm = (3 + 4 / 60) / 12 * 2 * math.pi; mm = 4 / 60 * 2 * math.pi
+    p.append(f'<line x1="{cx}" y1="{cy - 40}" x2="{cx + 110 * math.sin(hm):.0f}" y2="{cy - 40 - 110 * math.cos(hm):.0f}" stroke="{INK}" stroke-width="12" stroke-linecap="round" opacity="{a:.2f}"/>')
+    p.append(f'<line x1="{cx}" y1="{cy - 40}" x2="{cx + 175 * math.sin(mm):.0f}" y2="{cy - 40 - 175 * math.cos(mm):.0f}" stroke="{INK}" stroke-width="7" stroke-linecap="round" opacity="{a:.2f}"/>')
+    p.append(f'<circle cx="{cx}" cy="{cy - 40}" r="11" fill="{INK}" opacity="{a:.2f}"/>')
+    p.append(T(cx, cy + 250, "1958 · 2 · 6", 52, INK, 600, op=a, ls=6))
+    p.append(T(cx, cy + 320, "慕尼黑", 40, INK, 400, op=a, ls=10))
+    p += _snow(t)
+    return out_frame(p, fi, vignette=.3)
+
+def seats(t, fi, per=0.3125):
+    """Eight empty seats, one for each of the players who died."""
+    p = svg_open("#2E3236")
+    p += _snow(t + 2.5, 40, op=.5)
+    for i in range(8):
+        a = ease((t - 0.1 - i * per) / .25)
+        if a <= 0:
+            continue
+        x = 105 + i * 112; y = 900
+        p.append(f'<g opacity="{a:.2f}">')
+        p.append(f'<rect x="{x}" y="{y}" width="84" height="120" rx="8" fill="{C["red_d"]}" stroke="{INK}" stroke-width="3"/>')
+        p.append(f'<rect x="{x + 6}" y="{y + 120}" width="72" height="22" fill="{C["red"]}" stroke="{INK}" stroke-width="3"/>')
+        p.append(f'<rect x="{x + 36}" y="{y + 142}" width="12" height="90" fill="{C["charcoal"]}"/>')
+        p.append('</g>')
+    p.append(wobble_line([(60, 1240), (1020, 1240)], 3, "#8C8273", seed=8))
+    return out_frame(p, fi, vignette=.3)
+
+def wembley(t, fi):
+    """1968: the first European Cup, drawn in ink."""
+    p = svg_open()
+    k = ease_out_cubic(t / .9)
+    cx, base = W / 2, 1060 - 30 * k
+    o = ease(t / .4)
+    # the big-eared cup
+    cup = (f'M {cx - 120} {base - 420} L {cx + 120} {base - 420} Q {cx + 110} {base - 200} {cx + 30} {base - 150} '
+           f'L {cx + 30} {base - 90} Q {cx + 90} {base - 70} {cx + 100} {base} L {cx - 100} {base} Q {cx - 90} {base - 70} {cx - 30} {base - 90} '
+           f'L {cx - 30} {base - 150} Q {cx - 110} {base - 200} {cx - 120} {base - 420} Z')
+    p.append(f'<path d="{cup}" fill="{C["ochre_l"]}" stroke="{INK}" stroke-width="5" opacity="{o:.2f}"/>')
+    for s in (-1, 1):
+        ear = (f'M {cx + s * 118} {base - 400} Q {cx + s * 260} {base - 420} {cx + s * 240} {base - 300} '
+               f'Q {cx + s * 225} {base - 210} {cx + s * 80} {base - 190}')
+        p.append(f'<path d="{ear}" fill="none" stroke="{INK}" stroke-width="16" opacity="{o:.2f}"/>')
+        p.append(f'<path d="{ear}" fill="none" stroke="{C["ochre_l"]}" stroke-width="9" opacity="{o:.2f}"/>')
+    p.append(T(cx, 1190, "1968 · 温布利", 56, INK, 600, op=ease((t - .4) / .4), ls=6))
+    p.append(T(cx, 1270, "曼联  4 – 1  本菲卡", 44, C["red"], 600, op=ease((t - .7) / .4), ls=4))
+    return out_frame(p, fi)
+
+def ease_out_cubic(x):
+    x = max(0.0, min(1.0, x)); return 1 - (1 - x) ** 3
+
+# ------------------------------------------------------------------ cut 3: what the waiting cost
+def _cost(t, fi, big, label, date, art=None):
+    p = svg_open()
+    if art:
+        p += art
+    k = ease_out_cubic(t / .35)
+    sc = 1.2 - .2 * k
+    p.append(f'<g transform="translate({W / 2} 470) scale({sc:.3f}) translate({-W / 2} -470)" opacity="{min(1, t / .15):.2f}">')
+    p.append(T(W / 2, 520, big, 190, C["red"], 600, ls=2))
+    p.append('</g>')
+    p.append(T(W / 2, 610, label, 40, INK, 400, op=ease((t - .25) / .3), ls=3))
+    p.append(T(W / 2, 670, date, 28, C["grey"], 400, op=ease((t - .35) / .3), ls=4))
+    return out_frame(p, fi)
+
+def cost_debt(t, fi):
+    rng = random.Random(2)
+    art = []
+    for i in range(14):   # coins dropping into a pile on the beat
+        tt = t - 0.15 - i * 0.12
+        if tt < 0:
+            continue
+        x = W / 2 + rng.uniform(-170, 170); y_end = 1250 - (i // 4) * 40
+        y = min(y_end, 760 + 1400 * tt * tt)
+        art.append(f'<ellipse cx="{x:.0f}" cy="{y:.0f}" rx="60" ry="20" fill="{C["ochre"]}" stroke="{INK}" stroke-width="3"/>')
+    return _cost(t, fi, "£10亿", "收购债务的利息（估算）", "2005 — 2025", art)
+
+def cost_rain(t, fi):
+    art = []
+    for r in range(9):
+        y = 980 + r * 52
+        art.append(f'<rect x="80" y="{y}" width="920" height="30" fill="{C["red_d"] if r % 2 else C["red"]}"/>')
+    art.append(f'<polygon points="40,900 1040,900 1040,950 40,950" fill="{C["charcoal"]}"/>')
+    rng = random.Random(9)
+    for i in range(70):
+        x = rng.uniform(60, 1020); sp = rng.uniform(900, 1400); ph = rng.uniform(0, 1)
+        y = 950 + ((t * sp / 900 + ph) % 1) * 560
+        art.append(f'<line x1="{x:.0f}" y1="{y:.0f}" x2="{x - 6:.0f}" y2="{y + 34:.0f}" stroke="#7F93A3" stroke-width="3" opacity=".8"/>')
+    for x in (300, 610, 860):  # water pouring off the roof edge
+        art.append(f'<rect x="{x}" y="950" width="22" height="{min(560, 700 * t):.0f}" fill="#7F93A3" opacity=".75"/>')
+    return _cost(t, fi, "2024 · 5", "暴雨从顶棚泻进看台", "老特拉福德", art)
+
+def cost_tickets(t, fi):
+    art = []
+    tx, ty = 190, 860
+    art.append(f'<rect x="{tx}" y="{ty}" width="700" height="360" rx="18" fill="{C["paper"]}" stroke="{INK}" stroke-width="4"/>')
+    for i in range(10):
+        art.append(f'<circle cx="{tx + 520}" cy="{ty + 22 + i * 35}" r="6" fill="{IV}"/>')
+    art.append(T(tx + 260, ty + 150, "儿童 £25", 46, INK, 400))
+    art.append(T(tx + 260, ty + 240, "成人 £40", 46, INK, 400))
+    k = ease((t - .6) / .4)
+    for yy in (ty + 135, ty + 225):
+        art.append(f'<line x1="{tx + 120}" y1="{yy}" x2="{tx + 120 + 280 * k:.0f}" y2="{yy}" stroke="{RED}" stroke-width="7"/>')
+    art.append(T(tx + 610, ty + 210, "£66", 64, RED, 600))
+    return _cost(t, fi, "£66", "剩余比赛统一票价，优惠取消", "2024 · 11", art)
+
+def cost_jobs(t, fi):
+    art = []
+    n = 45
+    for i in range(n):
+        x = 150 + (i % 9) * 98; y = 900 + (i // 9) * 120
+        gone = ease((t - 0.4 - (n - i) * 0.03) / .2)
+        op = 1 - .8 * gone
+        art.append(f'<circle cx="{x}" cy="{y}" r="18" fill="{C["charcoal"]}" opacity="{op:.2f}"/>')
+        art.append(f'<rect x="{x - 22}" y="{y + 24}" width="44" height="54" rx="10" fill="{C["charcoal"]}" opacity="{op:.2f}"/>')
+    return _cost(t, fi, "约450", "两轮裁员，减少的岗位", "2024 — 2025", art)

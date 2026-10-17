@@ -9,7 +9,35 @@ BPM = 96
 BEAT = 60 / BPM
 BAR = 4 * BEAT
 
-SHOTS = [
+# Cut 3 edits cut 2's timeline: two shots are deleted and three passages are
+# inserted. Everything is expressed in cut-2 time and mapped with remap().
+DELETES = {"clock", "fergie"}
+INSERTS = [
+    (67.5, [("nfather", 2.5, ("dip", "#000000", 6)), ("munich", 2.5, ("dip", "#000000", 10)),
+            ("seats", 2.5, ("cut",)), ("wembley", 2.5, ("flash", "#F4ECDA", 4))]),
+    (105.0, [("debt", 2.5, ("whip", "up", 6)), ("rain", 2.5, ("cut",)), ("tickets", 2.5, ("cut",)), ("jobs", 2.5, ("cut",))]),
+    (147.5, [("pair", 5.0, ("cut",))]),
+]
+
+def _windows():
+    return [(st, st + d) for s, st, d, tr in _CUT2 if s in DELETES]
+
+def base(at):
+    """Where cut-2 time `at` lands in cut 3, before anything inserted at `at`."""
+    return at - sum(b - a for a, b in _windows() if b <= at + 1e-6) + sum(sum(x[1] for x in items) for t0, items in INSERTS if t0 < at - 1e-6)
+
+def remap(t):
+    """Cut-2 time -> cut-3 time (None inside a deleted shot)."""
+    for a, b in _windows():
+        if a <= t < b - 1e-6:
+            return None
+    return base(t) + sum(sum(x[1] for x in items) for t0, items in INSERTS if abs(t0 - t) < 1e-6)
+
+def at_insert(i, off):
+    """Cut-3 time of an offset into the i-th inserted passage."""
+    return base(INSERTS[i][0]) + off
+
+_CUT2 = [
     ("open",      0.0, 12.5, ("cut",)),
     ("profile",  12.5,  1.5, ("flash", "#000000", 2)),
     ("standup",  14.0,  1.25, ("cut",)),
@@ -41,28 +69,28 @@ SHOTS = [
     ("final",   147.5,  6.0, ("dip", "#EFE5CF", 8)),
     ("end",     153.5,  6.5, ("dissolve", 12)),
 ]
-TOTAL = 160.0
+SHOTS = [(s, remap(st), d, tr) for s, st, d, tr in _CUT2 if s not in DELETES]
+for i, (t0, items) in enumerate(INSERTS):
+    off = 0.0
+    for s, d, tr in items:
+        SHOTS.append((s, at_insert(i, off), d, tr)); off += d
+SHOTS.sort(key=lambda x: x[1])
+TOTAL = SHOTS[-1][1] + SHOTS[-1][2]
 
-# Captions: (start, end, text, style). styles: cap (lower third), quote (spoken
-# words, 「」), hand (handwritten motif), big (centre, large), tag (top band)
-CAPTIONS = [
-    # Martinez (his own voice is heard)
+_CAP2 = [
     (0.4, 2.95, "真的很差。真的很差。", "quote"),
     (3.3, 6.3, "有时候，这就是", "quote"),
     (6.3, 9.6, "俱乐部现状的一面镜子。", "quote"),
     (9.8, 12.3, "我们期待高层做得更多。", "quote"),
-    # the loop
     (20.4, 24.8, "1999 · 一个虚构的曼联家庭", "tag"),
     (25.3, 27.4, "1999 · 跟着父亲", "cap"),
     (27.8, 29.9, "2013 · 大学宿舍", "cap"),
     (30.3, 32.4, "2019 · 一个人", "cap"),
     (32.8, 34.9, "2026 · 位置没变", "cap"),
-    # 1999
     (43.0, 45.2, "比分停在 0 比 1。七岁的他困得睁不开眼。", "cap"),
     (45.6, 47.4, "再等一会儿。", "hand"),
     (60.3, 62.2, "2 比 1", "big"),
     (62.4, 64.9, "只要再等一会儿，球就会进。", "cap"),
-    # the wait
     (67.8, 70.0, "2013年5月 · 弗格森宣布退休", "cap"),
     (70.3, 72.4, "宿舍里，没有人说话。", "cap"),
     (72.8, 75.4, "一个赛季，又一个赛季。", "cap"),
@@ -74,7 +102,6 @@ CAPTIONS = [
     (95.0, 97.4, "那一晚，像极了1999年。", "cap"),
     (90.0, 100.0, "2024 · 虚构场景", "tag"),
     (97.8, 99.9, "可第二天醒来，老问题还在。", "cap"),
-    # green and gold
     (109.6, 112.3, "绿金围巾，走进老特拉福德。", "cap"),
     (112.8, 115.0, "他们没有离开球队。", "cap"),
     (115.1, 117.4, "他们想要回自己的俱乐部。", "cap"),
@@ -83,13 +110,28 @@ CAPTIONS = [
     (125.0, 132.5, "虚构场景", "tag"),
     (126.0, 128.6, "红色球衣，绿金围巾。", "cap"),
     (128.8, 132.3, "支持它，和要求它改变，从来不矛盾。", "cap"),
-    # ending
     (132.5, 147.5, "2026", "tag"),
     (138.2, 140.0, "二十七年。", "big"),
     (140.2, 142.2, "等一个进球，等一个赛季，", "cap"),
     (142.3, 144.2, "等一个像样的答案。", "cap"),
     (144.5, 147.3, "球迷的忠诚，值得俱乐部认真回应。", "cap"),
 ]
+CAPTIONS = [(remap(a), remap(a) + (b - a), s, st) for a, b, s, st in _CAP2 if remap(a) is not None]
+_NEWCAP = [  # (insert index, start offset, end offset, text, style)
+    (0, 0.3, 2.5, "父亲说，这句话是爷爷教他的。", "cap"),
+    (0, 2.8, 4.9, "空难中23人遇难，其中8名是曼联球员。", "cap"),
+    (0, 5.3, 7.4, "那一年，爷爷十九岁。", "cap"),
+    (0, 7.8, 9.1, "十年后，曼联第一次赢得欧冠。", "cap"),
+    (0, 9.1, 9.95, "爷爷等了十年。", "hand"),
+    (1, 0.3, 2.4, "钱，先拿去还了收购的债。", "cap"),
+    (1, 2.7, 4.9, "球场老了，雨水灌进看台。", "cap"),
+    (1, 5.2, 7.4, "儿童和老人的优惠，没了。", "cap"),
+    (1, 7.7, 9.9, "账单，最后落在了人身上。", "cap"),
+    (2, 0.0, 5.0, "虚构场景", "tag"),
+    (2, 0.3, 2.1, "再等一会儿？", "quote"),
+    (2, 2.4, 4.85, "等。可这一次，我们也要说出来。", "quote"),
+]
+CAPTIONS += [(at_insert(i, a), at_insert(i, b), s, st) for i, a, b, s, st in _NEWCAP]
 
 # Martinez audio from the Prime Video clip: (film_start, film_end, clip_start, gain_db)
 CLIP_AUDIO = [

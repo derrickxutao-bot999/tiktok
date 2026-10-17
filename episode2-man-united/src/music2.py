@@ -23,8 +23,14 @@ STEMS = {"piano": ["piano"], "winds": ["clarinet", "harp", "bells"], "strings": 
          "perc": ["timp", "kit"], "bass": ["bass"]}
 
 EV = []
+RAW = [False]   # False: times are cut-2 times and get remapped into cut 3
+
 def note(t, ins, n, vel, dur):
-    EV.append((t, ins, N[n] if isinstance(n, str) else n, int(max(1, min(127, vel))), dur))
+    from edit2 import remap
+    tt = t if RAW[0] else remap(t)
+    if tt is None:
+        return            # the shot this note scored was cut
+    EV.append((tt, ins, N[n] if isinstance(n, str) else n, int(max(1, min(127, vel))), dur))
 
 def chord(t, ins, ns, vel, dur, spread=0.0):
     for i, n in enumerate(ns):
@@ -332,6 +338,56 @@ def compose():
     for tt, n in ((154.0, "F#4"), (155.9, "E4"), (157.6, "D4")):
         note(tt, "piano", n, 32, 2.0)
 
+def compose_cut3():
+    """Music for the three passages cut 3 adds (absolute cut-3 times)."""
+    from edit2 import at_insert
+    RAW[0] = True
+    o = at_insert(0, 0.0) - 67.5
+    _EV0 = len(EV)
+    # ---- the grandfather's ten years (written at 67.5-77.5, moved by o)
+    chord(67.5, "pad", ["D2", "A2"], 26, 2.4)
+    for i, n in enumerate(["F#4", "E4", "D4"]):
+        note(67.7 + i * BEAT * 1.3, "piano", n, 34, 1.2)
+    # Munich: a single bell, low strings, nothing else
+    note(70.0, "bells", "B4", 40, 2.4)
+    chord(70.0, "strings", ["B1", "F#2", "B2"], 34, 2.4)
+    note(70.0, "piano", "B0", 40, 2.4)
+    # the empty seats: one soft piano note for each
+    for i in range(8):
+        note(72.6 + i * 0.3125, "piano", ["B3", "D4", "F#4", "B4", "A4", "F#4", "D4", "C#4"][i], 30 + i * 2, 0.9)
+    chord(72.5, "pad", ["B1", "F#2"], 24, 2.4)
+    # 1968: the motif, resolved, quietly
+    chord(75.0, "strings", ["D3", "A3", "D4", "F#4"], 46, 2.4)
+    for i, n in enumerate(["D4", "F#4", "A4", "D5", "F#5"]):
+        note(75.0 + i * 0.05, "harp", n, 48, 2.0)
+    motif(75.1, "clarinet", 0.3, 58, resolve=True, last=1.0)
+    EV[_EV0:] = [(t + o, i, n, v, d) for t, i, n, v, d in EV[_EV0:]]
+    o = at_insert(1, 0.0) - 115.0
+    _EV0 = len(EV)
+    # ---- what the waiting cost (written at 115-125, moved by o)
+    for k in range(32):
+        t = 115.0 + k * BEAT / 2
+        note(t, "piano", "B1", 40 + k // 2, BEAT / 2 * .8); note(t, "piano", "B0", 34 + k // 2, BEAT / 2 * .8)
+    heartbeat(115.0, 16, 1.0)
+    pads(115.0, [Bm, G_, Em, ["F#2", "C#3", "F#3", "A#3"]], v=44)
+    bass_line(115.0, ["B1", "G1", "E1", "F#1"], v=72)
+    for i, h in enumerate((115.0, 117.5, 120.0, 122.5)):
+        note(h, "timp", ["B1", "G1", "E1", "F#1"][i], 88, 1.2)
+        drum(h, CRASH if i == 3 else KICK, 96)
+    roll(123.75, 1.2, 30, 100)
+    EV[_EV0:] = [(t + o, i, n, v, d) for t, i, n, v, d in EV[_EV0:]]
+    o = at_insert(2, 0.0) - 167.5
+    _EV0 = len(EV)
+    # ---- the father beside him (written at 167.5-172.5, moved by o)
+    chord(167.5, "pad", ["G1", "D2"], 24, 5.0)
+    note(167.85, "piano", "A4", 44, 1.6)        # his question hangs
+    note(168.4, "piano", "C#5", 38, 1.2)
+    chord(169.9, "piano", ["G2", "D3", "B3"], 40, 1.3, spread=0.08)
+    chord(171.2, "piano", ["A2", "E3", "C#4"], 44, 1.3, spread=0.08)
+    chord(170.0, "strings", ["G2", "D3", "B3"], 30, 2.4)
+    EV[_EV0:] = [(t + o, i, n, v, d) for t, i, n, v, d in EV[_EV0:]]
+    RAW[0] = False
+
 def render_stem(stem, total):
     syn = tinysoundfont.Synth(samplerate=SR, gain=-3)
     sf_ids, chans = {}, {}
@@ -385,6 +441,7 @@ def write_midi(path):
 
 if __name__ == "__main__":
     compose()
+    compose_cut3()
     out = os.path.join(BUILD, "music2"); os.makedirs(out, exist_ok=True)
     wet = {"piano": .2, "winds": .28, "strings": .3, "perc": .12, "bass": .06}
     for st in STEMS:

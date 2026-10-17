@@ -176,7 +176,7 @@ def sleepy(t, fi):
     """Medium shot; ends by pushing through the CRT into the 90:00 clock."""
     R.CAM = dict(z=1.0 + 0.06 * min(t, 4.0) / 4.0, c=(W * .4, H * .5), par=1.3)
     if t > 3.9:
-        clk = Image.fromarray(G.s10(1.2, fi))
+        clk = Image.fromarray(minute_card(0.6, fi, "90+1'", [(0.15, "贝克汉姆 · 角球")], "0 – 1"))
         R.TV_INJECT = clk.crop((0, 960 - 405, 1080, 960 + 405))
         tvk = "inject"
     else:
@@ -414,3 +414,31 @@ def corner2(t, fi):
     return _corner2_tv(t, fi)
 
 FN.update({"basler": basler, "corner1": corner1, "corner2": corner2})
+
+# ------------------------------------------------------------------ cut 3: deeper content
+from chars import Figure
+OLDFATHER = Figure("oldfather")
+
+def nfather(t, fi):
+    """1999, after the winner: the boy against his father, the room quiet again."""
+    R.CAM = dict(z=1.04 + 0.05 * t / 2.5, c=(W * .5, H * .55), par=1.4)
+    return R.s13(5.0 + t * 0.6, fi)
+
+def pair(t, fi):
+    """2026: the father, older now, back on the sofa beside his son."""
+    era = "2026"; P = projector(era)
+    q = anchors(era)["screen"]
+    c = ((R.SEAT[0] + R.SEAT_R[0]) / 2, 0)
+    sx, sy, _ = P((-0.0, -0.55, 1.1))
+    R.CAM = dict(z=1.22 + 0.08 * ease_io(t / 5.0), c=(sx, sy), par=1.35)
+    img = R.room_base(era, 209.5 + 8.3 + 10 + t, tvk="clip")
+    seed = fi // 2
+    look = min(1.0, max(0.0, (t - 2.2) / 0.4))
+    items = [R.place(OLDFATHER, seated_back(lean=0.1, tilt=-6 * (1 - look), head_drop=0.15), P, R.SEAT_R, "back", seed),
+             R.place(R.ADULT_SCARF, seated_back(tilt=8 * look, breathe=R.breathe(t)), P, R.SEAT, "back", seed)]
+    img = R.with_sofa(img, era, items)
+    light = R.tv_light(era, img, 0.22)
+    return finish(img, fi, grade=("#C3C8CF", .2), light=light)
+
+FN.update({"nfather": nfather, "munich": G.munich, "seats": G.seats, "wembley": G.wembley,
+           "debt": G.cost_debt, "rain": G.cost_rain, "tickets": G.cost_tickets, "jobs": G.cost_jobs, "pair": pair})
