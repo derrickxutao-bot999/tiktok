@@ -1,5 +1,20 @@
 # Episode 2 · Sources and fact check
 
+## Footage clearance list (cut 3)
+
+Only three short real-footage segments remain. Everything else is illustrated. Each one plays on a TV inside the illustrated room and is cropped clear of broadcaster logos.
+
+| Film time | Length | Content | Rights holder to license from |
+|---|---|---|---|
+| 0:00–0:12.5 | 12.5 s | Lisandro Martínez post-match interview, 13 Oct 2026 (three continuous passages) | Prime Video / UEFA |
+| 0:57.5–1:00 | 2.5 s | Solskjær's winner, 1999 Champions League final | UEFA (archive) |
+| 1:10–1:12.5 | 2.5 s | Sir Alex Ferguson's farewell speech, Old Trafford, 12 May 2013 | Premier League / Manchester United |
+
+The working copies used in the edit came from public uploads: Prime Video Sport UK's post on X, and the Internet Archive for the other two. Before publishing, replace them with licensed masters of the same moments. The edit points are in `src/shots2.py` (`corner2`, `dorm`) and `src/edit2.py` (`CLIP_AUDIO`).
+
+Not used: fan edits, news-programme copies, and any 2024 FA Cup final footage. That section stays illustrated.
+
+
 Everything shown with a 史实 (documented) label, or stated in the narration with a date, is listed here.
 The father, the boy who grows up, the roommates, the phone call and every scene inside a room are **fiction**.
 The film says so on screen with a 虚构 label and again on the end card.

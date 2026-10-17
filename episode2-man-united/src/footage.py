@@ -38,7 +38,11 @@ def frame(src, t, look="modern"):
     return _load(os.path.join(FR, files[i]), look)
 
 def tv_look(im, look):
-    """Picture on a television: softer contrast, a touch of the era, scanlines."""
+    """Picture on a television: cropped clear of broadcaster logos, softer
+    contrast, a touch of the era, scanlines."""
+    w, h = im.size
+    k = 0.09 if look == "crt" else 0.06
+    im = im.crop((int(w * k), int(h * k), int(w * (1 - k)), int(h * (1 - k)))).resize((w, h), Image.BICUBIC)
     a = np.asarray(im, np.float32)
     g = a.mean(2, keepdims=True)
     if look == "crt":

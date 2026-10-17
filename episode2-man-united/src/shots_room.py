@@ -439,7 +439,7 @@ def s13(t, fi):
         cpz.update(el_l=(-70, cn[1] - 50), ha_l=(-84, cn[1] - 150), el_r=(70, cn[1] - 50), ha_r=(84, cn[1] - 150),
                    tilt=6 * math.sin(t * 7))
         # pelvis held at the father's hands
-        items.insert(0, CHILD.svg(cpz, x, yy + (nk[1] - 150) * s - cpz["pelvis"][1] * s * CHILD.body_s, s, "back", seed=seed))
+        items.insert(0, CHILD.svg(cpz, x, yy + (nk[1] - 60) * s - cpz["pelvis"][1] * s * CHILD.body_s, s, "back", seed=seed))
     else:
         k = ease((t - 4.0) / 0.8)
         fp = father_arm_pose(seated_back(breathe=breathe(t, ph=1)), 1.0)

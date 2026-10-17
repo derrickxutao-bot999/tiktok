@@ -337,88 +337,33 @@ def _z_fill(era, cam, frac=0.92):
 
 FAMILY_99 = lambda pf=None, pc=None: [(R.FATHER, pf or seated_back(), R.SEAT_R), (R.CHILD, pc or seated_back(), R.SEAT)]
 
-def basler(t, fi):
-    T_SHOT[0] = 2.5
-    src = 32.6 + t * 1.25
-    zf = _z_fill("1999", "m")
-    a = tvroom("1999", t, fi, FT.frame("ucl", src, "crt"), FAMILY_99(), zf * 0.55, zf * 0.75, grade=("#E3CBA4", .1))
-    dx, dy, r = shake(t, 2.16, .4, 8)
-    return zoom(a, 1.0, (W / 2, H / 2), r, dx, dy)
-
-def corner1(t, fi):
-    T_SHOT[0] = 5.0
-    src = 306.5 + t * 1.4 if t < 2.5 else 311.0 + (t - 2.5) * 1.6
-    zf = _z_fill("1999", "m")
-    up = t >= 2.5
-    pc = seated_back(arm="up" if up else "rest", lean=0.0 if up else 0.25)
-    pf = seated_back(arm="up" if up else "rest")
-    a = tvroom("1999", t, fi, FT.frame("ucl", src, "crt"), FAMILY_99(pf, pc), zf * 0.7, zf * 0.9, grade=("#E3CBA4", .1))
-    dx, dy, r = shake(t, 2.5, .6, 14)
-    a = zoom(a, 1.0, (W / 2, H / 2), r, dx, dy)
-    return flash(a, 0.45 * max(0, 1 - (t - 2.5) / .25) if t >= 2.5 else 0)
+# Real footage is used only where the story needs it, briefly, from sources a
+# rights holder can license, cropped clear of broadcaster logos:
+#   corner2: Solskjaer's winner, 1999 final (UEFA), last 2.5 s of the shot
+#   dorm:    Ferguson's farewell speech, 12 May 2013 (Premier League), last 2.5 s
 
 def corner2(t, fi):
-    T_SHOT[0] = 5.0
-    src = 342.5 + t * 1.56
-    zf = _z_fill("1999", "m")
-    pc = seated_back(lean=0.3 * min(1, t / 4), head_drop=-0.2)
-    a = tvroom("1999", t, fi, FT.frame("ucl", src, "crt"), FAMILY_99(None, pc), zf * 0.62, zf * 1.02, grade=("#E3CBA4", .1))
-    return a
-
-def fergie(t, fi):
+    """The second corner as a diagram, then the real winner on the family's CRT."""
+    if t < 2.5:
+        a = G.s12(t * 1.6, fi)
+        return zoom(a, 1.0 + 0.1 * ease_in(t / 2.5), (W / 2, 520))
     T_SHOT[0] = 2.5
-    src = 313.4 + t * 0.85
+    tt = t - 2.5
+    src = 348.0 + tt * 0.92          # ball crosses the line at ~350.3 -> film 59.95
     zf = _z_fill("1999", "m")
-    pc = seated_back(arm="up", tilt=5 * math.sin(t * 6)); pf = seated_back(arm="up")
-    return tvroom("1999", t, fi, FT.frame("ucl", src, "crt"), FAMILY_99(pf, pc), zf * 0.95, zf * 1.05, grade=("#E3CBA4", .1))
+    pc = seated_back(lean=0.3, head_drop=-0.2)
+    return tvroom("1999", tt, fi, FT.frame("ucl", src, "crt"), FAMILY_99(None, pc), zf * 0.9, zf * 1.02, grade=("#E3CBA4", .1))
 
+_dorm_room = dorm
 def dorm(t, fi):
-    T_SHOT[0] = 5.0
-    src = 141.5 + t if t < 2.5 else 204.0 + (t - 2.5)
+    """The silent dorm, then a push into the TV: Ferguson's farewell speech."""
+    if t < 2.5:
+        return _dorm_room(t, fi)
+    T_SHOT[0] = 2.5
+    tt = t - 2.5
     zf = _z_fill("2013", "m")
     figs = [(R.MATE1, seated_back(head_drop=.3), R.SEAT_L), (R.MATE2, seated_back(arm="chin"), R.SEAT_R),
-            (R.TEEN, seated_back(head_drop=0.4 * min(1, t / 4)), R.SEAT)]
-    return tvroom("2013", t, fi, FT.frame("fergie", src, "modern"), figs, zf * 0.5, zf * 0.78, grade=("#C9CCC4", .14))
+            (R.TEEN, seated_back(head_drop=0.4), R.SEAT)]
+    return tvroom("2013", tt, fi, FT.frame("fergie", 204.0 + tt, "modern"), figs, zf * 0.62, zf * 0.82, grade=("#C9CCC4", .14))
 
-def tv2024(t, fi):
-    T_SHOT[0] = 5.0
-    if t < 1.6:
-        im = FT.frame("rp", 352.4 + t, "modern")
-    elif t < 2.8:
-        im = FT.frame("nos", 670.0 + (t - 1.6), "modern")
-    elif t < 3.8:
-        im = FT.frame("rp", 718.0 + (t - 2.8), "modern")
-    else:
-        im = FT.frame("rp", 736.0 + (t - 3.8), "modern")
-    zf = _z_fill("2026", False)
-    up = t > 3.8
-    figs = [(R.ADULT, seated_back(arm="up" if up else "rest"), R.SEAT)]
-    return tvroom("2026", t, fi, im, figs, zf * 0.62, zf * 0.85, cam=False, grade=("#BCC4CF", .16), dark=0.4)
-
-def facup(t, fi):
-    a = G.s17(t * 1.0 if t < 1.5 else 1.5 + (t - 1.5) * 5.0, fi)
-    return zoom(a, 1.0 + 0.05 * t / 2.5, (W / 2, 1000))
-
-_sleepy_old = sleepy
-def sleepy(t, fi):
-    if t <= 3.9:
-        R.TV_INJECT = FT.frame("ucl", 60.0 + t * 1.5, "crt")
-        R.TV_OVERRIDE = "inject"
-        try:
-            R.CAM = dict(z=1.0 + 0.06 * min(t, 4.0) / 4.0, c=(W * .4, H * .5), par=1.3)
-            return R.s09(t * 2.0, fi)
-        finally:
-            R.TV_OVERRIDE = None; R.TV_INJECT = None
-    return _sleepy_old(t, fi)
-
-_joy_old = joy
-def joy(t, fi):
-    R.TV_INJECT = FT.frame("ucl", 351.3 + min(t, 3.0), "crt")
-    R.TV_OVERRIDE = "inject"
-    try:
-        return _joy_old(t, fi)
-    finally:
-        R.TV_OVERRIDE = None; R.TV_INJECT = None
-
-FN.update({"basler": basler, "corner1": corner1, "corner2": corner2, "fergie": fergie, "dorm": dorm,
-           "tv2024": tv2024, "facup": facup, "sleepy": sleepy, "joy": joy})
+FN.update({"corner2": corner2, "dorm": dorm})
