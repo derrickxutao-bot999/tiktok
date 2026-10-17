@@ -231,7 +231,7 @@ def final():
         dec.stdout.close(); dec.wait()
         a_last = last.copy()
     enc.stdin.close(); enc.wait()
-    out = os.path.join(OUTDIR, "ep2_man_united_v2.mp4")
+    out = os.path.join(OUTDIR, "ep2_man_united_v3.mp4")
     subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", out_raw, "-i", os.path.join(BUILD, "mix2.wav"),
                     "-af", "loudnorm=I=-14:TP=-1.2:LRA=12", "-ar", "48000", "-c:v", "libx264", "-preset", "slow",
                     "-crf", "19", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-shortest",
