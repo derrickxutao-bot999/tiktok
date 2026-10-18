@@ -545,3 +545,10 @@ def scarf(t, fi):
     return a
 
 FN.update({"open": open_, "basler": basler, "sleepy": sleepy, "nfather": nfather, "seasons": seasons, "scarf": scarf})
+
+
+# ------------------------------------------------------------------ cut 5: the scarf explained (replaces the 2021 postponement)
+def protest(t, fi):
+    return zoom(G.scarf_meaning(t, fi), 1.0 + 0.04 * t / 7.5, (W / 2, 900))
+
+FN.update({"protest": protest})

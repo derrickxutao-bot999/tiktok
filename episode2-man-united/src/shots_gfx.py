@@ -329,7 +329,7 @@ def s20(t, fi):
         p.append(f'<polygon points="{P([(cx, 600), (cx - 50, 600), (cx - 90, 560), (cx - 230, 620), (cx - 280, 800), (cx - 180, 830), (cx - 170, 1160), (cx, 1160)])}" fill="{C["green"]}"/>')
         p.append(f'<polygon points="{P(pts)}" fill="none" stroke="{INK}" stroke-width="4" stroke-linejoin="round"/>')
         p.append(T(cx, 1290, "牛顿希斯 · 1878", 48, INK, 600, ls=4))
-        p.append(T(cx, 1360, "曼联的前身", 32, C["grey"]))
+        p.append(T(cx, 1360, "铁路工人的球队 · 1902年改名曼联", 32, C["grey"]))
         p.append('</g>')
         return out_frame(p, fi)
     tt = t - 5.0
@@ -650,3 +650,43 @@ def cost_jobs(t, fi):
         art.append(f'<circle cx="{x}" cy="{y}" r="18" fill="{C["charcoal"]}" opacity="{op:.2f}"/>')
         art.append(f'<rect x="{x - 22}" y="{y + 24}" width="44" height="54" rx="10" fill="{C["charcoal"]}" opacity="{op:.2f}"/>')
     return _cost(t, fi, "约450", "两轮裁员，减少的岗位", "2024 — 2025", art)
+
+# ------------------------------------------------------------------ cut 5: what the scarf means
+def scarf_meaning(t, fi):
+    """A green-and-gold scarf unfurls across the frame; on the hit (t=5.0)
+    the line it carries lands: 俱乐部，先属于我们。"""
+    p = svg_open()
+    k = ease_out_cubic((t - 1.25) / 1.4)
+    y0 = 760
+    stripe = 72
+    n = 16
+    for i in range(n):
+        x = -60 + i * stripe * 1.0
+        if x > -60 + (W + 120) * k:
+            break
+        wav = 18 * math.sin(i * .7 + t * 2.2)
+        col = C["green"] if i % 2 == 0 else C["gold"]
+        p.append(f'<polygon points="{x:.0f},{y0 + wav:.0f} {x + stripe + 1:.0f},{y0 + wav + 6:.0f} '
+                 f'{x + stripe + 1:.0f},{y0 + 260 + wav + 6:.0f} {x:.0f},{y0 + 260 + wav:.0f}" fill="{col}"/>')
+    edge = -60 + (W + 120) * k
+    p.append(wobble_line([(-60, y0 - 4), (edge, y0 + 2)], 4, INK, seed=6))
+    p.append(wobble_line([(-60, y0 + 264), (edge, y0 + 270)], 4, INK, seed=7))
+    # fringe
+    for i in range(int(edge // 26)):
+        x = i * 26 + 8
+        p.append(f'<line x1="{x}" y1="{y0 + 268}" x2="{x - 4}" y2="{y0 + 300}" stroke="{C["gold"]}" stroke-width="5"/>')
+    p.append(T(W / 2, 600, "LOVE UNITED · HATE GLAZER", 34, C["grey"], 600, op=ease((t - 1.8) / .5), ls=6))
+    p.append(T(W / 2, 650, "2010", 30, C["grey"], 400, op=ease((t - 1.8) / .5), ls=8))
+    a = ease((t - 3.9) / .5) * (1 - ease((t - 4.95) / .1))
+    band = max(a, 1.0 if t >= 5.0 else 0.0)
+    if band > 0:
+        p.append(f'<rect x="0" y="{y0 + 78}" width="{W}" height="120" fill="{INK}" opacity="{.5 * band:.2f}"/>')
+    p.append(T(W / 2, y0 + 150, "在属于任何老板之前", 56, C["paper"], 600, op=a, ls=6))
+    if t >= 5.0:
+        kk = ease_out_cubic((t - 5.0) / .3)
+        sc = 1.3 - .3 * kk
+        p.append(f'<g transform="translate({W / 2} {y0 + 150}) scale({sc:.3f}) translate({-W / 2} {-(y0 + 150)})">')
+        p.append(T(W / 2, y0 + 165, "俱乐部，先属于我们", 74, C["paper"], 600, op=min(1, (t - 5.0) / .12), ls=6))
+        p.append('</g>')
+    p.append(T(W / 2, 1180, "2010.3.10 · 老特拉福德", 28, C["grey"], 400, op=ease((t - 5.6) / .4), ls=4))
+    return out_frame(p, fi)

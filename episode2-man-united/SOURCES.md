@@ -74,6 +74,14 @@ Reports of the same interview:
 - **"约450 两轮裁员":** about 250 roles went in 2024, and up to 150–200 more were announced in February 2025. Sources: [ESPN](https://global.espn.com/football/story/_/id/43995711/man-united-announce-200-more-redundancies-latest-cuts), [EWN/AFP](https://www.ewn.co.za/2025/02/24/man-utd-announce-up-to-200-fresh-job-cuts)
 - **Fiction:** the grandfather (19 in 1958, waiting ten years for 1968), the aged father in 2026, and their exchange 「再等一会儿？」「等。可这一次，我们也要说出来。」 are invented.
 
+## Cut 5: the green-and-gold scarf explained
+
+The 2 May 2021 postponement is no longer in the film. In its place:
+- **Newton Heath LYR:** formed in 1878 by the Carriage and Wagon department of the Lancashire and Yorkshire Railway depot at Newton Heath. Renamed Manchester United in 1902. Source: [Wikipedia: History of Manchester United (1878–1945)](https://en.wikipedia.org/wiki/History_of_Manchester_United_F.C._(1878%E2%80%931945))
+- **2010 green-and-gold campaign, "Love United, Hate Glazer" (LUHG), backed by MUST:** fans wore the colours of Newton Heath as a protest against the debt from the Glazer takeover. Sources: [The Boar](https://theboar.org/2010/03/love-united-hate-glazer/), [Sporting Intelligence](https://sportingintelligence832.substack.com/p/manchester-united-fans-must-announce-new-poster-campaign-in-latest-anti-glazer-move-040802)
+- **10 March 2010:** after United 4-0 AC Milan, Beckham picked up a green-and-gold scarf and put it round his neck. He said the way the club was run had nothing to do with him, so the caption only says what he did. Source: [Al Jazeera](https://www.aljazeera.com/sports/2010/3/11/beckham-shows-his-colours)
+- 「俱乐部，先属于我们」 is the film's own phrasing of what the scarf says. It is not a quotation.
+
 ## Fiction
 
 - The protagonist is 7 in May 1999, at university in May 2013, and 34 in 2026. "二十七年" counts 1999 to 2026.

@@ -192,7 +192,8 @@ TRANS4 = {
     "takeover": ("years", 2024, 2005, 18),
     "newton": ("dissolve", 10),          # the last staff icons -> the shirt, on the same paper
     "fans": ("zoomin", 8),               # into the green-and-gold stand
-    "scarf": ("zoomin", 8),              # into the protest banner -> the scarf
+    "scarf": ("zoomin", 8),              # the unfurled scarf -> the scarf on the hook
+    "protest": ("zoomin", 8),            # a raised scarf in the crowd -> the scarf unfurled
     "return": ("flash", "#FFF8EC", 4),   # the hallway door's light -> his room's door
 }
 
@@ -207,9 +208,9 @@ def captions4():
         if s == "我们期待高层做得更多。":
             a, b = 9.75, 12.4
         if s == "绿金围巾，走进老特拉福德。":
-            a, b = 122.8, 124.95
-        if s == "欧超风波之后，数千名球迷在老特拉福德外抗议。":
-            a, b = 133.8, 137.3
+            a, b, s = 122.8, 124.95, "格雷泽收购后，看台上出现了绿金。"
+        if s in ("欧超风波之后，数千名球迷在老特拉福德外抗议。", "对利物浦的比赛被迫推迟。"):
+            continue
         if s == "红色球衣，绿金围巾。":
             a, b = 142.6, 144.6
         if s == "支持它，和要求它改变，从来不矛盾。":
@@ -220,5 +221,8 @@ def captions4():
         (9.65, 12.4, "曼联后卫马丁内斯，赛后直言", "head"),
         (12.6, 15.15, "他支持曼联，已经二十七年。", "cap"),
         (20.4, 22.45, "1999年，七岁的他和父亲。", "cap"),
+        (120.3, 122.4, "绿和金，是曼联前身牛顿希斯的颜色。", "cap"),
+        (133.9, 136.3, "2010年，球迷喊出“爱曼联，恨格雷泽”。", "cap"),
+        (138.0, 139.95, "连贝克汉姆也捡起一条，围在了脖子上。", "cap"),
     ]
     return out
