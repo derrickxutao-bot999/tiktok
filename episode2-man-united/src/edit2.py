@@ -149,3 +149,74 @@ def clip_time(t):
     if 12.5 <= t < 14.0:
         return 28.25 + (t - 12.5)
     return None
+
+# ======================================================================
+# Cut 4 (2:30): windows removed from the cut-3 timeline. Video, music,
+# voice and captions are all cut by the same windows, so sync holds and the
+# score is edited on its own beat grid. Times are cut-3 times.
+CUT4_DELETE = [
+    (3.00, 9.65),      # Martinez's "mirror" line: keep the two sharpest lines
+    (18.75, 20.00),    # the empty room, a little shorter
+    (22.50, 23.75),    # part of the walk in from the door
+    (37.50, 40.00),    # the 1999 date card (now on the 6' card)
+    (50.00, 51.25),    # the 1-1 hold
+    (93.75, 95.00),    # the hold after the final whistle
+    (100.00, 102.50),  # "那一晚，像极了1999年"
+    (108.75, 110.00),  # takeover tail
+    (125.00, 127.50),  # second half of the stands filling
+    (132.50, 133.75),  # protest lead-in
+    (140.00, 142.50),  # scarf: reaching for the hook
+    (150.00, 151.25),  # part of the walk back in
+    (177.00, 180.00),  # end card, shorter
+]
+
+def kept(t3):
+    return not any(a <= t3 < b - 1e-6 for a, b in CUT4_DELETE)
+
+def to4(t3):
+    return t3 - sum(min(b, t3) - a for a, b in CUT4_DELETE if t3 > a)
+
+TOTAL4 = to4(TOTAL)
+
+# Transitions that grow out of the story (override cut-3 choices)
+TRANS4 = {
+    "orbit": ("dissolve", 8),            # same seat, same boy
+    "title": ("tvline", 10),             # the orbit ends on the TV: it switches off into the title
+    "basler": ("dissolve", 8),           # title -> 6' (date99 is gone)
+    "sleepy": ("cut",),                  # pulls back out of the CRT showing the 6' card
+    "nfather": ("dissolve", 6),          # same 1999 room
+    "munich": ("cut",),                  # match cut: the 1999 wall clock -> the Munich clock
+    "dorm": ("years", 1968, 2013, 18),   # the grandfather's wait -> his own
+    "seasons": ("zoomin", 10),           # through the dorm TV into the ledger
+    "facup": ("flash", "#F4ECDA", 3),    # out of the glowing 23/24 FA Cup dot
+    "takeover": ("years", 2024, 2005, 18),
+    "newton": ("dissolve", 10),          # the last staff icons -> the shirt, on the same paper
+    "fans": ("zoomin", 8),               # into the green-and-gold stand
+    "scarf": ("zoomin", 8),              # into the protest banner -> the scarf
+    "return": ("flash", "#FFF8EC", 4),   # the hallway door's light -> his room's door
+}
+
+# Caption changes for cut 4 (cut-3 times): clearer opening, moved lines
+def captions4():
+    out = []
+    for a, b, s, st in CAPTIONS:
+        if st == "tag" and s.startswith("1999 · 一个虚构"):
+            continue
+        if s == "我们期待高层做得更多。":
+            a, b = 9.75, 12.4
+        if s == "绿金围巾，走进老特拉福德。":
+            a, b = 122.8, 124.95
+        if s == "欧超风波之后，数千名球迷在老特拉福德外抗议。":
+            a, b = 133.8, 137.3
+        if s == "红色球衣，绿金围巾。":
+            a, b = 142.6, 144.6
+        if s == "支持它，和要求它改变，从来不矛盾。":
+            a, b = 144.8, 147.35
+        out.append((a, b, s, st))
+    out += [
+        (0.3, 2.95, "曼联后卫马丁内斯，赛后直言", "head"),
+        (9.65, 12.4, "曼联后卫马丁内斯，赛后直言", "head"),
+        (12.6, 15.15, "他支持曼联，已经二十七年。", "cap"),
+        (20.4, 22.45, "1999年，七岁的他和父亲。", "cap"),
+    ]
+    return out

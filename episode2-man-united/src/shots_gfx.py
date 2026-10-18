@@ -512,23 +512,34 @@ def _snow(t, n=60, seed=4, col="#F4ECDA", op=.8):
         out.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="{r:.1f}" fill="{col}" opacity="{op * rng.uniform(.4, 1):.2f}"/>')
     return out
 
+def clock_svg(cx, cy, r, minutes, op=1.0):
+    """A plain wall-clock face (the same drawing for the 1999 wall clock and
+    the Munich clock, so one can match-cut into the other)."""
+    s = r / 210
+    p = [f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r:.1f}" fill="{C["paper"]}" stroke="{INK}" stroke-width="{6 * s:.1f}" opacity="{op:.2f}"/>']
+    for i in range(12):
+        ang = i / 12 * 2 * math.pi
+        r0, r1 = ((170, 200) if i % 3 else (155, 200))
+        p.append(f'<line x1="{cx + r0 * s * math.sin(ang):.1f}" y1="{cy - r0 * s * math.cos(ang):.1f}" x2="{cx + r1 * s * math.sin(ang):.1f}" '
+                 f'y2="{cy - r1 * s * math.cos(ang):.1f}" stroke="{INK}" stroke-width="{(7 if i % 3 == 0 else 4) * s:.1f}" opacity="{op:.2f}"/>')
+    hm = (minutes / 60 % 12) / 12 * 2 * math.pi
+    mm = (minutes % 60) / 60 * 2 * math.pi
+    p.append(f'<line x1="{cx:.1f}" y1="{cy:.1f}" x2="{cx + 110 * s * math.sin(hm):.1f}" y2="{cy - 110 * s * math.cos(hm):.1f}" stroke="{INK}" stroke-width="{12 * s:.1f}" stroke-linecap="round" opacity="{op:.2f}"/>')
+    p.append(f'<line x1="{cx:.1f}" y1="{cy:.1f}" x2="{cx + 175 * s * math.sin(mm):.1f}" y2="{cy - 175 * s * math.cos(mm):.1f}" stroke="{INK}" stroke-width="{7 * s:.1f}" stroke-linecap="round" opacity="{op:.2f}"/>')
+    p.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{11 * s:.1f}" fill="{INK}" opacity="{op:.2f}"/>')
+    return p
+
+MUNICH_CLOCK = (W / 2, 740, 210)
+
 def munich(t, fi):
-    """The Munich clock at Old Trafford, stopped at 3:04, 6 February 1958."""
+    """The Munich clock at Old Trafford, stopped at 3:04, 6 February 1958.
+    The face is there from the first frame: the 1999 wall clock cuts into it."""
     p = svg_open("#2E3236")
     a = ease(t / .5)
     cx, cy = W / 2, 780
     p.append(f'<rect x="{cx - 300}" y="{cy - 330}" width="600" height="760" fill="#8C8273" stroke="{INK}" stroke-width="4" opacity="{a:.2f}"/>')
     p.append(f'<rect x="{cx - 270}" y="{cy - 300}" width="540" height="700" fill="#A39886" opacity="{a:.2f}"/>')
-    p.append(f'<circle cx="{cx}" cy="{cy - 40}" r="210" fill="{C["paper"]}" stroke="{INK}" stroke-width="6" opacity="{a:.2f}"/>')
-    for i in range(12):
-        ang = i / 12 * 2 * math.pi
-        r0, r1 = (170, 200) if i % 3 else (155, 200)
-        p.append(f'<line x1="{cx + r0 * math.sin(ang):.0f}" y1="{cy - 40 - r0 * math.cos(ang):.0f}" x2="{cx + r1 * math.sin(ang):.0f}" '
-                 f'y2="{cy - 40 - r1 * math.cos(ang):.0f}" stroke="{INK}" stroke-width="{7 if i % 3 == 0 else 4}" opacity="{a:.2f}"/>')
-    hm = (3 + 4 / 60) / 12 * 2 * math.pi; mm = 4 / 60 * 2 * math.pi
-    p.append(f'<line x1="{cx}" y1="{cy - 40}" x2="{cx + 110 * math.sin(hm):.0f}" y2="{cy - 40 - 110 * math.cos(hm):.0f}" stroke="{INK}" stroke-width="12" stroke-linecap="round" opacity="{a:.2f}"/>')
-    p.append(f'<line x1="{cx}" y1="{cy - 40}" x2="{cx + 175 * math.sin(mm):.0f}" y2="{cy - 40 - 175 * math.cos(mm):.0f}" stroke="{INK}" stroke-width="7" stroke-linecap="round" opacity="{a:.2f}"/>')
-    p.append(f'<circle cx="{cx}" cy="{cy - 40}" r="11" fill="{INK}" opacity="{a:.2f}"/>')
+    p += clock_svg(*MUNICH_CLOCK, 3 * 60 + 4)
     p.append(T(cx, cy + 250, "1958 · 2 · 6", 52, INK, 600, op=a, ls=6))
     p.append(T(cx, cy + 320, "慕尼黑", 40, INK, 400, op=a, ls=10))
     p += _snow(t)

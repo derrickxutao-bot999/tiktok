@@ -21,7 +21,7 @@ def lin(t, a, b, x0, x1):
     k = max(0.0, min(1.0, (t - a) / (b - a)))
     return x0 + (x1 - x0) * k
 
-def zoom(arr, z, c=(W / 2, H / 2), rot=0.0, dx=0.0, dy=0.0, centre=0.0):
+def zoom(arr, z, c=(W / 2, H / 2), rot=0.0, dx=0.0, dy=0.0, centre=0.0, fill=None):
     """2D camera on a finished frame: zoom about c, small roll, offset."""
     if abs(z - 1) < 1e-4 and not rot and not dx and not dy:
         return arr
@@ -33,7 +33,10 @@ def zoom(arr, z, c=(W / 2, H / 2), rot=0.0, dx=0.0, dy=0.0, centre=0.0):
     ox = c[0] + (W / 2 - c[0]) * centre + dx
     oy = c[1] + (H / 2 - c[1]) * centre + dy
     m = (ca, sa, c[0] - ca * ox - sa * oy, -sa, ca, c[1] + sa * ox - ca * oy)
-    return np.asarray(im.transform((W, H), Image.AFFINE, m, Image.BICUBIC))
+    if fill is None:
+        # extend with the nearest edge colour rather than black
+        fill = tuple(int(v) for v in np.asarray(arr)[[0, -1, 0, -1], [0, 0, -1, -1]].mean(0))
+    return np.asarray(im.transform((W, H), Image.AFFINE, m, Image.BICUBIC, fillcolor=fill))
 
 def shake(t, t0, dur, amp=18.0, seed=1):
     """Decaying hand-held shake after a hit at t0."""
@@ -442,3 +445,103 @@ def pair(t, fi):
 
 FN.update({"nfather": nfather, "munich": G.munich, "seats": G.seats, "wembley": G.wembley,
            "debt": G.cost_debt, "rain": G.cost_rain, "tickets": G.cost_tickets, "jobs": G.cost_jobs, "pair": pair})
+
+# ------------------------------------------------------------------ cut 4: transitions inside shots
+def open_(t, fi):
+    """Cut 4 keeps 0-3.0 (close on his face) and 9.65-12.5, where the whole
+    pull-back now happens, fast."""
+    import clipmap
+    if t < 9.65:
+        i = 1 + int(min(t, 6.4) * FPS)
+    else:
+        i = 157 + int(round(ease_io((t - 9.65) / 2.6) * 155))
+    i = max(1, min(312, i))
+    img = Image.open(os.path.join(BL, "2026", f"pull_{i:04d}.png")).convert("RGBA")
+    q = _pull_quads()[str(i)]
+    ct = clip_time(t)
+    warp_into(img, clipmap.frame(round(ct * 25) / 25), q)
+    k = ease((t - 9.65) / 2.6)
+    cx = sum(p[0] for p in q) / 4; cy = sum(p[1] for p in q) / 4
+    light = R.light_pool((W, H), (cx, cy), abs(q[1][0] - q[0][0]) * 2.0, "#9FB8C8", 0.18 * k) if k > 0 else None
+    a = finish(img, fi, grade=("#C7CCD6", .16 * k), light=light, grain=2.0)
+    if t < 3.0:
+        a = zoom(a, 1.0 + 0.04 * t / 3.0)
+    return a
+
+def basler(t, fi):
+    return minute_card(t, fi, "6'", [(0.1, "1999 · 欧冠决赛"), (0.4, "巴斯勒 · 任意球")], "0 – 0", "0 – 1", 2.05, 2.05)
+
+_sleepy3 = sleepy
+def sleepy(t, fi):
+    """Starts inside the CRT showing the 6' card, pulls back into the room."""
+    if t >= 0.8:
+        return _sleepy3(t, fi)
+    card = Image.fromarray(minute_card(2.4, fi, "6'", [(0.0, "1999 · 欧冠决赛"), (0.0, "巴斯勒 · 任意球")], "0 – 1"))
+    R.TV_INJECT = card.crop((0, 960 - 405, 1080, 960 + 405))
+    R.TV_OVERRIDE = "inject"
+    try:
+        R.CAM = dict(z=1.0, c=(W * .4, H * .5), par=1.3)
+        a = R.s09(0.0, fi)
+    finally:
+        R.TV_OVERRIDE = None; R.TV_INJECT = None
+    q = anchors("1999", "m")["screen"]
+    cx = sum(p[0] for p in q) / 4; cy = sum(p[1] for p in q) / 4
+    need = W / abs(q[1][0] - q[0][0]) * 1.12
+    k = ease_out(t / 0.8)
+    return zoom(a, need ** (1 - k), (cx, cy), centre=1 - k)
+
+def nfather(t, fi):
+    """1999, after the winner, in the wide shot. The camera pushes into the
+    wall clock; its hands run backwards to 3:04 for the cut to Munich."""
+    era = "1999"
+    R.CAM = None
+    img, grade = R._era_frame(era, 0.0 + t, fi)
+    a = finish(img, fi, grade=grade)
+    P = projector(era)
+    cx0, cy0, ppm = P((1.85, 2.97 - 0.02, 2.0))
+    r0 = 0.17 * ppm
+    mx, my, mr = G.MUNICH_CLOCK
+    k = ease_in(max(0.0, (t - 0.9) / 1.6))
+    zend = mr / r0
+    z = zend ** k
+    a = zoom(a, z, (cx0, cy0), centre=k, fill=(46, 50, 54))
+    # the room falls away into the dark of the next shot
+    dark = np.array(hex2rgb("#2E3236"), np.float32)
+    a = (a * (1 - 0.95 * k) + dark * 0.95 * k).astype(np.uint8)
+    ox = cx0 + (W / 2 - cx0) * k; oy = cy0 + (my - cy0) * k   # where the clock sits now
+    ox = cx0 + (mx - cx0) * k
+    minutes = 21 * 60 + 52 - (21 * 60 + 52 - (3 * 60 + 4)) * ease_in(max(0.0, (t - 0.6) / 1.9))
+    svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}">' + "".join(G.clock_svg(ox, oy, r0 * z, minutes)) + '</svg>'
+    im = Image.fromarray(a).convert("RGBA")
+    im.alpha_composite(svg_png(svg))
+    return np.asarray(im.convert("RGB"))
+
+def seasons(t, fi):
+    """Ends by pushing into the glowing 23/24 FA Cup dot."""
+    a = G.s16b(t, fi, per=BEAT)
+    if t > 8.9:
+        per = BEAT
+        scroll = max(0.0, (t / per - 6)) * 110
+        y = 520 - scroll + 10 * 110 - 15
+        k = ease_in((t - 8.9) / 1.1)
+        a = zoom(a, 1 + 5 * k, (420, y), centre=k)
+        a = flash(a, 0.6 * ease_in((t - 9.6) / 0.4), (255, 246, 222))
+    return a
+
+_scarf3 = scarf
+def scarf(t, fi):
+    """Ends with the hallway door flooding with light: he goes through."""
+    a = _scarf3(t, fi)
+    if t > 6.7:
+        k = ease_in((t - 6.7) / 0.8)
+        x0, x1, y0, y1 = 760, 1010, 420, 1500
+        X0 = x0 - (x0) * k; X1 = x1 + (W - x1) * k; Y0 = y0 - y0 * k; Y1 = y1 + (H - y1) * k
+        im = Image.fromarray(a).convert("RGBA")
+        lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        ImageDraw.Draw(lay).rectangle([X0, Y0, X1, Y1], fill=(255, 248, 236, int(255 * min(1, 0.55 + 0.45 * k))))
+        lay = lay.filter(ImageFilter.GaussianBlur(30 * (1 - k) + 4))
+        im.alpha_composite(lay)
+        a = np.asarray(im.convert("RGB"))
+    return a
+
+FN.update({"open": open_, "basler": basler, "sleepy": sleepy, "nfather": nfather, "seasons": seasons, "scarf": scarf})

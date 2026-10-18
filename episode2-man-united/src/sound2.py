@@ -56,8 +56,28 @@ def main():
     wavfile.write(os.path.join(BUILD, "stems2", "voice.wav"), SR, v)
     wavfile.write(os.path.join(BUILD, "stems2", "music.wav"), SR, m)
     peak = np.abs(mix).max()
-    wavfile.write(os.path.join(BUILD, "mix2.wav"), SR, (mix / max(1, peak / 0.89)).astype(np.float32))
-    print("peak", peak)
+    mix = mix / max(1, peak / 0.89)
+    wavfile.write(os.path.join(BUILD, "mix2.wav"), SR, mix.astype(np.float32))
+    # cut 4: remove the same windows from the audio, with short crossfades,
+    # so the score is edited exactly where the picture is
+    from edit2 import CUT4_DELETE
+    xf = int(0.03 * SR)
+    parts, pos = [], 0.0
+    for a_, b_ in CUT4_DELETE + [(len(mix) / SR, None)]:
+        seg = mix[int(pos * SR):int(a_ * SR)].copy()
+        if parts and len(seg) > xf:
+            # fade in the new segment while the material just after the previous
+            # cut point fades out: no samples are lost, so picture sync holds
+            tail = mix[int(prev_a * SR):int(prev_a * SR) + xf]
+            ramp = np.linspace(0, 1, len(tail))[:, None]
+            seg[:len(tail)] = seg[:len(tail)] * ramp + tail * (1 - ramp)
+        parts.append(seg)
+        if b_ is None:
+            break
+        prev_a, pos = a_, b_
+    out = np.concatenate(parts)
+    wavfile.write(os.path.join(BUILD, "mix4.wav"), SR, out.astype(np.float32))
+    print("peak", peak, "cut4 seconds", len(out) / SR)
 
 if __name__ == "__main__":
     main()

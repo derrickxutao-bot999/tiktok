@@ -98,6 +98,60 @@ def apply_transition(tr, i, a_last, b):
         m = ink_mask(k, seed=len(str(a_last.shape)) + i // 100) if kind == "ink" else (iris_mask(k) if kind == "iris" else np.full((H, W), k, np.float32))
         m = m[..., None]
         return (a_last * (1 - m) + b * m).astype(np.uint8)
+    if kind == "tvline":
+        # A switches off into a bright line (like the opening's TV); B unfolds from it
+        n = tr[1]
+        if i >= n:
+            return b
+        h = n / 2
+        out = np.zeros_like(b)
+        if i < h:
+            k = (i + 1) / h
+            src, hh = a_last, max(4, int(H * (1 - k) ** 2))
+        else:
+            k = (i - h + 1) / h
+            src, hh = b, max(4, int(H * k ** 2))
+        sq = np.asarray(Image.fromarray(src).resize((W, hh), Image.BILINEAR), np.float32)
+        glow = 1 + 1.5 * (1 - hh / H)
+        y0 = H // 2 - hh // 2
+        out[y0:y0 + hh] = np.clip(sq * glow, 0, 255).astype(np.uint8)
+        return out
+    if kind == "zoomin":
+        # push through A's centre, B settles in from slightly larger
+        n = tr[1]
+        if i >= n:
+            return b
+        k = (i + 1) / n
+        za = 1 + 0.9 * k * k
+        ia = Image.fromarray(a_last)
+        wa, ha = int(W / za), int(H / za)
+        ia = ia.crop(((W - wa) // 2, (H - ha) // 2, (W + wa) // 2, (H + ha) // 2)).resize((W, H), Image.BICUBIC)
+        ia = ia.filter(ImageFilter.GaussianBlur(10 * k))
+        zb = 1.12 - 0.12 * k
+        ib = Image.fromarray(b)
+        wb, hb = int(W / zb), int(H / zb)
+        ib = ib.crop(((W - wb) // 2, (H - hb) // 2, (W + wb) // 2, (H + hb) // 2)).resize((W, H), Image.BICUBIC)
+        m = ease(k)
+        return (np.asarray(ia, np.float32) * (1 - m) + np.asarray(ib, np.float32) * m).astype(np.uint8)
+    if kind == "years":
+        # the years roll on paper between two parts: (kind, y0, y1, frames)
+        y0, y1, n = tr[1], tr[2], tr[3]
+        if i >= n:
+            return b
+        k = (i + 1) / n
+        paper = np.full_like(b, hex2rgb(C["paper"]))
+        if k < 0.3:
+            base = (a_last * (1 - k / 0.3) + paper * (k / 0.3)).astype(np.uint8)
+        elif k > 0.75:
+            q = (k - 0.75) / 0.25
+            base = (paper * (1 - q) + b * q).astype(np.uint8)
+        else:
+            base = paper
+        yr = int(round(y0 + (y1 - y0) * ease(min(1, max(0, (k - 0.15) / 0.6)))))
+        img = Image.fromarray(base).convert("RGBA")
+        a = min(1, k / 0.2, (1 - k) / 0.2)
+        halo_text(img, (W / 2, H * 0.46), str(yr), font(SERIF_B, 230), hex2rgb(C["red"]), hex2rgb(C["paper"]), max(0, a), strength=.5)
+        return np.asarray(img.convert("RGB"))
     if kind == "dip":
         col, n = np.array(hex2rgb(tr[1]), np.float32), tr[2]
         if i >= n:
@@ -155,6 +209,13 @@ def draw_caption(img, t, t0, t1, text, style):
     if a <= 0:
         return
     rise = (1 - a_in) * 16
+    if style == "head":
+        # headline in the top band: who is speaking, so nobody is lost
+        y = 210
+        f = font(SERIF_B, 40)
+        halo_text(img, (W / 2, y), text, f, hex2rgb(C["paper"]), (18, 16, 14), a, blur=8, strength=.75)
+        ImageDraw.Draw(img).rectangle([W / 2 - 50, y + 36, W / 2 + 50, y + 41], fill=(*hex2rgb(C["red_l"]), int(255 * a)))
+        return
     if style == "tag":
         y = 250
         light = lum(img, (300, y - 25, W - 300, y + 25)) > 150
@@ -202,17 +263,26 @@ def ease_out_back(x):
 
 # ------------------------------------------------------------------ final
 def final():
-    out_raw = os.path.join(BUILD, "video2.mp4")
+    """Cut 4: walk the cut-3 timeline, drop the CUT4_DELETE windows, apply the
+    story transitions, soften jumps inside shots, draw cut-4 captions."""
+    from edit2 import kept, TRANS4, captions4, TOTAL4
+    caps = captions4()
+    out_raw = os.path.join(BUILD, "video4.mp4")
     enc = subprocess.Popen(["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
                             "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "fast", "-crf", "16",
                             "-pix_fmt", "yuv420p", out_raw], stdin=subprocess.PIPE)
     a_last = None
-    fi = 0
+    last_out = None
     for sid, start, dur, tr in SHOTS:
+        tr = TRANS4.get(sid, tr)
         n = nframes(start, dur)
+        f0 = int(round(start * FPS))
         dec = subprocess.Popen(["ffmpeg", "-v", "error", "-i", os.path.join(SEG, f"{sid}.mp4"), "-f", "rawvideo",
                                 "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE)
         last = None
+        k = 0            # kept frames of this shot so far (drives its transition)
+        jump = None      # frames since a jump inside the shot
+        was_kept = True
         for i in range(n):
             raw = dec.stdout.read(W * H * 3)
             if len(raw) == W * H * 3:
@@ -220,19 +290,31 @@ def final():
                 last = b
             else:
                 b = last
-            frame = apply_transition(tr, i, a_last, b)
-            t = fi / FPS
+            t3 = (f0 + i) / FPS
+            if not kept(t3):
+                was_kept = False
+                continue
+            if not was_kept and k > 0:
+                jump = 0           # a window removed the middle of this shot
+                jump_from = last_out
+            was_kept = True
+            frame = apply_transition(tr, k, a_last, b)
+            if jump is not None and jump < 4:
+                m = (jump + 1) / 5
+                frame = (jump_from * (1 - m) + frame * m).astype(np.uint8)
+                jump += 1
             img = Image.fromarray(frame).convert("RGBA")
-            for t0, t1, text, style in CAPTIONS:
-                if t0 <= t < t1:
-                    draw_caption(img, t, t0, t1, text, style)
-            enc.stdin.write(img.convert("RGB").tobytes())
-            fi += 1
+            for c0, c1, text, style in caps:
+                if c0 <= t3 < c1:
+                    draw_caption(img, t3, c0, c1, text, style)
+            last_out = np.asarray(img.convert("RGB"))
+            enc.stdin.write(last_out.tobytes())
+            k += 1
         dec.stdout.close(); dec.wait()
-        a_last = last.copy()
+        a_last = last_out.copy() if last_out is not None else None
     enc.stdin.close(); enc.wait()
-    out = os.path.join(OUTDIR, "ep2_man_united_v3.mp4")
-    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", out_raw, "-i", os.path.join(BUILD, "mix2.wav"),
+    out = os.path.join(OUTDIR, "ep2_man_united_v4.mp4")
+    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", out_raw, "-i", os.path.join(BUILD, "mix4.wav"),
                     "-af", "loudnorm=I=-14:TP=-1.2:LRA=12", "-ar", "48000", "-c:v", "libx264", "-preset", "slow",
                     "-crf", "19", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-shortest",
                     "-movflags", "+faststart", out], check=True)
