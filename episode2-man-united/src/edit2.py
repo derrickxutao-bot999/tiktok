@@ -202,6 +202,8 @@ def captions4():
     for a, b, s, st in CAPTIONS:
         if st == "tag" and s.startswith("1999 · 一个虚构"):
             continue
+        if s == "2013年5月 · 弗格森宣布退休":
+            a = 73.35          # after the rolling years have landed on 2013
         if s == "我们期待高层做得更多。":
             a, b = 9.75, 12.4
         if s == "绿金围巾，走进老特拉福德。":
