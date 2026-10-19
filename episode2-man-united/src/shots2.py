@@ -128,14 +128,17 @@ def empty(t, fi):
 def enter(t, fi):
     """Picks up on the closed door where the 2026 take ended: it opens on
     1999, and the camera eases back as father and son walk in."""
+    # cut 4 drops enter 2.5-3.75: run the action on kept time so it plays
+    # through the trim without a jump
+    t = t if t < 2.5 else max(2.5, t - 1.25)
     end = R.leave_cam(R.LEAVE_LEN)
     k = ease_io((t - 0.9) / 1.5)
     z = end["z"] + (1.0 - end["z"]) * k
     c = end["c"]
     to = (end["to"][0] + (c[0] - end["to"][0]) * k, end["to"][1] + (c[1] - end["to"][1]) * k)
     R.CAM = dict(z=z, c=c, to=to, par=1.25, figpar=1.0 + 0.25 * k)
-    old = t * 1.2 if t < 1.0 else 1.2 + (t - 1.0) * 1.3
-    a = R.s05(old, fi)
+    old = t * 1.2 if t < 1.0 else 1.2 + (t - 1.0) * 1.8
+    a = R.s05(old, fi, t_walk0=0.9)
     if 0.75 < t < 1.25:   # light bloom as the room becomes 1999
         a = flash(a, 0.35 * math.sin((t - .75) / .5 * math.pi), (255, 236, 196))
     return a

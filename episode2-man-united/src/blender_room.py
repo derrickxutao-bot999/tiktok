@@ -497,15 +497,27 @@ if MODE == "orbit":
     ls.collection_negation = "EXCLUSIVE"
     pivot = Vector((-0.30, -0.55, 0.0))
     target0 = Vector((-0.30, -0.15, 1.0))
+    # the move starts on the plate camera (the framing of the 2D shot before
+    # it), so the door, TV and cabinet do not jump at the dissolve
+    N_BLEND = 36
     for f in range(f0, f1 + 1):
         u = f / (N_ORBIT - 1)
         th = math.radians(-26 + 50 * u)
         R = 3.5 - 0.6 * u
         loc = pivot + Vector((R * math.sin(th), -R * math.cos(th), 1.72 - 0.1 * u))
+        look = target0.copy()
+        lens = 28 + 3 * u
+        if f < N_BLEND:
+            w = f / N_BLEND
+            w = w * w * (3 - 2 * w)
+            loc = Vector(WIDE_LOC).lerp(loc, w)
+            look = Vector(WIDE_LOOK).lerp(look, w)
+            lens = 42 + (lens - 42) * w
+            th = math.atan2(loc.x - pivot.x, -(loc.y - pivot.y))
         cam.location = loc
-        d = target0 - loc
+        d = look - loc
         cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
-        cam.data.lens = 28 + 3 * u
+        cam.data.lens = lens
         cam.keyframe_insert("location", frame=f - f0 + 1)
         cam.keyframe_insert("rotation_euler", frame=f - f0 + 1)
         cam.data.keyframe_insert("lens", frame=f - f0 + 1)

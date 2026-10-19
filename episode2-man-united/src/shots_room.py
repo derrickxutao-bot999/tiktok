@@ -378,15 +378,17 @@ def _enter_figs(t, P, t_walk0=1.25):
         (over if y > 2.98 else items).append(svg)
     return items, over
 
-def s05(t, fi):
-    door = seq(t, [(0.0, 0), (1.1, 84)])
+def s05(t, fi, t_walk0=1.25):
+    # the door opens, they come in, and it is shut behind them (the orbit
+    # that follows starts on this framing with the door closed)
+    door = seq(t, [(0.0, 0), (1.1, 84), (3.0, 84), (3.6, 0)])
     a = room_base("2026", t, door=door, tvk="off")
     b = room_base("1999", t, door=door, tvk="match", tvop=seq(t, [(1.6, 0), (2.4, 1)]))
     q = anchors("1999")["door_open"]
     dc = ((q[0][0] + q[1][0]) / 2, (q[0][1] + q[2][1]) / 2)
     r = seq(t, [(0.25, 0), (2.2, 2300)])
     P = projector("1999")
-    items, over = _enter_figs(t, P)
+    items, over = _enter_figs(t, P, t_walk0)
     if over:
         lay = masked(grade_figs(figures_layer(over), "1999"), poly_mask(q))
         b.alpha_composite(lay)
@@ -400,7 +402,7 @@ def s05(t, fi):
             sc = (sc[0] + (dc[0] - CAM["c"][0]) * z, sc[1] + (dc[1] - CAM["c"][1]) * z)
         img = _radial_mix(with_sofa(a, "2026", []), img, sc, r * z).convert("RGBA")
     # warm spill from the open door
-    light = light_pool((W, H), (dc[0], dc[1] + 200), 700, "#F2C878", 0.35 * ease(t / 1.2))
+    light = light_pool((W, H), (dc[0], dc[1] + 200), 700, "#F2C878", 0.35 * ease(t / 1.2) * door / 84)
     g = seq(t, [(0, .28), (2.0, .1)])
     col = "#B5BDC9" if t < 1.0 else "#E9D3B0"
     return finish(img, fi, grade=(col, g), light=light)
