@@ -29,7 +29,7 @@ Cut 2 drops the voice-over. A 96 BPM score (beat = 15 frames, bar = 2.5 s) carri
 ## How it is made
 
 - `src/chars.py`: SVG cut-out characters in a vintage editorial style (angular silhouettes, irregular ink outlines slightly out of register with flat fills). The protagonist keeps the same hair flick and nose from age 7 to 34.
-- `src/blender_room.py`: Blender sets for the same room in four eras, rendered flat (matte emission shading, two-tone faces, Freestyle ink lines with noise). It outputs layered plates (background, sofa occluder, door-leaf angles) plus camera data, so the 2D figures sit correctly in 3D space. The opening pull-back is a full per-frame Blender render.
+- `src/blender_room.py`: Blender sets for the same room in four eras, rendered flat (matte emission shading, two-tone faces, one clean Freestyle ink stroke per edge, no noise, so lines stay solid and still when the camera moves). It outputs layered plates (background, sofa occluder, door-leaf angles) plus camera data, so the 2D figures sit correctly in 3D space. The opening pull-back is a full per-frame Blender render.
 - `src/shots_room.py`, `src/shots_gfx.py`: shot code (room composites and SVG motion graphics).
 - `src/script.py`, `src/tts.py`: narration (edge-tts, zh-CN voices). `src/timeline.py`: master timing.
 - `src/music.py`: original score written note by note against the picture. The five-note motif for "再等一会儿" (A–B–D–E–C♯) hangs on C♯ and resolves to D only when the waiting pays off.

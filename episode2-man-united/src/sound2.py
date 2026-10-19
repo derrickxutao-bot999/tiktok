@@ -31,7 +31,8 @@ def sfx():
     S.put(S.click() * 0.8, 12.47)
     pop = S.lp(S.noise(0.12), 300) * S.env(int(0.12 * SR), 0.002, 0.11, 6) * 0.5
     S.put(pop, 12.5)
-    S.put(S.door_close() * 0.55, 17.45, pan=.3)
+    S.put(S.handle() * 0.9, 16.42, pan=.3)        # he opens the door (shots_room.leave)
+    S.put(S.door_close() * 0.55, 18.30, pan=.3)    # and it shuts behind him
     from edit2 import remap
     S.put(S.click() * 0.6, remap(137.45))
     return S.TRACK

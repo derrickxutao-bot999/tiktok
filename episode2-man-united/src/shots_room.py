@@ -135,10 +135,12 @@ TV_INJECT = None
 TV_OVERRIDE = None
 CAM = None   # dict(z=zoom, c=(x, y) focus, par=extra zoom factor for foreground) set by shots2
 
-def _zoom_layer(im, z, c):
-    if abs(z - 1) < 1e-4:
+def _zoom_layer(im, z, c, to=None):
+    """Scale by z about c; c lands on screen point `to` (default: stays put)."""
+    to = c if to is None else to
+    if abs(z - 1) < 1e-4 and math.dist(c, to) < 0.05:
         return im
-    x0 = c[0] * (1 - 1 / z); y0 = c[1] * (1 - 1 / z)   # c stays fixed on screen
+    x0 = c[0] - to[0] / z; y0 = c[1] - to[1] / z
     return im.transform((W, H), Image.AFFINE, (1 / z, 0, x0, 0, 1 / z, y0), Image.BICUBIC)
 
 def with_sofa(img, era, items, cam=False, behind=None):
@@ -146,16 +148,21 @@ def with_sofa(img, era, items, cam=False, behind=None):
     seated figures sit *behind* the sofa back from the camera's view, so the
     order is plate -> figures -> sofa."""
     pre = "m_" if cam == "m" else ""
-    fg = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    if items:
-        fg.alpha_composite(grade_figs(figures_layer(items), era, FIG_DARK))
-    fg.alpha_composite(plate(era, pre + "sofa.png"))
+    figs = grade_figs(figures_layer(items), era, FIG_DARK) if items else None
+    sofa = plate(era, pre + "sofa.png")
     if CAM:
-        z, c, par = CAM["z"], CAM["c"], CAM.get("par", 1.3)
-        img = _zoom_layer(img.convert("RGBA"), z, c)
-        fg = _zoom_layer(fg, 1 + (z - 1) * par, c)
+        z, c, par, to = CAM["z"], CAM["c"], CAM.get("par", 1.3), CAM.get("to")
+        # figures walking away from the sofa sit at the wall's depth: "figpar"
+        # lets them move with the plate instead of sliding with the sofa
+        fpar = CAM.get("figpar", par)
+        img = _zoom_layer(img.convert("RGBA"), z, c, to)
+        sofa = _zoom_layer(sofa, 1 + (z - 1) * par, c, to)
+        if figs is not None:
+            figs = _zoom_layer(figs, 1 + (z - 1) * fpar, c, to)
     img = img.convert("RGBA")
-    img.alpha_composite(fg)
+    if figs is not None:
+        img.alpha_composite(figs)
+    img.alpha_composite(sofa)
     return img
 
 def breathe(t, f=0.23, ph=0.0):
@@ -262,6 +269,66 @@ def s03(t, fi):
     light = tv_light(era, img, 0.22) if tv_on else None
     return finish(img, fi, grade=("#BCC4CF", .2 if tv_on else .27), light=light)
 
+# ---------------------------------------------------------------- leave
+# One continuous take (cut 4: standup + exit + empty, 4.75 s): he rises, walks
+# to the latch side of the door, opens it, steps through, the door closes and
+# the camera settles on it. He waits outside the leaf's swing, so the door
+# never passes through him.
+LEAVE_WALK = [(STAND[0], STAND[1]), (0.15, 1.0), (0.38, 2.42)]
+LEAVE_OUT = [(0.38, 2.42), (0.78, 2.72), (0.97, 3.05), (0.97, 3.85)]
+LEAVE_T = dict(rise=(0.12, 0.62), walk=0.62, v_walk=1.45, open=(2.42, 2.92), out=2.84, v_out=1.35,
+               close=(3.78, 4.32))
+LEAVE_LEN = 4.75
+
+def leave_cam(T):
+    """Push from the wide room onto the door; it ends a little right of centre."""
+    q = anchors("2026")["door_open"]
+    dc = ((q[0][0] + q[1][0]) / 2, (q[0][1] + q[2][1]) / 2)
+    k = ease_io(min(1.0, max(0.0, (T - 0.25) / 3.3)))
+    z = 1.0 + 0.48 * k + 0.05 * max(0.0, T - 3.55) / 1.2
+    to = (dc[0] + (W * 0.57 - dc[0]) * k, dc[1] + (H * 0.46 - dc[1]) * k)
+    return dict(z=z, c=dc, to=to, par=1.25, figpar=1.0)
+
+def leave(T, fi):
+    era = "2026"
+    P = projector(era)
+    L = LEAVE_T
+    door = seq(T, [(L["open"][0], 0), (L["open"][1], 84), (L["close"][0], 84), (L["close"][1], 0)])
+    img = room_base(era, 0.0, door=door, tvk="off")
+    items = []; over = []
+    seed = fi // 2
+    r0, r1 = L["rise"]
+    if T < r0:
+        items.append(place(ADULT, seated_back(arm="remote_low", head_drop=0.8), P, SEAT, "back", seed))
+    elif T < r1:
+        k = ease((T - r0) / (r1 - r0))
+        x, y, ppm = P(STAND)
+        lift = (1 - k) * 0.46 * ppm  # rises from the seat; legs hidden by the sofa
+        items.append(ADULT.svg(standing_back(), x, y + lift, ppm * UNIT, "back", seed=seed))
+    else:
+        dw = max(0.0, T - L["walk"]) * L["v_walk"]
+        (gx, gy), tot = path_pos(LEAVE_WALK, dw)
+        if T < L["out"]:
+            # slows into the last step at the door
+            walking = dw < tot
+            items.append(place(ADULT, standing_back(phase=dw / 1.3 if walking else None, lean=0.15 if not walking else 0),
+                               P, (gx, gy, 0), "back", seed))
+        else:
+            d2 = (T - L["out"]) * L["v_out"]
+            (gx, gy), tot2 = path_pos(LEAVE_OUT, d2)
+            svg = place(ADULT, standing_back(phase=d2 / 1.3 if d2 < tot2 else None), P, (gx, gy, 0), "back", seed)
+            if gy > 2.98:
+                if door > 0.5:
+                    over.append(svg)   # beyond the threshold: clipped to the doorway
+            else:
+                items.append(svg)
+    if over:
+        lay = masked(grade_figs(figures_layer(over), era), poly_mask(anchors(era)["door_open"]))
+        img.alpha_composite(lay)
+        img.alpha_composite(door_layer(era, door))
+    img = with_sofa(img, era, items)
+    return finish(img, fi, grade=("#B5BDC9", .27))
+
 # ---------------------------------------------------------------- s04
 def s04(t, fi):
     img = room_base("2026", t, tvk="off")
@@ -318,14 +385,20 @@ def s05(t, fi):
     q = anchors("1999")["door_open"]
     dc = ((q[0][0] + q[1][0]) / 2, (q[0][1] + q[2][1]) / 2)
     r = seq(t, [(0.25, 0), (2.2, 2300)])
-    img = _radial_mix(a, b, dc, r).convert("RGBA") if r < 2290 else b
     P = projector("1999")
     items, over = _enter_figs(t, P)
     if over:
         lay = masked(grade_figs(figures_layer(over), "1999"), poly_mask(q))
-        img.alpha_composite(lay)
-        img.alpha_composite(door_layer("1999", door))
-    img = with_sofa(img, "1999", items)
+        b.alpha_composite(lay)
+        b.alpha_composite(door_layer("1999", door))
+    img = with_sofa(b, "1999", items)
+    if r < 2290:
+        # the 1999 room spreads out from the door over the whole 2026 frame,
+        # sofa included, in screen space (after the camera)
+        z, sc = (CAM["z"], CAM.get("to") or CAM["c"]) if CAM else (1.0, dc)
+        if CAM:
+            sc = (sc[0] + (dc[0] - CAM["c"][0]) * z, sc[1] + (dc[1] - CAM["c"][1]) * z)
+        img = _radial_mix(with_sofa(a, "2026", []), img, sc, r * z).convert("RGBA")
     # warm spill from the open door
     light = light_pool((W, H), (dc[0], dc[1] + 200), 700, "#F2C878", 0.35 * ease(t / 1.2))
     g = seq(t, [(0, .28), (2.0, .1)])

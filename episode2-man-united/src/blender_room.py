@@ -77,13 +77,12 @@ ls.select_by_collection = False
 lst = bpy.data.linestyles.new("inkstyle") if ls.linestyle is None else ls.linestyle
 ls.linestyle = lst
 lst.color = hx("#2A2522")
-lst.thickness = 1.9
+lst.thickness = 2.3
+# one solid stroke per edge: no noise wobble or thickness noise, which broke
+# long edges into dashes and made the lines crawl when the camera moves
 lst.chaining = "PLAIN"
+lst.use_same_object = True
 lst.caps = "ROUND"
-gm = lst.geometry_modifiers.new("wob", "PERLIN_NOISE_1D")
-gm.amplitude, gm.frequency, gm.octaves = 0.8, 5.0, 2
-tm = lst.thickness_modifiers.new("var", "NOISE")
-tm.amplitude, tm.period = 0.8, 40.0
 
 # ------------------------------------------------------------------ materials
 _mats = {}
@@ -175,8 +174,8 @@ def box(name, center, size, col, cname="set", shade=0.84, stripe=None, rot=None,
     for c in o.users_collection:
         c.objects.unlink(o)
     coll(cname).objects.link(o)
-    if bevel:
-        b = o.modifiers.new("b", "BEVEL"); b.width = bevel; b.segments = 1
+    # bevel is ignored: its two chamfer edges each drew an ink line, doubling
+    # every sofa and cabinet edge
     return o
 
 def cyl(name, center, r, h, col, cname="set", verts=8, r2=None):

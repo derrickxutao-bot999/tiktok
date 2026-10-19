@@ -113,27 +113,27 @@ def profile(t, fi):
     return zoom(a, 1.0 + 0.05 * t / 1.5, (W * .55, H * .4))
 
 def standup(t, fi):
-    era = "2026"
-    R.CAM = dict(z=1.0 + 0.06 * t / 1.25, c=(W * .45, H * .5), par=1.4)
-    return R.s03(2.5 + t * 0.75, fi)
+    # standup, exit and empty are one continuous take (R.leave)
+    R.CAM = R.leave_cam(t)
+    return R.leave(t, fi)
 
 def exit_(t, fi):
-    # cut-in: closer on the door, slow push as it closes
-    q = anchors("2026")["door_open"]
-    c = ((q[0][0] + q[1][0]) / 2, (q[0][1] + q[2][1]) / 2)
-    R.CAM = dict(z=1.55 + 0.1 * t / 2.25, c=c, par=1.0)
-    return R.s03(5.45 + t * 1.05, fi)
+    R.CAM = R.leave_cam(1.25 + t)
+    return R.leave(1.25 + t, fi)
 
 def empty(t, fi):
-    R.CAM = dict(z=1.0 + 0.04 * t / 2.5, c=(W / 2, H * .45), par=1.6)
-    return R.s04(t, fi)
+    R.CAM = R.leave_cam(3.5 + t)
+    return R.leave(3.5 + t, fi)
 
 def enter(t, fi):
-    q = anchors("1999")["door_open"]
-    dc = ((q[0][0] + q[1][0]) / 2, (q[0][1] + q[2][1]) / 2)
-    # push toward the opening door, then ease back as they walk in
-    z = 1.0 + 0.22 * ease_out(t / 1.1) - 0.22 * ease((t - 1.6) / 2.4)
-    R.CAM = dict(z=z, c=dc, par=1.2)
+    """Picks up on the closed door where the 2026 take ended: it opens on
+    1999, and the camera eases back as father and son walk in."""
+    end = R.leave_cam(R.LEAVE_LEN)
+    k = ease_io((t - 0.9) / 1.5)
+    z = end["z"] + (1.0 - end["z"]) * k
+    c = end["c"]
+    to = (end["to"][0] + (c[0] - end["to"][0]) * k, end["to"][1] + (c[1] - end["to"][1]) * k)
+    R.CAM = dict(z=z, c=c, to=to, par=1.25, figpar=1.0 + 0.25 * k)
     old = t * 1.2 if t < 1.0 else 1.2 + (t - 1.0) * 1.3
     a = R.s05(old, fi)
     if 0.75 < t < 1.25:   # light bloom as the room becomes 1999
